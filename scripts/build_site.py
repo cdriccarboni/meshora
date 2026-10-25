@@ -192,6 +192,16 @@ def build():
         out = DIST / meta["path"].lstrip("/") / "index.html"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(layout(meta, body))
+    # Page 404 bilingue (sinon Cloudflare Pages renvoie l'accueil pour toute adresse inconnue)
+    nf_body = """      <div class="hero">
+        <h1>Page introuvable</h1>
+        <p>Cette adresse n'existe pas ou plus.</p>
+        <p lang="en">This page doesn't exist (anymore).</p>
+        <div class="actions"><a class="btn primary" href="/">Accueil</a><a class="btn" href="/en/" lang="en">Home (English)</a></div>
+      </div>"""
+    (DIST / "404.html").write_text(layout({"lang": "fr", "path": "/404.html", "title": "Page introuvable",
+                                           "description": "Cette page n'existe pas.", "nav": ""}, nf_body)
+                                    .replace('<meta name="description"', '<meta name="robots" content="noindex">\n  <meta name="description"', 1))
     # /app : prototype construit s'il existe, sinon page d'attente
     proto = ROOT / "prototype" / "dist"
     if proto.is_dir():
