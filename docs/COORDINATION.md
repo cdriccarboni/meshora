@@ -74,3 +74,12 @@ Exigences et répartition détaillées dans `PUBLICATION.md`. En bref : Claude f
 ## 7. Prochaines étapes pour les agents locaux
 
 Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2**, **E3** (BLE Android ↔ iPhone, compatibilité Bitchat) et **E10** (découverte Nearby). Rapports dans `docs/tests/`.
+
+## 8. Contre-audit V0.2 et corrections ciblées (25 octobre 2026) — Claude
+
+- Analyse complète : `docs/audits/CONTRE-AUDIT-V0.2.md` ; résultats bruts : `docs/tests/CONTRE-AUDIT-V0.2-2026-10-25.md`.
+- Les corrections de Claude sont sur `validation/v0.2-contre-audit`, **pas** sur `ai-studio/prototype-v0` (laissée intacte à `9965e5e`).
+- Fichiers d'Antigravity touchés, à relire par Antigravity : `WebSocketTransport.ts`, `TransportManager.ts`, `BroadcastTransport.ts`, `QuickSOSButton.tsx`, `MessagesScreen.tsx`, `ResilienceScreen.tsx`, `EmergencyBroadcastPanel.tsx`, `i18n.ts`, `App.tsx`, `main.tsx`, `tests/real-two-clients.test.ts`, `tools/relay/server.js`. Nouveau : `core/urlHygiene.ts`, `tests/url-hygiene.test.ts`, `tools/audit/*`.
+- Protocole relais modifié : le relais envoie `MESHORA_CHALLENGE {nonce, room}` ; le client répond par `MESHORA_HELLO` avec `helloSignature` = ECDSA P-256/SHA-256 de `MESHORA-HELLO|v1|<room>|<nonce>|<publicKeyHex>` ; l'identifiant doit valoir `msh_` + 12 premiers hex de SHA-256(clé SPKI). `MESHORA_MSG` (clair) n'existe plus.
+- Reste à Antigravity : voir `CONTRE-AUDIT-V0.2.md` §8.
+- Règle maintenue : la messagerie entre appareils n'est annoncée nulle part tant que l'essai Mac ↔ téléphone (§11) n'est pas consigné dans `docs/tests/`.

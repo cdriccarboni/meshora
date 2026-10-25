@@ -13,9 +13,9 @@
 
 | Transport | Navigateur Web / PWA | Android Natif | iPhone / iOS Natif | État MESHORA actuel |
 |---|---|---|---|---|
-| **Relais WebSocket Internet** | ✅ Oui (WSS) | ✅ Oui | ✅ Oui | **Opérationnel** (E2EE P-256 + AES-GCM validé) |
-| **Wi-Fi Local (Même Box / Routeur)** | ✅ Oui (WS LAN) | ✅ Oui | ✅ Oui | **Opérationnel** (Relais Node sur LAN ou machine locale) |
-| **BroadcastChannel** | ✅ Même navigateur | — | — | **Opérationnel** (Test local mono-appareil uniquement) |
+| **Relais WebSocket Internet** | ✅ Oui (WSS) | ✅ Oui | ✅ Oui | 🔧 **Implémenté, non hébergé** : testé entre deux navigateurs sur un même Mac (contre-audit V0.2, B2) ; aucun relais public ; la CSP de `/app` bloque tout relais externe ; non testé entre appareils |
+| **Wi-Fi Local (Même Box / Routeur)** | ✅ Oui (WS LAN) | ✅ Oui | ✅ Oui | ⬜ **Non testé** : sur téléphone, `http://<IP du Mac>` n'est pas un contexte sécurisé (WebCrypto indisponible) ; il faut HTTPS + `wss://` |
+| **BroadcastChannel** | ✅ Même navigateur | — | — | 🔧 **Testé entre onglets d'un même navigateur** (contre-audit V0.2, B1) |
 | **Bluetooth LE Direct (Android ↔ Android)** | ❌ Impossible en PWA | ✅ Oui (Advertiser + GattServer) | — | 📐 Spécifié (Requiert APK Android) |
 | **Bluetooth LE Direct (iPhone ↔ iPhone)** | ❌ Impossible en PWA | — | ✅ Oui (CoreBluetooth) | 📐 Spécifié (Requiert app iOS native) |
 | **Bluetooth LE Croisé (Android ↔ iPhone)** | ❌ Impossible en PWA | ✅ Oui (GATT standard) | ✅ Oui (GATT standard) | 📐 Spécifié (Protocole GATT unifié ci-dessous) |
