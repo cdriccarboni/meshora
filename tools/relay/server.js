@@ -375,12 +375,8 @@ function handleClientMessage(client, msg) {
     if (!pub || id !== deriveId(pub) || !verifyEcdsa(pub, sig, payload)) {
       return closeWith(client, 1008, 'hello rejected');
     }
-    // Une même clé ne garde qu'une connexion par salon : la plus récente (authentifiée) gagne.
-    for (const other of clients.values()) {
-      if (other !== client && other.authenticated && other.room === client.room && other.publicKey === pub) {
-        closeWith(other, 1000, 'replaced');
-      }
-    }
+    // Plusieurs connexions authentifiées d'une même clé sont admises (plusieurs onglets d'un même appareil) :
+    // chacune a prouvé la possession de la clé privée.
     client.authenticated = true;
     clearTimeout(client.helloTimer);
     client.peerId = id;
