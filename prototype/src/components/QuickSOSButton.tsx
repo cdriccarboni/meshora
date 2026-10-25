@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Language } from '../core/i18n';
 import { AppIdentity } from '../types';
 import { Phone, X, AlertTriangle, MessageSquare } from 'lucide-react';
@@ -99,7 +100,9 @@ export const QuickSOSButton: React.FC<QuickSOSButtonProps> = ({ lang }) => {
     };
   }, [isOpen, close]);
 
-  return (
+  // Rendu dans <body> (portail) : un ancêtre animé (transform) ferait sinon défiler le bouton « fixe » avec la page.
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <>
       {/* Bouton compact : 40 × 40 px, au-dessus de la barre de navigation (≈ 60 px + zone sûre) */}
       <button
@@ -195,6 +198,7 @@ export const QuickSOSButton: React.FC<QuickSOSButtonProps> = ({ lang }) => {
           </div>
         </div>
       )}
-    </>
+    </>,
+    document.body
   );
 };

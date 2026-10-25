@@ -91,9 +91,9 @@ try {
       record('B3', 'Paramètres utm_*/fbclid retirés de l’adresse, paramètres fonctionnels conservés',
         href === `${APP}?room=atelier#messages`, `adresse affichée=${href}`);
       const s = await (await b.newContext()).newPage();
-      await s.goto(`${BASE}/fr/?utm_campaign=z&x=1`, { waitUntil: 'networkidle' });
+      await s.goto(`${BASE}/fr/decouvrir/?utm_campaign=z&x=1`, { waitUntil: 'networkidle' });
       const shref = await s.evaluate(() => location.href);
-      record('B3b', 'Site : utm_* retirés, autres paramètres conservés', shref === `${BASE}/fr/?x=1`, `adresse affichée=${shref}`);
+      record('B3b', 'Site : utm_* retirés, autres paramètres conservés', shref === `${BASE}/fr/decouvrir/?x=1`, `adresse affichée=${shref}`);
     }
     // B4
     {
