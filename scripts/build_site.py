@@ -90,14 +90,14 @@ def layout(meta, body):
   <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#14171C" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/assets/meshora.css?v={VERSION}">
   <script src="/assets/site.js?v={VERSION}" defer></script>
 </head>
 <body>
 {band}  <div class="wrap">
     <header class="site">
-      <a class="brand" href="{t['home']}"><img src="/assets/logo.svg" alt="" width="32" height="32">MESHORA</a>
+      <a class="brand" href="{t['home']}"><img src="/assets/logo.svg" alt="" width="36" height="36">MESHORA</a>
       <nav class="site" aria-label="{t['main_nav']}">
         {' '.join(nav_links)}
         {lang_link}
@@ -156,7 +156,7 @@ def status_body(lang):
         intro = (f"<p>This page is generated automatically from the project's internal tracker. "
                  f"A feature is marked ✅ only after a real test on physical devices.</p>"
                  f"<p><strong>{tested} feature(s) tested on devices so far.</strong></p>"
-                 f"<p class=\"muted\">Legend: ⬜ Not started · 📐 Specified · 🎭 Simulated in the prototype · 🔧 Implemented, not tested · ✅ Tested on physical devices · ❌ Dropped. "
+                 f"<p class=\"muted\">Legend: ⛔ Blocked for publication · ⬜ Not started · 📐 Specified · 🎭 Simulated in the prototype · 🔧 Implemented, not tested · ✅ Tested on physical devices · ❌ Dropped. "
                  f"Feature names are currently listed in French.</p>")
         title = "Real feature status"
         heads = ["Pillar", "Feature", "Status", "Tested platforms", "Test"]
@@ -267,8 +267,22 @@ SECRET_PATTERNS = [
 ]
 DOWNLOAD_EXT = re.compile(r'href="[^"]+\.(apk|ipa|dmg|exe|msi|deb|rpm|appimage|zip)"', re.I)
 
+# Fonctions de détresse : interdites dans /app tant qu'elles ne sont pas réelles, testées et validées
+# (PUBLICATION.md §3, règle 6). Un réseau simulé ne doit jamais faire croire qu'un appel à l'aide est parti.
+EMERGENCY_PATTERNS = re.compile(r"\bSOS\b|détresse|distress|urgence vitale|vital emergency|emergency broadcast|diffusion d.urgence", re.I)
+EMERGENCY_APPROVAL = ROOT / "docs" / "tests" / "EMERGENCY-APPROVAL.md"
+
 def check(urls):
     errors = []
+    app_dir = DIST / "app"
+    if app_dir.is_dir() and not EMERGENCY_APPROVAL.is_file():
+        for f in app_dir.rglob("*"):
+            if f.is_file() and f.suffix in {".html", ".js", ".json", ".mjs"}:
+                m = EMERGENCY_PATTERNS.search(f.read_text(errors="ignore"))
+                if m:
+                    errors.append(f"Fonction de détresse « {m.group(0)} » dans /app ({f.relative_to(DIST)}) sans validation "
+                                  f"(docs/tests/EMERGENCY-APPROVAL.md absent) — voir PUBLICATION.md §3 règle 6")
+                    break
     releases = json.loads((SRC / "releases.json").read_text())
     published = {r.get("url") for r in releases.values() if isinstance(r, dict) and r.get("published")}
     for f in DIST.rglob("*"):

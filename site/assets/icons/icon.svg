@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 84 84"><rect x="-10" y="-10" width="84" height="84" fill="#FFFFFF"/><ellipse cx="32" cy="32" rx="28" ry="7.5" fill="none" stroke="#2A2E35" stroke-width="3" stroke-linecap="round" transform="rotate(-28 32 32)"/><circle cx="32" cy="32" r="11" fill="#2A2E35"/><circle cx="51.1" cy="17.3" r="4.5" fill="#3566C8"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- MESHORA Minimalist Orbital Logo -->
+  <rect width="128" height="128" rx="28" fill="#121316"/>
+  <!-- Outer Orbit -->
+  <circle cx="64" cy="64" r="44" stroke="#4a5060" stroke-width="2.5" stroke-dasharray="4 6" opacity="0.65"/>
+  <!-- Middle Orbit (Tilted ellipse) -->
+  <ellipse cx="64" cy="64" rx="46" ry="24" transform="rotate(-30 64 64)" stroke="#60a5fa" stroke-width="2" opacity="0.85"/>
+  <!-- Inner Orbit -->
+  <circle cx="64" cy="64" r="26" stroke="#94a3b8" stroke-width="1.75" opacity="0.5"/>
+  <!-- Central Core Node -->
+  <circle cx="64" cy="64" r="9" fill="#f8fafc"/>
+  <circle cx="64" cy="64" r="5" fill="#3b82f6"/>
+  <!-- Orbital Satellite Nodes -->
+  <circle cx="26" cy="42" r="4" fill="#60a5fa"/>
+  <circle cx="102" cy="86" r="4" fill="#93c5fd"/>
+  <circle cx="64" cy="20" r="3.5" fill="#f8fafc"/>
+</svg>

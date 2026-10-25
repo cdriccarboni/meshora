@@ -37,6 +37,8 @@ Le dépôt GitHub restant **privé**, le site ne renvoie jamais vers des pages G
 3. Aucune fonction n'est présentée comme disponible si `docs/STATUS.md` ne la marque pas ✅.
 4. Pas de promesse d'anonymat, de fonctionnement « en toutes circonstances » ni de VPN qui créerait une connexion.
 5. Libellés et ton conformes à `DESIGN.md` (aucune esthétique survivaliste, statuts sans jargon).
+6. **Aucune fonction de détresse (SOS, « diffusion d'urgence », « signal de détresse diffusé ») n'est publiée** tant qu'elle n'est pas réelle, testée entre appareils physiques et validée explicitement par le porteur du projet (`docs/tests/EMERGENCY-APPROVAL.md`). Dans un réseau simulé, un tel bouton ferait croire à une personne en danger qu'elle a été entendue. MESHORA ne remplace pas le 112 ni FR-Alert, et doit le dire à côté de toute fonction de ce type. Le script de construction bloque automatiquement toute mention de ce type dans `/app` sans ce fichier de validation.
+7. Licence : si `/app` sert le prototype AGPL-3.0, prévoir l'accès au code source correspondant (`LICENSING.md` §2).
 
 ## 4. Installation (PWA)
 

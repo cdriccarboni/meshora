@@ -1,8 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" role="img" aria-labelledby="t">
   <title id="t">MESHORA</title>
+  <!-- Logo officiel MESHORA (géométrie de OrbitalLogo.tsx, prototype Google AI Studio V0.2), version transparente clair/sombre -->
   <style>
-    .s{stroke:#2A2E35}.f{fill:#2A2E35}.a{fill:#3566C8}
-    @media (prefers-color-scheme: dark){.s{stroke:#E8EBF0}.f{fill:#E8EBF0}.a{fill:#8DB0F5}}
+    .core{fill:#121316}.dot{fill:#3B82F6}.ell{stroke:#3B82F6}.out{stroke:#94A3B8}.s1{fill:#3B82F6}.s2{fill:#94A3B8}
+    @media (prefers-color-scheme: dark){.core{fill:#F8FAFC}.ell{stroke:#60A5FA}.out{stroke:#4A5060}.s1{fill:#60A5FA}.s2{fill:#E5E5E5}}
   </style>
-  <ellipse cx="32" cy="32" rx="28" ry="7.5" fill="none" class="s" stroke-width="3" stroke-linecap="round" transform="rotate(-28 32 32)"/><circle cx="32" cy="32" r="11" class="f"/><circle cx="51.1" cy="17.3" r="4.5" class="a"/>
+  <circle class="out" cx="50" cy="50" r="38" stroke-width="1.5" stroke-dasharray="3 5"/>
+  <circle class="s2" cx="78" cy="24" r="2.5"/>
+  <ellipse class="ell" cx="50" cy="50" rx="36" ry="19" transform="rotate(-28 50 50)" stroke-width="1.8"/>
+  <circle class="s1" cx="20" cy="36" r="3"/>
+  <circle class="core" cx="50" cy="50" r="7"/>
+  <circle class="dot" cx="50" cy="50" r="4"/>
 </svg>
