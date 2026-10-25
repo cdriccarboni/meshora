@@ -56,7 +56,7 @@ Source : `MESHORA-CLAUDE-V0.2.zip` (extrait partiel du prototype : 17 fichiers, 
 
 | # | Constat dans la V0.2 | Gravité | Action attendue |
 |---|---|---|---|
-| A1 | Bouton « SOS Rapide », « Diffusion d'urgence », message « Signal de détresse diffusé aux nœuds mesh ! » alors que le réseau est simulé | **Bloquant (sécurité des personnes)** | Retirer de la version publiée, ou désactiver avec la mention « ne remplace pas le 112 » tant que la diffusion réelle n'est pas testée (PUBLICATION §3 règle 6). Le build bloque automatiquement. |
+| A1 | **PRIORITÉ 1 (confirmée par le porteur du projet le 25/10/2026)** — Bouton « SOS Rapide », « Diffusion d'urgence », message « Signal de détresse diffusé aux nœuds mesh ! » alors que le réseau est simulé | **Bloquant (sécurité des personnes)** | Retirer de la version publiée, ou désactiver avec la mention « ne remplace pas le 112 » tant que la diffusion réelle n'est pas testée (PUBLICATION §3 règle 6). Le build bloque automatiquement. |
 | A2 | Vocabulaire « urgence », « détresse vitale », balise stroboscopique, animation radar, repères « zone de sécurité / sanctuaire » | Bloquant (directive design) | Remplacer par le vocabulaire de `DESIGN.md` §7–8 (« Continuité », « annonces de la communauté », « fiches pratiques ») |
 | A3 | Dépendances `@google/genai`, `express`, `dotenv` dans `package.json`, alors que le README affirme « aucune donnée envoyée à un service IA » | Bloquant (confidentialité) | Vérifier l'usage réel dans le code complet ; retirer toute dépendance IA de la version publiée ; aucune clé d'API dans le bundle (le build la détecte) |
 | A4 | Google Fonts chargé dans `index.html` | Bloquant (CSP de `/app` et confidentialité) | Auto-héberger Plus Jakarta Sans / JetBrains Mono ou utiliser les polices système |
@@ -65,7 +65,7 @@ Source : `MESHORA-CLAUDE-V0.2.zip` (extrait partiel du prototype : 17 fichiers, 
 | A7 | « Transport local réel » `BroadcastChannel` : ne relie que des onglets **du même navigateur** | Majeur (honnêteté) | Ne jamais le présenter comme une messagerie entre appareils ; ne compte pas pour le test M1 |
 | A8 | Relais WebSocket local : nécessite un serveur (`express`) qui n'existe pas sur Cloudflare Pages | Majeur | Sur l'aperçu public, le désactiver ou l'afficher comme « nécessite une passerelle locale » |
 | A9 | Formulations « garantir que vos échanges restent toujours accessibles », « Aucune esthétique… » mais promesse de continuité absolue | Mineur | Reformuler sans garantie absolue |
-| A10 | Licence AGPL-3.0-or-later | Décision | Voir `LICENSING.md` ; prévoir l'accès au code source de `/app` (article 13) |
+| A10 | Licence AGPL-3.0-or-later | Décision provisoire : option B | Fournir `package-lock.json` et la liste des licences des dépendances, confirmer l'origine des ressources (`LICENSING.md` §7, L1–L2) ; prévoir l'accès au code source de `/app` (article 13) |
 
 ## 6. Publication web
 

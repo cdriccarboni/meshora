@@ -11,7 +11,7 @@
 | Documentation, contrats, site et script de construction (dépôt `cdriccarboni/meshora`) | **Aucune licence déclarée** pour l'instant (tous droits réservés par défaut) | Ce dépôt |
 | Proposition antérieure (ARCHITECTURE ADR-10) | Apache-2.0 ou MPL-2.0 pour le cœur | Retirée en attendant cette revue |
 
-La proposition Apache-2.0 / MPL-2.0 de l'ADR-10 **n'est pas imposée** : elle est suspendue jusqu'à décision explicite.
+**Décision provisoire du porteur du projet (25/10/2026) : option B** (§4). Les fichiers de licence ne sont pas encore créés : ils le seront après la vérification des droits et des dépendances (§6–7).
 
 ## 2. Ce que l'AGPL-3.0 implique concrètement
 
@@ -56,3 +56,40 @@ L'AGPL est donc **compatible avec toutes les briques retenues**, et même plus c
 3. Adopter une politique de contribution (DCO) avant d'accepter des contributions extérieures.
 4. Prévoir le lien « Code source » dans `/app` et la publication du code au lancement public (article 13).
 5. Si l'option A ou B est retenue pour iOS : rédiger la permission supplémentaire pour la distribution via les stores.
+
+## 6. Vérification des droits et des dépendances (25 octobre 2026)
+
+### 6.1 Droits sur le contenu du dépôt `cdriccarboni/meshora`
+| Vérification | Résultat |
+|---|---|
+| Auteurs des commits | 13 commits, tous produits par Claude dans les sessions du porteur du projet |
+| Code ou texte tiers copié | Aucun fichier tiers ; aucun en-tête de copyright ou de licence étranger dans `site/`, `contracts/`, `scripts/` |
+| Dépendances du site | **Aucune** : le site est en HTML/CSS/JS sans bibliothèque ; le script de construction n'utilise que la bibliothèque standard Python (licence PSF, non redistribuée) |
+| Polices | Aucune police redistribuée (Plus Jakarta Sans / Inter utilisées seulement si installées sur l'appareil) |
+| Logo et icônes | Dérivés du logo du prototype, validé par le porteur du projet ; variante favicon validée |
+| Titularité des contenus générés par IA | Les conditions d'utilisation d'Anthropic et de Google attribuent en principe les contenus générés à l'utilisateur [C, à vérifier dans les conditions applicables au compte] ; la protection par le droit d'auteur de contenus générés par IA reste incertaine selon les pays |
+
+### 6.2 Dépendances d'exécution déclarées par le prototype V0.2 (`package.json`)
+Licences relevées sur le registre npm le 25/10/2026 (dernière version publiée de chaque paquet) :
+
+| Paquet | Licence | Compatible AGPL-3.0 |
+|---|---|---|
+| react, react-dom | MIT | ✅ |
+| vite, @vitejs/plugin-react, @tailwindcss/vite | MIT | ✅ |
+| motion | MIT | ✅ |
+| express | MIT | ✅ |
+| lucide-react | ISC | ✅ |
+| dotenv | BSD-2-Clause | ✅ |
+| @google/genai | Apache-2.0 | ✅ (sens Apache → AGPL) — mais dépendance à retirer de la version publiée (COORDINATION §5, A3) |
+
+Limites : les versions vérifiées sont les dernières publiées, pas forcément celles qu'installe le prototype ; le ZIP ne contient **pas** de `package-lock.json`, donc les **dépendances indirectes ne sont pas vérifiées**.
+
+## 7. Reste à faire avant de créer les fichiers de licence
+
+| # | Action | Responsable |
+|---|---|---|
+| L1 | Fournir le dépôt complet du prototype avec `package-lock.json` ; produire la liste des licences de toutes les dépendances (ex. `npx license-checker --production --summary`) et l'archiver dans `docs/tests/` | Antigravity |
+| L2 | Confirmer qu'aucun fichier du prototype n'a été copié d'un projet tiers (images, cartes, sons des « alertes audio » de la V0.2 en particulier) | Antigravity + porteur du projet |
+| L3 | Confirmer la titularité des contenus générés (conditions des comptes Google AI Studio et Claude utilisés) | Porteur du projet |
+| L4 | Créer les fichiers : `LICENSE` (AGPL-3.0-or-later) à la racine pour les applications ; `contracts/LICENSE` (Apache-2.0 ou MIT, à choisir) ; spécifications de protocole (`docs/NEARBY.md` §3, enveloppe de `ARCHITECTURE.md`) sous CC-BY-4.0 ; en-têtes SPDX | Claude, après L1–L3 |
+| L5 | Ajouter une politique de contribution (DCO) et, pour iOS, la permission supplémentaire de distribution via les stores (article 7 GPLv3) | Claude (rédaction) + validation du porteur |

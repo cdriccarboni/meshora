@@ -29,7 +29,7 @@ MESHORA doit être **assez beau et simple pour servir tous les jours, même quan
   | `site/assets/logo.svg` | Symbole transparent pour l'en-tête, adapté clair/sombre (noyau graphite en clair, blanc en sombre) |
   | `site/assets/logo-animated.svg` | Même symbole avec l'animation du composant, utilisé en grand (accueil, `/app`) |
   | `site/assets/icons/icon-maskable.svg` | Icône officielle sans coins arrondis (Android « maskable », icône Apple) |
-  | `site/assets/icons/favicon.svg` | **Variante petite taille** (16–32 px) : mêmes carré, noyau et ellipse, traits épaissis, orbites secondaires retirées — à cette taille, les traits fins du logo complet disparaissent |
+  | `site/assets/icons/favicon.svg` | **Variante petite taille** (16–32 px), **validée par le porteur du projet le 25/10/2026** ; le logo officiel reste inchangé pour tous les autres usages : mêmes carré, noyau et ellipse, traits épaissis, orbites secondaires retirées — à cette taille, les traits fins du logo complet disparaissent |
   | `site/assets/icons/*.png` | Exports 32, 180, 192, 512 px ; image de partage `site/assets/og-image.png` |
 - Mot-symbole « MESHORA » en capitales, approche ouverte.
 - Interdits : éclairs, boucliers agressifs, radars, cibles, antennes stylisées, dégradés néon.

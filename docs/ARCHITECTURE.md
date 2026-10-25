@@ -91,7 +91,7 @@ Si le protocole BLE de Bitchat peut être parlé tel quel (licences le permetten
 Aucune fonction cœur n'appelle de service externe. Les services optionnels (traduction, résumé) passeront par une interface remplaçable, désactivée par défaut, et pourront tourner en local.
 
 ### ADR-10 — Licences
-**Mise à jour V0.2 :** le prototype est publié sous **AGPL-3.0-or-later**. La proposition ci-dessous est suspendue ; analyse et options dans `LICENSING.md` (recommandation : applications AGPL, contrats et spécification permissifs).
+**Décision provisoire (25/10/2026) : option B** — applications sous AGPL-3.0-or-later, contrats et protocole sous licences permissives. Fichiers de licence à finaliser après la vérification des droits et des dépendances (`LICENSING.md` §6–7). La proposition ci-dessous est abandonnée.
 
 Proposition initiale (suspendue) : **spécification sous CC-BY-4.0, cœur et SDK sous Apache-2.0 ou MPL-2.0** (adoption maximale, microcontrôleurs, compatibilité App Store), applications sous la même licence ou GPL-3.0 au choix du porteur. Conséquence : pas d'inclusion de code GPL (Meshtastic, Briar) ou AGPL (forks Reticulum) dans le cœur — uniquement dialogue via leurs API/protocoles.
 
