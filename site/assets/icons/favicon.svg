@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t">
+  <title id="t">MESHORA</title>
+  <style>
+    .s{stroke:#2A2E35}.f{fill:#2A2E35}.a{fill:#3566C8}
+    @media (prefers-color-scheme: dark){.s{stroke:#E8EBF0}.f{fill:#E8EBF0}.a{fill:#8DB0F5}}
+  </style>
+  <ellipse cx="32" cy="32" rx="28" ry="7.5" fill="none" class="s" stroke-width="3" stroke-linecap="round" transform="rotate(-28 32 32)"/><circle cx="32" cy="32" r="11" class="f"/><circle cx="51.1" cy="17.3" r="4.5" class="a"/>
+</svg>
