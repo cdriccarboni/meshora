@@ -40,9 +40,10 @@ Ce qu'une PWA peut faire réellement : interface, stockage local, synchronisatio
 3. Appliquer `docs/DESIGN.md` : jetons de couleur, Inter, clair/sombre, trois onglets **Se connecter / Communiquer / Découvrir**, libellés FR/EN du §8, nom « Continuité ».
 4. Afficher la bannière discrète « Prototype — réseau simulé » tant que `adapter.simulated === true`.
 5. Écran de consentement « passerelle inconnue » (sans option « toujours » cochée) et écran « Diagnostic » listant transports, preuves et limites de plateforme.
-6. Réutiliser `site/assets/logo.svg`, `site/assets/icons/` et `site/manifest.webmanifest` plutôt que de recréer une identité.
-7. Ouvrir une PR vers `main` avec captures clair/sombre et FR/EN ; mettre à jour `docs/STATUS.md` en 🎭 pour les fonctions simulées.
+6. Prévoir dans l'onglet **Se connecter** la section « Autour de moi » (contacts proches, relais, passerelle) et les trois modes de visibilité de `NEARBY.md` §3.5 (Invisible / Mes contacts / Tout le monde 10 min), en simulation.
+7. Réutiliser `site/assets/logo.svg`, `site/assets/icons/` et `site/manifest.webmanifest` plutôt que de recréer une identité.
+8. Ouvrir une PR vers `main` avec captures clair/sombre et FR/EN ; mettre à jour `docs/STATUS.md` en 🎭 pour les fonctions simulées.
 
 ## 5. Prochaines étapes pour les agents locaux
 
-Phase 0 de `ROADMAP.md` : expériences E1 à E9 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2** et **E3** (BLE Android ↔ iPhone, compatibilité Bitchat). Rapports dans `docs/tests/`.
+Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2**, **E3** (BLE Android ↔ iPhone, compatibilité Bitchat) et **E10** (découverte Nearby). Rapports dans `docs/tests/`.

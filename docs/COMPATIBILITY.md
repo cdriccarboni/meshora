@@ -44,7 +44,20 @@
 | Thread / Matter | Hors périmètre | — | — | Via Home Assistant éventuellement |
 | ESP-NOW | Entre relais ESP32 d'un même site | ↔ | Stable | |
 
-## 4. Contraintes réglementaires et physiques
+## 4. MESHORA Nearby (découverte privée)
+
+| Fonction | iPhone | Android | macOS | Windows | Linux / Pi | ESP32 / nRF52 |
+|---|---|---|---|---|---|---|
+| Annonce avec identifiant tournant dans les données de service | ❌ données de service interdites aux apps [C] → lecture GATT | ✅ | ✅ | 🧪 | ✅ | ✅ |
+| Reconnaissance d'un contact au premier plan | 🧪 (N2) | 🧪 (N2) | 🧪 | 🧪 | 🧪 | n/a |
+| Reconnaissance en arrière-plan | 🧪 **critique** (N3, N4) | 🟡 service au premier plan | ✅ | 🧪 | ✅ | ✅ |
+| Appairage d'un relais par sélecteur système | 🟡 AccessorySetupKit (iOS 18 et ultérieur) [C] | 🟡 CompanionDeviceManager [C] | ❌ | ❌ | ❌ | (côté relais) |
+| Appairage par proximité, comme des écouteurs | 🟡 UE seulement, iOS 26.5 et ultérieur, compte organisation [S] | 🟡 Fast Pair = programme partenaire [S] | ❌ | ❌ | ❌ | (côté relais) |
+| Ajout de contact par NFC | 🟡 lecture de tag seulement [C] | ✅ [C] | ❌ | ❌ | ❌ | ❌ |
+| Distance et direction (UWB) | 🟡 modèles UWB, Nearby Interaction [C] | 🟡 rares modèles [C] | ❌ | ❌ | ❌ | ❌ |
+| Réseaux Find My / Find Hub pour transporter des messages | ❌ aucune API, exclu | ❌ aucune API, exclu [S] | ❌ | ❌ | ❌ | ❌ |
+
+## 5. Contraintes réglementaires et physiques
 
 | Sujet | Contrainte | Conséquence |
 |---|---|---|

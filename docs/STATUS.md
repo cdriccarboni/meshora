@@ -27,6 +27,11 @@ Légende : ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le proto
 | Resilience | Mode économie de batterie | 📐 | — | R10 |
 | Resilience | Alertes communautaires signées | 📐 | — | R8 |
 | Resilience | Indicateur VPN / chiffrement | 📐 | — | R9 |
+| Mesh (Nearby) | Appairage QR Android ↔ iPhone | 📐 | — | N1 |
+| Mesh (Nearby) | Reconnaissance par identifiant tournant | 📐 | — | N2–N5 |
+| Mesh (Nearby) | Révocation d'un contact | 📐 | — | N6 |
+| Mesh (Nearby) | Appairage de relais (AccessorySetupKit / CompanionDeviceManager) | 📐 | — | N10 |
+| — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 
 Le prototype Google AI Studio met à jour la colonne « État » vers 🎭 pour ce qu'il simule, dans sa propre PR.

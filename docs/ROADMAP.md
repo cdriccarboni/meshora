@@ -18,6 +18,7 @@ Objectif : transformer les 🧪 critiques de `COMPATIBILITY.md` en résultats me
 | E7 | Radio MeshCore et Meshtastic pilotée depuis l'app | Faisabilité du pont | Message texte de bout en bout BLE → LoRa → BLE |
 | E8 | Wi-Fi Aware iPhone (iOS 26) ↔ Android | Interop réelle | Lien de données établi ou échec documenté |
 | E9 | Passerelle Pi → Nostr → téléphone distant | Synchro différée | Message livré après reconnexion, sans doublon |
+| E10 | **Nearby** : reconnaissance d'un contact appairé Android ↔ iPhone par identifiant tournant (tests N1–N5 de `NEARBY.md`) | La découverte privée fonctionne-t-elle des deux côtés, au premier plan et en arrière-plan ? | Délais et taux de reconnaissance publiés ; aucun identifiant stable au-delà de 15 min |
 
 Livrable : `docs/tests/PHASE0-RESULTS.md` avec données brutes.
 
@@ -43,6 +44,9 @@ Livrable : `docs/tests/PHASE0-RESULTS.md` avec données brutes.
 - Pont Reticulum ; Wi-Fi Aware si E8 positif ; Multipeer pour gros fichiers Apple ↔ Apple.
 - Firmware relais fixe ESP32 MESHORA (ou profil sur MeshCore).
 - Spécification de l'enveloppe v1 figée et publiée.
+
+### Chantier prioritaire Nearby
+Détail dans `NEARBY.md` §7–8. Phase 0 : E10 (N1–N5). MVP : appairage QR, identifiants tournants, visibilité « Mes contacts », liste « Autour de moi ». Bêta : relais appairés via AccessorySetupKit et CompanionDeviceManager, révocation testée (N6), consommation publiée (N8). Stable : appairage par proximité UE pour les relais, UWB « par ici », Wi-Fi Aware pour les fichiers.
 
 ### Modules Shield et Resilience
 Leur découpage par phase est détaillé dans `SHIELD-SECURITY-AUDIT.md` §10 et `RESILIENCE.md` §7. En résumé : la bêta Shield se limite au VPN vers sa propre passerelle + DNS chiffré ; le MVP Resilience couvre détection de connexion, basculement BLE/LAN/Nostr, états de message et indicateurs honnêtes.

@@ -152,6 +152,7 @@ Principe : **MESHORA transporte, il ne remplace pas.** Un message rédigé hors 
 
 - **Shield** (VPN WireGuard personnel, DNS chiffré, Tor optionnel) : voir `SHIELD-SECURITY-AUDIT.md`. Indépendant du mesh, optionnel, activé avec consentement.
 - **Resilience** (détection de pannes, basculement, états de message, passerelles signées, fichiers, cartes hors ligne, alertes, indicateurs honnêtes) : voir `RESILIENCE.md`, qui contient aussi le **contrat d'interface TypeScript** que le prototype doit respecter.
+- **Nearby** (découverte privée des contacts proches, identifiants tournants, appairage de relais, anti-pistage) : voir `NEARBY.md`. Chantier prioritaire du pilier Mesh.
 - L'état réel de chaque fonction est tenu dans `STATUS.md`.
 
 ## 8. Consignes pour le prototype Google AI Studio
