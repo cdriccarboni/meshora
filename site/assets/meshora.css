@@ -42,6 +42,7 @@ nav.site a[aria-current="page"] { color: var(--text); border-bottom: 2px solid v
 .hero .kicker { font-size: .95rem; letter-spacing: .04em; color: var(--accent); margin: 0 0 10px; font-weight: 500; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
+.grid.four { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .card h2, .card h3 { margin: 0 0 6px; font-size: 1.1rem; font-weight: 600; }
 .card p { margin: 0; color: var(--text-2); }
