@@ -16,13 +16,22 @@ MESHORA doit être **assez beau et simple pour servir tous les jours, même quan
 - Signature : **« Un réseau qui relie les autres. »** — EN : **“A network that connects the others.”**
 - Piliers, toujours dans cet ordre : **Mesh**, **Connect**, **Shield**, **Resilience**. Dans l'interface grand public, ils apparaissent sous des mots simples : « Appareils proches », « Connexion », « Protection », « Continuité ».
 
-## 2. Logo
+## 2. Logo (officiel, validé le 25 octobre 2026)
 
-- Un **motif orbital simple** : un point central et un anneau elliptique d'un seul trait, éventuellement un second point en orbite. Évoque des appareils qui gravitent et se relient, sans réseau « en toile d'araignée ».
-- Monochrome d'abord (graphite sur clair, blanc cassé sur sombre) ; version bleu doux en accent.
-- Lisible à 16 px (favicon, barre d'état) : pas plus de deux formes, trait ≥ 1,5 px à cette taille.
-- Mot-symbole « MESHORA » en capitales, approche légèrement ouverte, même famille que l'interface.
-- Fichiers : `site/assets/logo.svg` (symbole), `site/assets/icons/` (favicon, icônes PWA). Ce symbole est une proposition originale conforme à ces règles ; si le symbole validé ailleurs diffère, il le remplace par PR en conservant les mêmes noms de fichiers.
+**Source de référence : prototype Google AI Studio V0.2** — `src/components/OrbitalLogo.tsx` (composant animé) et `public/icon.svg` (icône d'application). Il remplace la proposition antérieure.
+
+- **Composition** : un noyau blanc à cœur bleu, une **ellipse bleue inclinée** (−28° à −30°) portant un satellite, une **orbite extérieure circulaire en pointillés** portant un second satellite ; l'icône d'application ajoute une orbite intérieure fine et un troisième satellite, sur un carré graphite `#121316` aux coins arrondis.
+- **Animation** (composant) : ellipse en rotation lente (24 s), orbite extérieure en sens inverse (40 s). Toujours désactivée si « réduire les animations » est actif.
+- **Fichiers du site** :
+  | Fichier | Usage |
+  |---|---|
+  | `site/assets/icons/icon.svg` | Copie conforme de `public/icon.svg` (icône d'application) |
+  | `site/assets/logo.svg` | Symbole transparent pour l'en-tête, adapté clair/sombre (noyau graphite en clair, blanc en sombre) |
+  | `site/assets/logo-animated.svg` | Même symbole avec l'animation du composant, utilisé en grand (accueil, `/app`) |
+  | `site/assets/icons/icon-maskable.svg` | Icône officielle sans coins arrondis (Android « maskable », icône Apple) |
+  | `site/assets/icons/favicon.svg` | **Variante petite taille** (16–32 px), **validée par le porteur du projet le 25/10/2026** ; le logo officiel reste inchangé pour tous les autres usages : mêmes carré, noyau et ellipse, traits épaissis, orbites secondaires retirées — à cette taille, les traits fins du logo complet disparaissent |
+  | `site/assets/icons/*.png` | Exports 32, 180, 192, 512 px ; image de partage `site/assets/og-image.png` |
+- Mot-symbole « MESHORA » en capitales, approche ouverte.
 - Interdits : éclairs, boucliers agressifs, radars, cibles, antennes stylisées, dégradés néon.
 
 ## 3. Couleurs
@@ -31,14 +40,16 @@ Toutes les paires texte/fond ci-dessous ont été calculées ≥ 4,5:1 (WCAG 2.1
 
 | Rôle | Clair | Sombre | Contraste (clair / sombre, sur fond principal) |
 |---|---|---|---|
-| Fond principal | `#FFFFFF` | `#14171C` | — |
-| Fond secondaire (cartes) | `#F6F7F9` | `#1D2128` | — |
-| Texte principal (graphite) | `#2A2E35` | `#E8EBF0` | 13,6 / 15,0 |
-| Texte secondaire | `#5A616C` | `#A9B0BB` | 6,3 / 8,2 |
-| Accent bleu doux | `#3566C8` | `#8DB0F5` | 5,4 / 8,3 |
+| Fond principal | `#FFFFFF` | `#121316` (graphite officiel) | — |
+| Fond secondaire (cartes) | `#F6F7F9` | `#1B1D22` | — |
+| Texte principal (graphite) | `#2A2E35` | `#E8EBF0` | 13,6 / 15,5 |
+| Texte secondaire | `#5A616C` | `#A9B0BB` | 6,3 / 7,7 |
+| Accent bleu (famille du logo officiel) | `#2563EB` | `#60A5FA` | 5,2 / 7,3 |
 | État « tout va bien » | `#2F7A5B` | `#7CC4A2` | 5,2 / 8,8 |
 | État « à noter » (ambre doux, jamais orange vif) | `#8A5A12` | `#E2B66B` | 5,9 / 9,5 |
 | Erreur réelle uniquement | `#A8433A` | `#E39A92` | 6,0 / 8,0 |
+
+Harmonisation V0.2 : le fond sombre et le bleu sombre sont ceux du prototype (`#121316`, `#60A5FA`). En clair, le bleu du logo `#3B82F6` n'atteint que 3,7:1 sur blanc : il reste réservé aux graphismes (logo, pastilles) et le texte utilise `#2563EB`, de la même famille.
 
 Règles :
 - Le bleu est la seule couleur d'accent. Le vert, l'ambre et la terre cuite servent **uniquement** aux statuts, en petites touches (pastille, icône), jamais en aplats plein écran.
@@ -47,7 +58,8 @@ Règles :
 
 ## 4. Typographie
 
-- **Inter** (licence libre OFL) pour toute l'interface, avec repli sur les polices système (SF Pro, Roboto, Segoe UI).
+- **Plus Jakarta Sans** (police du prototype V0.2, licence libre OFL), puis Inter, puis les polices système (SF Pro, Roboto, Segoe UI).
+- Les polices sont **auto-hébergées ou système** : aucun chargement depuis Google Fonts (confidentialité, `PUBLICATION.md` §6). Tant que les fichiers ne sont pas ajoutés au dépôt, le site utilise la police système si Plus Jakarta Sans n'est pas installée.
 - Taille de base 16 px (17 pt sur iOS), interlignage 1,5. Respect de la taille de texte choisie dans le système (Dynamic Type, échelle Android).
 - Chiffres tabulaires pour les compteurs et les heures.
 - Pas de police à chasse fixe dans l'interface grand public (réservée à l'écran de diagnostic avancé).

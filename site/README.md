@@ -1,19 +1,15 @@
-# Site MESHORA (structure bilingue)
+# Site public MESHORA
 
-Pages statiques, sans dépendance de build, conformes à `docs/DESIGN.md`.
+Sources du site publié sur Cloudflare Pages. Exigences : `docs/PUBLICATION.md`. Design : `docs/DESIGN.md`.
 
 ```
 site/
-  index.html              redirection selon la langue du navigateur
-  assets/logo.svg         logo orbital (clair/sombre automatique)
-  assets/meshora.css      jetons de couleur, typographie, composants
-  fr/decouvrir/           Découvrir
-  fr/installer/           Installer
-  en/discover/            Discover
-  en/install/             Install
+  pages/*.html         contenu de chaque page (métadonnées JSON en tête, FR et EN)
+  assets/              style, script (partage, installation), logo, icônes, image de partage
+  app-placeholder/     page d'attente servie sous /app tant que le prototype n'est pas intégré
+  releases.json        versions natives réellement publiées (vide : aucun lien de téléchargement)
+  manifest.webmanifest, _headers, _redirects
 ```
 
-Règles :
-- Toute page existe en FR et en EN, reliées par `hreflang`.
-- La page Installer n'affiche un lien de téléchargement que pour une version marquée ✅ dans `docs/STATUS.md`.
-- Ce dossier est indépendant du prototype Google AI Studio : celui-ci garde son propre dossier et ses propres branches.
+Construction : `SITE_URL=https://… MESHORA_CHANNEL=preview python3 scripts/build_site.py` → `dist/`.
+La construction échoue en cas de lien interne cassé, de secret détecté ou de lien de téléchargement non publié.

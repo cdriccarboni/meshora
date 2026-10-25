@@ -3,7 +3,7 @@
 > Source de vérité sur ce qui **fonctionne réellement**. Mis à jour par pull request uniquement.
 > Une fonction ne passe en « ✅ Testée » qu'avec un lien vers un rapport dans `docs/tests/` (appareils, versions d'OS, version de l'app, données brutes).
 
-Légende : ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
+Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
 **État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.**
 
@@ -31,6 +31,12 @@ Légende : ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le proto
 | Mesh (Nearby) | Reconnaissance par identifiant tournant | 📐 | — | N2–N5 |
 | Mesh (Nearby) | Révocation d'un contact | 📐 | — | N6 |
 | Mesh (Nearby) | Appairage de relais (AccessorySetupKit / CompanionDeviceManager) | 📐 | — | N10 |
+| Prototype V0.2 | Messagerie entre onglets d'un même navigateur (BroadcastChannel) | 🔧 | — | Annoncé par AI Studio, non vérifié ; ne vaut pas messagerie entre appareils (M1) |
+| Prototype V0.2 | Relais WebSocket sur réseau local | 🔧 | — | Annoncé, non vérifié ; nécessite un serveur local |
+| Prototype V0.2 | File d'attente hors ligne (IndexedDB, Outbox) | 🔧 | — | Annoncé, non vérifié |
+| Prototype V0.2 | VPN (WireGuard, VpnService, NEPacketTunnelProvider) | 🎭 | — | Interfaces factices « nécessite un module natif » |
+| Prototype V0.2 | Cartes et repères hors ligne | 🔧 | — | Annoncé, non vérifié |
+| Prototype V0.2 | Diffusion d'urgence / SOS | ⛔ | — | Bloqué pour publication (COORDINATION §5, A1) |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 
