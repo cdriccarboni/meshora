@@ -60,8 +60,8 @@ export const QuickSOSButton: React.FC<QuickSOSButtonProps> = ({ lang }) => {
 
   const close = useCallback(() => {
     setIsOpen(false);
-    // Retour du focus au déclencheur
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    // Retour du focus au déclencheur (toujours monté)
+    triggerRef.current?.focus();
   }, []);
 
   useEffect(() => {

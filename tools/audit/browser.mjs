@@ -130,7 +130,7 @@ try {
       await p.screenshot({ path: path.join(SHOTS, `b5-112-fenetre-${vp.name}.png`) });
       await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); await p.keyboard.press('Tab'); await p.keyboard.press('Tab');
       const focusInside = await p.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'));
-      await p.keyboard.press('Escape');
+      await p.keyboard.press('Escape'); await sleep(150);
       const closed = (await p.getByRole('dialog').count()) === 0;
       const focusBack = await p.evaluate(() => document.activeElement?.getAttribute('data-testid') === 'emergency-112');
       const pass = sizeOk && aboveNav && rightSide && style.bg === 'none' && style.anim === 'none' && !!style.label && !!dlgName && telLinks === 1 && focusInside && closed && focusBack;
