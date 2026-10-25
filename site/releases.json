@@ -1,0 +1,3 @@
+{
+  "_comment": "Versions natives réellement publiées. Ajouter une entrée uniquement après publication effective et test sur appareil (docs/PUBLICATION.md §3). Format : {\"published\": true, \"url\": \"...\", \"label\": \"...\", \"version\": \"...\"}"
+}

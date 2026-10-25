@@ -44,6 +44,10 @@ Ce qu'une PWA peut faire réellement : interface, stockage local, synchronisatio
 7. Réutiliser `site/assets/logo.svg`, `site/assets/icons/` et `site/manifest.webmanifest` plutôt que de recréer une identité.
 8. Ouvrir une PR vers `main` avec captures clair/sombre et FR/EN ; mettre à jour `docs/STATUS.md` en 🎭 pour les fonctions simulées.
 
-## 5. Prochaines étapes pour les agents locaux
+## 5. Publication web
+
+Exigences et répartition détaillées dans `PUBLICATION.md`. En bref : Claude fournit le site (`site/`), le script de construction et ses contrôles ; **Antigravity** prépare Cloudflare Pages, l'intégration du ZIP AI Studio dans `/app` et les tests de bout en bout ; **AI Studio** fournit l'application `/app`. La messagerie n'est annoncée comme opérationnelle qu'après le test M1 (deux clients distincts, chiffrement vérifié).
+
+## 6. Prochaines étapes pour les agents locaux
 
 Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2**, **E3** (BLE Android ↔ iPhone, compatibilité Bitchat) et **E10** (découverte Nearby). Rapports dans `docs/tests/`.
