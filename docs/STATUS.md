@@ -5,7 +5,7 @@
 
 Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
-**État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.**
+**État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.** Contre-audit et corrections (branche `validation/v0.2-contre-audit`) : `docs/audits/CONTRE-AUDIT-V0.2.md` ; messagerie vérifiée entre navigateurs **sur une seule machine**, pas entre appareils. Audit du prototype V0.2 : `docs/audits/AUDIT-PR3-V0.2.md` (8 P0, 12 P1 ; 0 critère sur 18 de messagerie opérationnelle rempli).
 
 | Pilier | Fonction | État | Plateformes testées | Rapport |
 |---|---|---|---|---|
@@ -31,12 +31,13 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Mesh (Nearby) | Reconnaissance par identifiant tournant | 📐 | — | N2–N5 |
 | Mesh (Nearby) | Révocation d'un contact | 📐 | — | N6 |
 | Mesh (Nearby) | Appairage de relais (AccessorySetupKit / CompanionDeviceManager) | 📐 | — | N10 |
-| Prototype V0.2 | Messagerie entre onglets d'un même navigateur (BroadcastChannel) | 🔧 | — | Annoncé par AI Studio, non vérifié ; ne vaut pas messagerie entre appareils (M1) |
-| Prototype V0.2 | Relais WebSocket sur réseau local | 🔧 | — | Annoncé, non vérifié ; nécessite un serveur local |
-| Prototype V0.2 | File d'attente hors ligne (IndexedDB, Outbox) | 🔧 | — | Annoncé, non vérifié |
+| Prototype V0.2 | Messagerie entre onglets d'un même navigateur (BroadcastChannel) | 🔧 | Chrome (Mac) | Testée entre onglets (contre-audit B1, `docs/tests/CONTRE-AUDIT-V0.2-2026-10-25.md`) |
+| Prototype V0.2 | Relais WebSocket chiffré de bout en bout (relais de test) | 🔧 | Chrome × 2 instances, un seul Mac | Fonctionne entre deux navigateurs indépendants sur une machine (B2, T1–T10) ; **non hébergé ; CSP de `/app` bloquante ; non testé entre appareils** |
+| Prototype V0.2 | File d'attente hors ligne | 🔧 | Node + Chrome, un seul Mac | Conservée jusqu'à accusé signé ; renvoi réel (T6, T7) ; non testée sur appareil |
 | Prototype V0.2 | VPN (WireGuard, VpnService, NEPacketTunnelProvider) | 🎭 | — | Interfaces factices « nécessite un module natif » |
 | Prototype V0.2 | Cartes et repères hors ligne | 🔧 | — | Annoncé, non vérifié |
-| Prototype V0.2 | Diffusion d'urgence / SOS | ⛔ | — | Bloqué pour publication (COORDINATION §5, A1) |
+| Prototype V0.2 | Accès aux numéros d'urgence (112) | 🔧 | Chrome mobile et ordinateur (émulés) | Aucun envoi par MESHORA ; liens `tel:` ; bouton accessible (B5). Diffusion d'alertes : ⛔ toujours bloquée |
+| Prototype V0.2 | Signatures, « vérifié », chiffrement | 🔧 | Node + Chrome, un seul Mac | WebCrypto réel ; plus de badge de signature fictif ; clés **non vérifiées hors bande** (pas de QR) |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 

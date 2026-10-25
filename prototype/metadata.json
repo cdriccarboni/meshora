@@ -1,0 +1,6 @@
+{
+  "name": "MESHORA",
+  "description": "Un réseau qui relie les autres. Application libre multi-réseaux pour communiquer localement et via passerelles avec MESHORA Mesh, Connect, Shield et Resilience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
