@@ -71,6 +71,8 @@ brouillon → en file → remis à N voisin(s) / publié sur Nostr → livré (a
 
 ## 4. Indicateur d'état : sources de vérité
 
+> Les libellés ci-dessous décrivent la **logique**. Le texte et les couleurs réellement affichés sont ceux de `DESIGN.md` §8 (nom affiché du module : « Continuité », sans vocabulaire anxiogène ; ambre doux au lieu d'orange).
+
 | Élément affiché | Affiché seulement si… | Sinon |
 |---|---|---|
 | « Internet » | Réponse d'un relais ou de la passerelle depuis < 60 s | « Internet : non vérifié » |
