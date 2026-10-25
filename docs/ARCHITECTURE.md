@@ -148,7 +148,13 @@ Chaque transport déclare son **MTU** et son **coût** (énergie, temps d'antenn
 
 Principe : **MESHORA transporte, il ne remplace pas.** Un message rédigé hors ligne au festival peut finir sur le compte Mastodon de l'auteur quand sa passerelle personnelle le voit passer. Les messages privés ne sortent jamais vers Mastodon ou Bluesky (pas de chiffrement de bout en bout adapté) ; ils restent dans MESHORA/Nostr.
 
-## 7. Consignes pour le prototype Google AI Studio
+## 7. Modules complémentaires
+
+- **Shield** (VPN WireGuard personnel, DNS chiffré, Tor optionnel) : voir `SHIELD-SECURITY-AUDIT.md`. Indépendant du mesh, optionnel, activé avec consentement.
+- **Resilience** (détection de pannes, basculement, états de message, passerelles signées, fichiers, cartes hors ligne, alertes, indicateurs honnêtes) : voir `RESILIENCE.md`, qui contient aussi le **contrat d'interface TypeScript** que le prototype doit respecter.
+- L'état réel de chaque fonction est tenu dans `STATUS.md`.
+
+## 8. Consignes pour le prototype Google AI Studio
 
 1. Coder l'interface contre une interface `Transport` simulée identique au §3.
 2. Afficher en clair l'état réel de chaque transport (« BLE indisponible dans le navigateur »).

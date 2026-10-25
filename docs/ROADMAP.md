@@ -44,6 +44,9 @@ Livrable : `docs/tests/PHASE0-RESULTS.md` avec données brutes.
 - Firmware relais fixe ESP32 MESHORA (ou profil sur MeshCore).
 - Spécification de l'enveloppe v1 figée et publiée.
 
+### Modules Shield et Resilience
+Leur découpage par phase est détaillé dans `SHIELD-SECURITY-AUDIT.md` §10 et `RESILIENCE.md` §7. En résumé : la bêta Shield se limite au VPN vers sa propre passerelle + DNS chiffré ; le MVP Resilience couvre détection de connexion, basculement BLE/LAN/Nostr, états de message et indicateurs honnêtes.
+
 ## 2. Estimation des coûts (ordres de grandeur à vérifier au moment de l'achat)
 
 ### Matériel de laboratoire
