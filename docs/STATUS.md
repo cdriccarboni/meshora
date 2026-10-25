@@ -7,15 +7,15 @@ Légende : ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le proto
 
 **État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.**
 
-| Module | Fonction | État | Plateformes testées | Rapport |
+| Pilier | Fonction | État | Plateformes testées | Rapport |
 |---|---|---|---|---|
-| Core | Identité et vérification QR | 📐 | — | — |
-| Core | Enveloppe chiffrée | 📐 | — | — |
-| Core | Messagerie BLE Android ↔ iPhone (premier plan) | 📐 | — | E2, E3 à faire |
-| Core | Relais BLE iPhone en arrière-plan | 📐 | — | E4 à faire |
-| Core | Stockage-relais et synchro Nostr | 📐 | — | E9 à faire |
-| Bridges | Meshtastic / MeshCore | 📐 | — | E7 à faire |
-| Bridges | Mastodon / Bluesky | 📐 | — | — |
+| Mesh | Identité et vérification QR | 📐 | — | — |
+| Mesh | Enveloppe chiffrée | 📐 | — | — |
+| Mesh | Messagerie BLE Android ↔ iPhone (premier plan) | 📐 | — | E2, E3 à faire |
+| Mesh | Relais BLE iPhone en arrière-plan | 📐 | — | E4 à faire |
+| Connect | Stockage-relais et synchro Nostr | 📐 | — | E9 à faire |
+| Connect | Meshtastic / MeshCore | 📐 | — | E7 à faire |
+| Connect | Mastodon / Bluesky | 📐 | — | — |
 | Shield | VPN WireGuard vers sa passerelle | 📐 | — | S1–S4 à faire |
 | Shield | Tor côté passerelle | 📐 | — | — |
 | Resilience | Détection de perte de connexion | 📐 | — | R1, R2 |

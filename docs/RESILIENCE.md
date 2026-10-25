@@ -3,16 +3,18 @@
 > Version 0.1 — 25 octobre 2026. S'appuie sur `ARCHITECTURE.md` (cœur, transports), `SECURITY.md` et `SHIELD-SECURITY-AUDIT.md` (VPN, passerelles).
 > Convention de preuve : **[S]** sourcé · **[C]** connaissance du domaine · **[T]** à trancher par test sur appareil physique.
 
-## 0. Les quatre modules MESHORA
+## 0. Les quatre piliers MESHORA
 
-| Module | Rôle | Document |
+| Pilier | Rôle | Document |
 |---|---|---|
-| 1. **Core** | Identité, enveloppe chiffrée, stockage-relais, transports | ARCHITECTURE, SECURITY |
-| 2. **Bridges** | Meshtastic, MeshCore, Reticulum, Nostr, Mastodon, Bluesky | ARCHITECTURE §5–6 |
-| 3. **Shield** | VPN WireGuard personnel, DNS chiffré, Tor optionnel | SHIELD-SECURITY-AUDIT |
-| 4. **Resilience** | Continuité de communication quand les réseaux se dégradent | ce document |
+| **MESHORA Mesh** | Communications locales : BLE, LAN, relais mesh ; repose sur le cœur partagé (identité, enveloppe chiffrée, stockage-relais) | ARCHITECTURE, SECURITY |
+| **MESHORA Connect** | Connexions et passerelles Internet disponibles ; ponts Nostr, Meshtastic, MeshCore, Reticulum, Mastodon, Bluesky | ARCHITECTURE §5–6 |
+| **MESHORA Shield** | VPN facultatif, chiffrement, confidentialité | SHIELD-SECURITY-AUDIT |
+| **MESHORA Resilience** | Continuité des communications, stockage hors ligne, synchronisation différée | ce document |
 
-Resilience **n'ajoute pas de nouveau protocole**. C'est la couche de décision et d'affichage au-dessus du Core et de Shield : elle détecte, choisit, prévient, et ne ment jamais sur l'état réel.
+Règle commune : une passerelle ou un VPN **n'invente jamais une connexion** ; il utilise celles qui existent réellement.
+
+Resilience **n'ajoute pas de nouveau protocole**. C'est la couche de décision et d'affichage au-dessus de Mesh, Connect et Shield : elle détecte, choisit, prévient, et ne ment jamais sur l'état réel.
 
 ## 1. Règles impératives → règles d'implémentation
 
@@ -31,7 +33,7 @@ Resilience **n'ajoute pas de nouveau protocole**. C'est la couche de décision e
 | **Détection des pertes de connexion** | Signal système (`NWPathMonitor` sur Apple, `ConnectivityManager` sur Android) **+ preuve active** : réponse d'un relais Nostr ou de sa passerelle. Détection des portails captifs (« Wi-Fi connecté mais pas d'Internet »). | ✅ au premier plan ; en arrière-plan, pas de sonde périodique garantie | ✅ | [C], seuils [T] |
 | **Basculement des transports** | Gestionnaire de transports (SHIELD §3.4) : envoi parallèle par tous les chemins **autorisés**, déduplication par identifiant. Jamais de repli silencieux vers moins protecteur. | ✅ | ✅ | [C] |
 | **Communication locale sans Internet** | BLE GATT + LAN (mDNS/TCP). | ✅ premier plan ; 🟡 arrière-plan | ✅ | [S] interop BLE premier plan (Bitchat) ; arrière-plan [T] |
-| **Messages hors ligne, synchro différée** | Stockage-relais du Core + Nostr à la reconnexion. | ✅ | ✅ | [C], E9 |
+| **Messages hors ligne, synchro différée** | Stockage-relais du cœur (Mesh) + Nostr à la reconnexion. | ✅ | ✅ | [C], E9 |
 | **Recherche de relais mesh compatibles** | Scan BLE sur l'UUID de service MESHORA ; mDNS sur LAN ; radios compagnon LoRa appairées. Les relais annoncent version et capacités. | 🟡 scan arrière-plan bridé | ✅ | [T] E2, E4 |
 | **Recherche de passerelles fiables** | Les passerelles diffusent sur le mesh une **annonce signée** (identité, capacités : Nostr, VPN, LoRa ; âge de la dernière preuve Internet). Fiabilité = niveau de confiance (§2.1), pas popularité. | ✅ | ✅ | [C] |
 | **Cartes hors ligne** | MapLibre (BSD) + fichiers PMTiles vectoriels d'une zone, préparés par la passerelle ou téléchargés à l'avance. Données OpenStreetMap (ODbL, attribution obligatoire). **Interdit** : télécharger en masse depuis les serveurs de tuiles d'OpenStreetMap (politique d'usage). | ✅ | ✅ | [C] tailles par zone [T] |
@@ -84,7 +86,7 @@ brouillon → en file → remis à N voisin(s) / publié sur Nostr → livré (a
 
 ## 5. Contrat d'interface pour le prototype Google AI Studio
 
-Les adaptateurs du prototype doivent respecter ces types (miroir des traits Rust du Core) afin que l'interface se branche plus tard sur les vrais transports sans réécriture. Le prototype ne fournit que des implémentations **simulées**, clairement nommées `Sim*`.
+Les adaptateurs du prototype doivent respecter ces types (miroir des traits Rust du cœur) afin que l'interface se branche plus tard sur les vrais transports sans réécriture. Le prototype ne fournit que des implémentations **simulées**, clairement nommées `Sim*`.
 
 ```ts
 // Types partagés — v0, susceptibles d'évoluer via PR sur docs/

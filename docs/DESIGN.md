@@ -10,12 +10,19 @@ MESHORA doit être **assez beau et simple pour servir tous les jours, même quan
 **Mots-clés :** minimaliste, élégant, technologique, accessible, rassurant.
 **À proscrire :** esthétique survivaliste, militaire, tactique, cyberpunk, « hacker », camouflage, couleurs agressives, alarmes permanentes, discours anxiogène.
 
+## 1 bis. Nom, signature et piliers
+
+- Nom officiel : **MESHORA** (capitales).
+- Signature : **« Un réseau qui relie les autres. »** — EN : **“A network that connects the others.”**
+- Piliers, toujours dans cet ordre : **Mesh**, **Connect**, **Shield**, **Resilience**. Dans l'interface grand public, ils apparaissent sous des mots simples : « Appareils proches », « Connexion », « Protection », « Continuité ».
+
 ## 2. Logo
 
 - Un **motif orbital simple** : un point central et un anneau elliptique d'un seul trait, éventuellement un second point en orbite. Évoque des appareils qui gravitent et se relient, sans réseau « en toile d'araignée ».
 - Monochrome d'abord (graphite sur clair, blanc cassé sur sombre) ; version bleu doux en accent.
 - Lisible à 16 px (favicon, barre d'état) : pas plus de deux formes, trait ≥ 1,5 px à cette taille.
 - Mot-symbole « MESHORA » en capitales, approche légèrement ouverte, même famille que l'interface.
+- Fichiers : `site/assets/logo.svg` (symbole), `site/assets/icons/` (favicon, icônes PWA). Ce symbole est une proposition originale conforme à ces règles ; si le symbole validé ailleurs diffère, il le remplace par PR en conservant les mêmes noms de fichiers.
 - Interdits : éclairs, boucliers agressifs, radars, cibles, antennes stylisées, dégradés néon.
 
 ## 3. Couleurs
