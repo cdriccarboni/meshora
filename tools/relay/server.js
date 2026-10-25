@@ -131,6 +131,8 @@ function closeWith(client, code, reason) {
     client.socket.write(encodeWsFrame(body, 0x8));
   } catch {}
   try {
+    // Cesser de lire immédiatement : la contre-pression TCP empêche l'accumulation en mémoire.
+    client.socket.pause();
     client.socket.end();
   } catch {}
   setTimeout(() => {
