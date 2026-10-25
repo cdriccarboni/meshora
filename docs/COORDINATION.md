@@ -1,0 +1,76 @@
+# MESHORA — Coordination des agents
+
+> Version 0.1 — 25 octobre 2026. GitHub (`cdriccarboni/meshora`) est la **source de vérité unique**.
+
+## 1. Rôles
+
+| Agent | Responsabilité | Branches | Ne fait pas |
+|---|---|---|---|
+| **Porteur du projet** | Décisions, validation, fusion vers `main` | — | — |
+| **Claude** | Audit, architecture, sécurité, documentation, contrats d'interface (`contracts/`), structure du site (`site/`) | `docs/*`, `contracts/*` | Construire l'interface du prototype |
+| **Google AI Studio** | Interface et prototype (adaptateurs simulés `Sim*`) | `ai-studio/*` | Modifier `docs/` ou `contracts/` directement (propose une PR) |
+| **Pi Desktop / agents locaux** | Intégration, builds natifs, tests sur appareils physiques, rapports dans `docs/tests/` | `integration/*`, `tests/*` | Déclarer une fonction opérationnelle sans rapport archivé |
+
+## 2. Règles de collaboration
+
+1. Toute modification passe par une pull request vers `main`. **Aucune fusion sans accord explicite du porteur du projet.**
+2. Aucun agent ne supprime, ne renomme ni ne réécrit les fichiers d'un autre agent. Un désaccord se traite par commentaire de PR.
+3. Dossiers réservés :
+   - `docs/`, `contracts/`, `site/` → Claude
+   - `prototype/` → Google AI Studio (à créer par lui)
+   - `native/`, `gateway/`, `docs/tests/` → agents d'intégration
+4. Les contrats (`contracts/typescript/meshora-contracts.ts`) sont le point de jonction : le prototype les importe, le cœur natif les respecte. Changement = PR `contracts/*` + incrément de version.
+5. `docs/STATUS.md` est mis à jour par la PR qui change l'état réel d'une fonction : 🎭 par AI Studio pour ce qu'il simule, ✅ uniquement par un agent de test avec rapport.
+6. Aucun déploiement public, aucune publication sur un store, aucune suppression sans validation explicite.
+
+## 3. Ce qui ne peut pas être fait dans une PWA
+
+Les fonctions suivantes exigent des applications **natives** ; le prototype web les simule seulement :
+- Bluetooth LE (central et périphérique), relais BLE en arrière-plan — impossible sur iPhone en web, et l'émission d'annonces BLE est impossible en web sur toutes les plateformes.
+- VPN WireGuard (extension réseau iOS/macOS, `VpnService` Android).
+- Wi-Fi Aware, Multipeer Connectivity.
+- Accès aux radios LoRa compagnon en Bluetooth sur iPhone.
+
+Ce qu'une PWA peut faire réellement : interface, stockage local, synchronisation Nostr via WebSocket quand Internet est disponible, LAN via un serveur local de passerelle, Web Serial / Web Bluetooth central sur Chrome desktop et Android uniquement [C].
+
+## 4. Prochaines étapes pour Google AI Studio
+
+1. Créer `prototype/` sur une branche `ai-studio/prototype-v0` ; ne rien modifier hors de ce dossier.
+2. Importer `contracts/typescript/meshora-contracts.ts` et implémenter `SimMeshoraAdapter` (pannes, latences, partitions réglables ; tous les `MessageState`, dont `expired` et `storage_full`).
+3. Appliquer `docs/DESIGN.md` : jetons de couleur, Inter, clair/sombre, trois onglets **Se connecter / Communiquer / Découvrir**, libellés FR/EN du §8, nom « Continuité ».
+4. Afficher la bannière discrète « Prototype — réseau simulé » tant que `adapter.simulated === true`.
+5. Écran de consentement « passerelle inconnue » (sans option « toujours » cochée) et écran « Diagnostic » listant transports, preuves et limites de plateforme.
+6. Prévoir dans l'onglet **Se connecter** la section « Autour de moi » (contacts proches, relais, passerelle) et les trois modes de visibilité de `NEARBY.md` §3.5 (Invisible / Mes contacts / Tout le monde 10 min), en simulation.
+7. Le logo officiel est celui du prototype (`OrbitalLogo.tsx`, `public/icon.svg`) ; le site en dérive ses fichiers (`DESIGN.md` §2). Garder ces deux sources synchronisées : toute évolution du logo passe par une PR qui met à jour les deux.
+8. Ouvrir une PR vers `main` avec captures clair/sombre et FR/EN ; mettre à jour `docs/STATUS.md` en 🎭 pour les fonctions simulées.
+
+## 5. Passation V0.2 (25 octobre 2026) — revue de cohérence par Claude
+
+Source : `MESHORA-CLAUDE-V0.2.zip` (extrait partiel du prototype : 17 fichiers, dont `PASSATION.md`). Le prototype lui-même n'est **pas** intégré par Claude : c'est le rôle d'Antigravity.
+
+**Pris en compte dans le site (PR #2)** : logo officiel, palette (`#121316`, `#60A5FA`), police Plus Jakarta Sans, icônes PWA et image de partage régénérées depuis `public/icon.svg`.
+
+**Cohérent avec la documentation** : quatre piliers (mêmes noms et rôles), matrice PWA / Android / iOS de `docs/MOBILE_AND_MESH_CONSTRAINTS.md`, règles « vérité d'affichage », « consentement passerelle », « zéro perte silencieuse ».
+
+**À traiter par Antigravity avant toute publication de `/app`** (bloquant = la construction du site échoue ou la PR ne doit pas être validée) :
+
+| # | Constat dans la V0.2 | Gravité | Action attendue |
+|---|---|---|---|
+| A1 | **PRIORITÉ 1 (confirmée par le porteur du projet le 25/10/2026)** — Bouton « SOS Rapide », « Diffusion d'urgence », message « Signal de détresse diffusé aux nœuds mesh ! » alors que le réseau est simulé | **Bloquant (sécurité des personnes)** | Retirer de la version publiée, ou désactiver avec la mention « ne remplace pas le 112 » tant que la diffusion réelle n'est pas testée (PUBLICATION §3 règle 6). Le build bloque automatiquement. |
+| A2 | Vocabulaire « urgence », « détresse vitale », balise stroboscopique, animation radar, repères « zone de sécurité / sanctuaire » | Bloquant (directive design) | Remplacer par le vocabulaire de `DESIGN.md` §7–8 (« Continuité », « annonces de la communauté », « fiches pratiques ») |
+| A3 | Dépendances `@google/genai`, `express`, `dotenv` dans `package.json`, alors que le README affirme « aucune donnée envoyée à un service IA » | Bloquant (confidentialité) | Vérifier l'usage réel dans le code complet ; retirer toute dépendance IA de la version publiée ; aucune clé d'API dans le bundle (le build la détecte) |
+| A4 | Google Fonts chargé dans `index.html` | Bloquant (CSP de `/app` et confidentialité) | Auto-héberger Plus Jakarta Sans / JetBrains Mono ou utiliser les polices système |
+| A5 | `user-scalable=no, maximum-scale=1.0` dans la balise viewport | Bloquant (WCAG 1.4.4, zoom interdit) | Supprimer ces deux paramètres |
+| A6 | Manifeste `id`, `start_url`, `scope` = `/` ; `apple-touch-icon.png` référencé mais absent ; `theme-color` `#090a0c` différent du manifeste | Majeur | `/app/` partout (PUBLICATION §4) ; réutiliser `site/assets/icons/` ; une seule couleur `#121316` |
+| A7 | « Transport local réel » `BroadcastChannel` : ne relie que des onglets **du même navigateur** | Majeur (honnêteté) | Ne jamais le présenter comme une messagerie entre appareils ; ne compte pas pour le test M1 |
+| A8 | Relais WebSocket local : nécessite un serveur (`express`) qui n'existe pas sur Cloudflare Pages | Majeur | Sur l'aperçu public, le désactiver ou l'afficher comme « nécessite une passerelle locale » |
+| A9 | Formulations « garantir que vos échanges restent toujours accessibles », « Aucune esthétique… » mais promesse de continuité absolue | Mineur | Reformuler sans garantie absolue |
+| A10 | Licence AGPL-3.0-or-later | Décision provisoire : option B | Fournir `package-lock.json` et la liste des licences des dépendances, confirmer l'origine des ressources (`LICENSING.md` §7, L1–L2) ; prévoir l'accès au code source de `/app` (article 13) |
+
+## 6. Publication web
+
+Exigences et répartition détaillées dans `PUBLICATION.md`. En bref : Claude fournit le site (`site/`), le script de construction et ses contrôles ; **Antigravity** prépare Cloudflare Pages, l'intégration du ZIP AI Studio dans `/app` et les tests de bout en bout ; **AI Studio** fournit l'application `/app`. La messagerie n'est annoncée comme opérationnelle qu'après le test M1 (deux clients distincts, chiffrement vérifié).
+
+## 7. Prochaines étapes pour les agents locaux
+
+Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2**, **E3** (BLE Android ↔ iPhone, compatibilité Bitchat) et **E10** (découverte Nearby). Rapports dans `docs/tests/`.
