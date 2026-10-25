@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MESHORA</string>
+    <string name="title_messages">Messages</string>
+    <string name="title_peers">Voisins</string>
+    <string name="title_transports">Réseau</string>
+    <string name="title_identity">Identité</string>
+    <string name="title_emergency">Assistance 112</string>
+</resources>
