@@ -18,6 +18,7 @@ const store = new Map<string, string>();
 const RELAY = process.env.RELAY!;
 const ROOM = process.env.ROOM!;
 (globalThis as any).window = {
+  confirm: () => true, // l'utilisateur accepte le relais proposé
   location: { search: `?relay=${encodeURIComponent(RELAY + '?room=' + ROOM)}&room=${ROOM}`, hostname: 'audit.invalid' },
   addEventListener() {}
 };
@@ -61,7 +62,7 @@ async function main() {
           return process.send!({ rid: cmd.rid, ok: true, data: ws ? await ws.discoverPeers() : [] });
         }
         case 'flush':
-          return process.send!({ rid: cmd.rid, ok: true, data: tm.flushPendingOutbox() });
+          return process.send!({ rid: cmd.rid, ok: true, data: await tm.flushPendingOutbox() });
       }
     } catch (e: any) {
       process.send!({ rid: cmd.rid, ok: false, error: String(e?.message || e) });

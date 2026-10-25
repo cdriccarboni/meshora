@@ -7,6 +7,23 @@
     en: { copied: "Link copied", shareTitle: "MESHORA", shareText: "A network that connects the others." }
   }[lang];
 
+  // Hygiène d'adresse : retire utm_* et identifiants de clic publicitaires de l'adresse affichée
+  // et des liens partagés ; les paramètres fonctionnels et le fragment sont conservés.
+  var TRACK = /^(utm_.*|fbclid|gclid|dclid|gbraid|wbraid|msclkid|mc_cid|mc_eid|igshid|yclid|twclid|ttclid|li_fat_id)$/i;
+  function cleanUrl(href) {
+    try {
+      var u = new URL(href, location.href);
+      var drop = [];
+      u.searchParams.forEach(function (_v, k) { if (TRACK.test(k)) drop.push(k); });
+      drop.forEach(function (k) { u.searchParams.delete(k); });
+      return u.toString().replace(/\?(?=#|$)/, "");
+    } catch (e) { return href; }
+  }
+  var cleaned = cleanUrl(location.href);
+  if (cleaned !== location.href && history.replaceState) {
+    try { history.replaceState(history.state, "", cleaned); } catch (e) {}
+  }
+
   function toast(msg) {
     var t = document.getElementById("toast");
     if (!t) return;
@@ -19,7 +36,7 @@
   // Partage : feuille de partage du système, sinon copie du lien.
   document.querySelectorAll("[data-share]").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      var url = btn.getAttribute("data-share-url") || location.href;
+      var url = cleanUrl(btn.getAttribute("data-share-url") || location.href);
       if (navigator.share) {
         navigator.share({ title: T.shareTitle, text: T.shareText, url: url }).catch(function () {});
       } else if (navigator.clipboard) {

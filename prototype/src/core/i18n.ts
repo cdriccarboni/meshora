@@ -84,15 +84,15 @@ export const i18nData = {
       resilience: {
         title: 'MESHORA Resilience',
         subtitle: 'Continuité intelligente de connexion',
-        description: 'Bascule automatique et sereine en cas d’aléa : zéro message perdu, documents de secours locaux et partage hors-ligne.'
+        description: 'Continuité en cas d’aléa : file d’attente locale des messages non remis, documents de secours consultables hors ligne (prototype).'
       }
     },
     home: {
       welcome: 'Votre espace de communication résilient',
-      overview: 'MESHORA unifie vos moyens de liaison pour garantir que vos échanges restent toujours accessibles.',
+      overview: 'MESHORA vise à unifier vos moyens de liaison pour que vos échanges restent accessibles le plus longtemps possible (prototype).',
       threeActionsTitle: 'Que souhaitez-vous faire ?',
       actionConnectDesc: 'Vérifier vos accès Internet, passerelles et tunnels disponibles.',
-      actionCommunicateDesc: 'Échanger des messages en direct sur le canal local ou privé.',
+      actionCommunicateDesc: 'Échanger des messages entre onglets ou via un relais de test (prototype).',
       actionDiscoverDesc: 'Comprendre l’architecture et installer l’application sur vos appareils.',
       realConnections: 'Liaisons actives détectées',
       outboxStatus: 'File d’attente locale',
@@ -104,8 +104,8 @@ export const i18nData = {
       publicChannel: 'Canal Général Local',
       emergencyChannel: 'Canal d’Entraide & Continuité',
       directChannel: 'Discussion directe',
-      placeholder: 'Écrivez un message (chiffré localement)...',
-      testNotice: 'Ouvrez un 2ᵉ onglet pour tester la messagerie en direct instantanée !',
+      placeholder: 'Écrivez un message…',
+      testNotice: 'Test local : ouvrez un 2ᵉ onglet du même navigateur. Entre appareils, un relais de test est nécessaire.',
       searchPlaceholder: 'Rechercher dans les messages...'
     },
     devices: {
@@ -286,7 +286,7 @@ export const i18nData = {
       queued: 'Queued',
       sent: 'Sent to transport',
       relayed: 'Relayed',
-      delivered: 'Delivered (ACK verified)',
+      delivered: 'Delivered (receipt acknowledged)',
       failed: 'Failed',
       nativeRequired: 'Requires native module',
       simulationNotice: 'Topological simulation active',
@@ -311,15 +311,15 @@ export const i18nData = {
       resilience: {
         title: 'MESHORA Resilience',
         subtitle: 'Smart connection continuity',
-        description: 'Smooth and calm failover during incidents: zero lost messages, local emergency docs, and offline sharing.'
+        description: 'Continuity during incidents: local queue for undelivered messages, emergency docs readable offline (prototype).'
       }
     },
     home: {
       welcome: 'Your resilient communication space',
-      overview: 'MESHORA unifies your communication links to ensure your conversations remain always accessible.',
+      overview: 'MESHORA aims to unify your communication links so your conversations stay reachable as long as possible (prototype).',
       threeActionsTitle: 'What would you like to do?',
       actionConnectDesc: 'Check your available Internet access, gateways, and tunnels.',
-      actionCommunicateDesc: 'Exchange real-time messages on local or private channels.',
+      actionCommunicateDesc: 'Exchange messages between tabs or through a test relay (prototype).',
       actionDiscoverDesc: 'Understand the architecture and install the app on your devices.',
       realConnections: 'Active links detected',
       outboxStatus: 'Local Outbox Queue',
@@ -331,8 +331,8 @@ export const i18nData = {
       publicChannel: 'Local Public Channel',
       emergencyChannel: 'Mutual Aid & Continuity Channel',
       directChannel: 'Direct Chat',
-      placeholder: 'Write a message (locally protected)...',
-      testNotice: 'Open a 2nd browser tab to test live peer-to-peer messaging instantly!',
+      placeholder: 'Write a message…',
+      testNotice: 'Local test: open a 2nd tab in the same browser. Across devices, a test relay is required.',
       searchPlaceholder: 'Search messages...'
     },
     devices: {

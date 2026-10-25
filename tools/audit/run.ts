@@ -54,13 +54,26 @@ async function appClient(room: string): Promise<Client> {
 }
 
 // ---------- Client « brut » (attaquant) ----------
-type Raw = { ws: WebSocket; inbox: any[]; send: (o: any) => void; close: () => void };
+type Raw = { ws: WebSocket; inbox: any[]; send: (o: any) => void; close: () => void; nonce: () => Promise<string>; closed: () => boolean };
 async function raw(room: string): Promise<Raw> {
   const ws = new WebSocket(`ws://127.0.0.1:${PORT}?room=${room}`);
   const inbox: any[] = [];
+  let isClosed = false;
   ws.onmessage = (e) => { try { inbox.push(JSON.parse(String(e.data))); } catch {} };
+  ws.onclose = () => { isClosed = true; };
   await new Promise<void>((r, j) => { ws.onopen = () => r(); ws.onerror = () => j(new Error('ws')); });
-  return { ws, inbox, send: (o) => ws.send(JSON.stringify(o)), close: () => ws.close() };
+  const nonce = async () => {
+    for (let i = 0; i < 50; i++) { const c = inbox.find((p) => p.type === 'MESHORA_CHALLENGE'); if (c) return c.nonce as string; await sleep(20); }
+    return '';
+  };
+  return { ws, inbox, send: (o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }, close: () => ws.close(), nonce, closed: () => isClosed };
+}
+/** HELLO signé selon le protocole durci (le relais d'origine l'ignore simplement). */
+async function signedHello(r: Raw, room: string, keys: { publicKeyHex: string; privateKeyPkcs8Hex: string }, alias: string, claimedId?: string) {
+  const n = await r.nonce();
+  const sig = await MeshoraCrypto.signData(await MeshoraCrypto.importPrivateKey(keys.privateKeyPkcs8Hex), `MESHORA-HELLO|v1|${room}|${n}|${keys.publicKeyHex}`);
+  const id = claimedId ?? 'msh_' + (await MeshoraCrypto.computeFingerprint(keys.publicKeyHex)).replace(/:/g, '').substring(0, 12);
+  r.send({ type: 'MESHORA_HELLO', senderId: id, senderAlias: alias, publicKey: keys.publicKeyHex, helloSignature: sig, room });
 }
 const record = (id: string, title: string, pass: boolean, evidence: string) => {
   results.push({ id, title, pass, evidence });
@@ -99,7 +112,7 @@ async function main() {
   {
     const room = 't3';
     const A = await appClient(room); await sleep(500);
-    const M = await raw(room); await sleep(300);
+    const M = await raw(room); await signedHello(M, room, await MeshoraCrypto.generateIdentityKeyPair(), 'Participant'); await sleep(400);
     const { id } = await A.call({ cmd: 'send', text: 'T3' }); await sleep(600);
     const before = await A.call({ cmd: 'status', id });
     M.send({ type: 'MESHORA_ACK', ack: { messageId: id, recipientId: 'msh_forge', recipientAlias: 'Faux', timestamp: Date.now(), transport: 'websocket', verified: false } });
@@ -117,7 +130,7 @@ async function main() {
     const bob = await B.call({ cmd: 'identity' });
     const mKeys = await MeshoraCrypto.generateIdentityKeyPair();
     const M = await raw(room);
-    M.send({ type: 'MESHORA_HELLO', senderId: bob.id, senderAlias: bob.alias, publicKey: mKeys.publicKeyHex, room }); await sleep(800);
+    await signedHello(M, room, mKeys, bob.alias, bob.id); await sleep(800); // signe avec SA clé, revendique l'identifiant de Bob
     const secret = 'T4-secret-' + crypto.randomBytes(4).toString('hex');
     const { id } = await A.call({ cmd: 'send', text: secret }); await sleep(1200);
     let mRead = false;
@@ -130,7 +143,7 @@ async function main() {
     M.send({ type: 'MESHORA_ACK', ack: { messageId: id, recipientId: bob.id, recipientAlias: bob.alias, timestamp: ack.timestamp, transport: 'websocket', signature: ack.signatureHex, verified: true, signedAck: ack } });
     await sleep(800);
     const st = await A.call({ cmd: 'status', id });
-    record('T4', 'Un tiers se présentant avec l\'identifiant de Bob ne doit pas recevoir les messages destinés à Bob', !mRead,
+    record('T4', 'Un tiers se présentant avec l\'identifiant de Bob ne doit pas recevoir les messages destinés à Bob', !mRead && bGot,
       `message déchiffré par l'usurpateur=${mRead} ; reçu par le vrai Bob=${bGot} ; statut chez A=${st}`);
     A.proc.kill(); B.proc.kill(); M.close(); await sleep(300);
   }
@@ -140,11 +153,14 @@ async function main() {
     const room = 't5';
     const bobK = await MeshoraCrypto.generateIdentityKeyPair(); const aliceK = await MeshoraCrypto.generateIdentityKeyPair();
     const env = await MeshoraCrypto.encryptEnvelope({ messageId: 'mbx1', senderPrivateKey: aliceK.privateKey, senderPublicKeyHex: aliceK.publicKeyHex, recipientPublicKeyHex: bobK.publicKeyHex, plaintext: 'T5' });
-    const A = await raw(room); A.send({ type: 'MESHORA_ENVELOPE', envelope: env, room }); await sleep(400); // Bob absent → mise en file
-    const M = await raw(room); M.send({ type: 'MESHORA_HELLO', senderId: 'msh_mallory', senderAlias: 'X', publicKey: bobK.publicKeyHex, room }); await sleep(500);
+    const A = await raw(room); await signedHello(A, room, aliceK, 'Alice'); await sleep(200);
+    A.send({ type: 'MESHORA_ENVELOPE', envelope: env, room }); await sleep(400); // Bob absent → mise en file
+    // Mallory déclare la clé publique (publique !) de Bob, avec l'identifiant correspondant, sans pouvoir signer le défi
+    const bobId = 'msh_' + (await MeshoraCrypto.computeFingerprint(bobK.publicKeyHex)).replace(/:/g, '').substring(0, 12);
+    const M = await raw(room); await M.nonce(); M.send({ type: 'MESHORA_HELLO', senderId: bobId, senderAlias: 'X', publicKey: bobK.publicKeyHex, helloSignature: '00'.repeat(64), room }); await sleep(500);
     const stolen = M.inbox.some((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.id === 'mbx1');
     M.close(); await sleep(200);
-    const B = await raw(room); B.send({ type: 'MESHORA_HELLO', senderId: 'msh_bob', senderAlias: 'Bob', publicKey: bobK.publicKeyHex, room }); await sleep(500);
+    const B = await raw(room); await signedHello(B, room, bobK, 'Bob'); await sleep(500);
     const bobGot = B.inbox.some((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.id === 'mbx1');
     record('T5', 'Seul le vrai destinataire peut retirer son courrier en attente', !stolen && bobGot,
       `retiré par un tiers=${stolen} ; reçu ensuite par Bob=${bobGot}`);

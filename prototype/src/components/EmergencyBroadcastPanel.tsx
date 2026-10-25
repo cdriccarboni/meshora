@@ -686,9 +686,8 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
                       <span className="font-mono text-[10px] text-neutral-400">
                         {b.transportUsed}
                       </span>
-                      <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                        <ShieldCheck className="w-3 h-3" />
-                        Signé Ed25519
+                      <span className="font-mono text-[10px] text-neutral-500 dark:text-neutral-400 flex items-center gap-0.5">
+                        {b.signature ? 'Signature présente (non vérifiée)' : 'Non signé · non vérifié'}
                       </span>
                     </div>
 

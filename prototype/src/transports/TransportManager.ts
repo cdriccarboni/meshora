@@ -22,6 +22,7 @@ export const MESH_SCAN_INTERVALS = {
 } as const;
 
 const DEDUP_KEY = 'meshora_processed_ids_v02';
+const OUTBOX_RETRY_MS = 15000;
 
 export class TransportManager {
   private static instance: TransportManager | null = null;
@@ -64,6 +65,14 @@ export class TransportManager {
         this.flushPendingOutbox();
       }
     });
+
+    // Contre-audit V0.2 : renvoi aussi quand un pair (re)devient joignable, et périodiquement tant que l'Outbox n'est pas vide.
+    wsAdapter.onPeersChanged(() => {
+      void this.flushPendingOutbox();
+    });
+    setInterval(() => {
+      if (MessageStore.getOutboxMessages().length > 0) void this.flushPendingOutbox();
+    }, OUTBOX_RETRY_MS);
 
     this.startBackgroundScanner();
   }
@@ -129,6 +138,7 @@ export class TransportManager {
 
     // 2. Dispatch through real active transports
     let dispatched = false;
+    let viaE2EE = false;
     const realTransports: TransportType[] = ['broadcast', 'websocket'];
 
     for (const t of realTransports) {
@@ -136,7 +146,11 @@ export class TransportManager {
       if (adapter && adapter.isAvailable()) {
         try {
           const ok = await adapter.send(message);
-          if (ok) dispatched = true;
+          if (ok) {
+            dispatched = true;
+            // Le transport WebSocket n'émet plus que des enveloppes chiffrées (contre-audit V0.2)
+            if (t === 'websocket') viaE2EE = true;
+          }
         } catch {
           // Continue
         }
@@ -146,6 +160,7 @@ export class TransportManager {
     // 3. STRICT TRUTH: Dispatched on transport means 'sent', NEVER 'delivered' without ACK!
     const finalMsg: MeshMessage = {
       ...message,
+      encrypted: viaE2EE,
       status: dispatched ? 'sent' : 'queued'
     };
     MessageStore.saveMessage(finalMsg);
@@ -154,19 +169,38 @@ export class TransportManager {
     return dispatched;
   }
 
-  public flushPendingOutbox(): number {
-    return MessageStore.flushOutbox((msg) => {
-      let dispatched = false;
+  private flushing = false;
+
+  /**
+   * Contre-audit V0.2 : renvoi réel de l'Outbox. Un message n'est marqué « envoyé » que si un transport
+   * a effectivement accepté l'envoi (résultat attendu, plus de succès présumé). Les messages « envoyés »
+   * restent dans l'Outbox jusqu'à un ACK vérifié et sont renvoyés (le destinataire déduplique par identifiant).
+   */
+  public async flushPendingOutbox(): Promise<number> {
+    if (this.flushing) return 0;
+    this.flushing = true;
+    let count = 0;
+    try {
       const realTransports: TransportType[] = ['broadcast', 'websocket'];
-      for (const t of realTransports) {
-        const adapter = this.adapters.get(t);
-        if (adapter && adapter.isAvailable()) {
-          adapter.send(msg);
-          dispatched = true;
+      for (const msg of MessageStore.getOutboxMessages()) {
+        let ok = false;
+        for (const t of realTransports) {
+          const adapter = this.adapters.get(t);
+          if (adapter && adapter.isAvailable()) {
+            try {
+              if (await adapter.send(msg)) ok = true;
+            } catch {}
+          }
+        }
+        if (ok) {
+          count++;
+          if (msg.status === 'queued') MessageStore.markStatus(msg.id, 'sent');
         }
       }
-      return dispatched;
-    });
+    } finally {
+      this.flushing = false;
+    }
+    return count;
   }
 
   private handleIncomingMessage(msg: MeshMessage): void {
@@ -196,6 +230,10 @@ export class TransportManager {
   }
 
   public handleAck(ack: MessageAck): void {
+    // Contre-audit V0.2 : « délivré » exige un ACK signé et vérifié (relais WebSocket),
+    // ou un ACK d'un autre onglet du MÊME navigateur (BroadcastChannel, même origine : portée locale uniquement).
+    const trusted = ack.verified === true || ack.transport === 'broadcast';
+    if (!trusted) return;
     const existing = MessageStore.getMessageById(ack.messageId);
     if (existing && existing.status !== 'delivered') {
       const confirmed: MeshMessage = {
