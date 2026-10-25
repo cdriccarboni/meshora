@@ -371,7 +371,7 @@ export class WebSocketTransport implements ITransportAdapter {
           this.remotePeers.clear();
           const myId = getOrCreateIdentity();
           for (const p of packet.peers) {
-            if (p && p.id !== myId.id && (await WebSocketTransport.idMatchesKey(p.id, p.publicKey))) {
+            if (p && p.id !== myId.id && (await WebSocketTransport.idMatchesKey(p.id, (p as MeshPeer & { publicKey?: string }).publicKey))) {
               this.remotePeers.set(p.id, { ...p, verified: false });
             }
           }

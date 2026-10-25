@@ -37,6 +37,9 @@ function connectTestClient(urlStr: string): Promise<{
       let resolveChallenge: (c: { nonce: string; room: string }) => void = () => {};
       const challenge = new Promise<{ nonce: string; room: string }>((r) => (resolveChallenge = r));
 
+      // Contre-audit V0.2 : les octets reçus avec la réponse 101 (« head ») contiennent déjà le défi du relais ;
+      // ils sont décodés immédiatement au lieu d'attendre le prochain paquet.
+      setImmediate(() => socket.emit('data', Buffer.alloc(0)));
       socket.on('data', (chunk) => {
         buffer = Buffer.concat([buffer, chunk]);
 
