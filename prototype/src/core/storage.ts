@@ -2,54 +2,45 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
+ * Stockage persistant avec gestion d'Outbox et suivi d'accusés de réception.
  */
 
 import { MeshMessage } from '../types';
 
-const MESSAGES_KEY = 'meshora_messages_store_v01';
-const OUTBOX_KEY = 'meshora_outbox_queue_v01';
+const MESSAGES_KEY = 'meshora_messages_store_v02';
+const OUTBOX_KEY = 'meshora_outbox_queue_v02';
 
-const INITIAL_MESSAGES: MeshMessage[] = [
-  {
-    id: 'msh_msg_seed_1',
-    senderId: 'msh_system_core',
-    senderAlias: 'Système MESHORA',
-    recipientId: 'broadcast',
-    channelId: 'general',
-    content: 'Bienvenue sur le canal local de MESHORA. La liaison directe est prête.',
-    timestamp: Date.now() - 3600000,
-    status: 'delivered',
-    transport: 'broadcast',
-    hops: 0,
-    encrypted: true
-  },
-  {
-    id: 'msh_msg_seed_2',
-    senderId: 'msh_node_relais_nord',
-    senderAlias: 'Relais-Nord-84',
-    recipientId: 'broadcast',
-    channelId: 'general',
-    content: 'Passerelle locale active sur le sous-réseau. Connexion fluide.',
-    timestamp: Date.now() - 1800000,
-    status: 'delivered',
-    transport: 'lan',
-    hops: 1,
-    encrypted: true
-  },
-  {
-    id: 'msh_msg_seed_3',
-    senderId: 'msh_system_resilience',
-    senderAlias: 'Sentinelle Résilience',
-    recipientId: 'broadcast',
-    channelId: 'emergency',
-    content: 'Canal d’entraide et de continuité configuré. Zéro perte de message garantie via l’Outbox locale.',
-    timestamp: Date.now() - 600000,
-    status: 'delivered',
-    transport: 'broadcast',
-    hops: 0,
-    encrypted: true
-  }
-];
+const INITIAL_MESSAGES: MeshMessage[] = [];
+
+// Fallback mémoire pour environnements headless / CLI / tests
+const memoryFallback = new Map<string, string>();
+
+function safeGetItem(key: string): string | null {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+  } catch {}
+  return memoryFallback.get(key) || null;
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  } catch {}
+  memoryFallback.set(key, value);
+}
+
+function safeRemoveItem(key: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  } catch {}
+  memoryFallback.delete(key);
+}
 
 export class MessageStore {
   private static listeners: Set<() => void> = new Set();
@@ -71,9 +62,9 @@ export class MessageStore {
 
   public static getAllMessages(): MeshMessage[] {
     try {
-      const raw = localStorage.getItem(MESSAGES_KEY);
+      const raw = safeGetItem(MESSAGES_KEY);
       if (!raw) {
-        localStorage.setItem(MESSAGES_KEY, JSON.stringify(INITIAL_MESSAGES));
+        safeSetItem(MESSAGES_KEY, JSON.stringify(INITIAL_MESSAGES));
         return INITIAL_MESSAGES;
       }
       return JSON.parse(raw);
@@ -82,14 +73,22 @@ export class MessageStore {
     }
   }
 
+  public static getMessageById(id: string): MeshMessage | undefined {
+    return this.getAllMessages().find((m) => m.id === id);
+  }
+
   public static getOutboxMessages(): MeshMessage[] {
     try {
-      const raw = localStorage.getItem(OUTBOX_KEY);
+      const raw = safeGetItem(OUTBOX_KEY);
       if (!raw) return [];
       return JSON.parse(raw);
     } catch {
       return [];
     }
+  }
+
+  public static getOutbox(): MeshMessage[] {
+    return this.getOutboxMessages();
   }
 
   public static saveMessage(msg: MeshMessage): void {
@@ -102,25 +101,28 @@ export class MessageStore {
     }
 
     try {
-      localStorage.setItem(MESSAGES_KEY, JSON.stringify(list));
+      safeSetItem(MESSAGES_KEY, JSON.stringify(list));
     } catch {
       // quota fallback
     }
 
-    // Update outbox if queued
-    if (msg.status === 'queued') {
+    // Outbox retention: message remains in outbox until delivered with verified ACK
+    if (msg.status === 'queued' || msg.status === 'sent') {
       const outbox = this.getOutboxMessages();
-      if (!outbox.some((m) => m.id === msg.id)) {
+      const outboxIdx = outbox.findIndex((m) => m.id === msg.id);
+      if (outboxIdx >= 0) {
+        outbox[outboxIdx] = msg;
+      } else {
         outbox.push(msg);
-        try {
-          localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
-        } catch {}
       }
-    } else {
-      // Remove from outbox if delivered/relayed
+      try {
+        safeSetItem(OUTBOX_KEY, JSON.stringify(outbox));
+      } catch {}
+    } else if (msg.status === 'delivered') {
+      // Remove from outbox ONLY when reception is confirmed
       const outbox = this.getOutboxMessages().filter((m) => m.id !== msg.id);
       try {
-        localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
+        safeSetItem(OUTBOX_KEY, JSON.stringify(outbox));
       } catch {}
     }
 
@@ -128,8 +130,7 @@ export class MessageStore {
   }
 
   public static markStatus(msgId: string, status: MeshMessage['status']): void {
-    const list = this.getAllMessages();
-    const target = list.find((m) => m.id === msgId);
+    const target = this.getMessageById(msgId);
     if (target) {
       target.status = status;
       this.saveMessage(target);
@@ -142,7 +143,7 @@ export class MessageStore {
     outbox.forEach((msg) => {
       const success = sendFn(msg);
       if (success) {
-        this.markStatus(msg.id, 'relayed');
+        this.markStatus(msg.id, 'sent');
         countFlushed++;
       }
     });
@@ -150,10 +151,8 @@ export class MessageStore {
   }
 
   public static clearAll(): void {
-    try {
-      localStorage.removeItem(MESSAGES_KEY);
-      localStorage.removeItem(OUTBOX_KEY);
-    } catch {}
+    safeRemoveItem(MESSAGES_KEY);
+    safeRemoveItem(OUTBOX_KEY);
     this.notify();
   }
 }

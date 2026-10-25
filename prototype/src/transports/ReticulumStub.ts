@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
+ * Spécification et Stub Reticulum Network Stack (Démon natif requis).
  */
 
 import { MeshMessage, MeshPeer } from '../types';
@@ -19,12 +20,11 @@ export class ReticulumStub implements ITransportAdapter {
   }
 
   public isNativeRequired(): boolean {
-    return true; // Cryptographic autonomous mesh stack requires Python daemon or native library
+    return true; // Pile autonome nécessitant un démon système RNS
   }
 
-  public async send(message: MeshMessage): Promise<boolean> {
-    console.info('[MESHORA-Reticulum] Identity destination packet encoded:', message.id);
-    return true;
+  public async send(_message: MeshMessage): Promise<boolean> {
+    return false;
   }
 
   public onMessage(callback: (message: MeshMessage) => void): () => void {
@@ -33,18 +33,6 @@ export class ReticulumStub implements ITransportAdapter {
   }
 
   public async discoverPeers(): Promise<MeshPeer[]> {
-    return [
-      {
-        id: 'rns_dest_node_7',
-        alias: 'Destination RNS (Auto-routée)',
-        transport: 'reticulum',
-        hops: 3,
-        rssi: -74,
-        lastSeen: Date.now() - 300000,
-        isGateway: false,
-        capabilities: ['reticulum_identity', 'end_to_end_routing'],
-        verified: true
-      }
-    ];
+    return [];
   }
 }

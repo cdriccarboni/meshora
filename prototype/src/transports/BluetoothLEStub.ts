@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
+ * Spécification et Stub Bluetooth Low Energy (Module natif requis).
  */
 
 import { MeshMessage, MeshPeer } from '../types';
@@ -15,17 +16,17 @@ export class BluetoothLEStub implements ITransportAdapter {
   private messageListeners: Set<(msg: MeshMessage) => void> = new Set();
 
   public isAvailable(): boolean {
-    return false; // Native module required for continuous background mesh
+    // Non disponible en PWA/navigateur standard : nécessite une application native (iOS/Android)
+    return false;
   }
 
   public isNativeRequired(): boolean {
-    return true; // Explicitly marked as requiring native module
+    return true;
   }
 
-  public async send(message: MeshMessage): Promise<boolean> {
-    // In web environment, log intent and simulate packet dispatch
-    console.info('[MESHORA-BLE] Simulation dispatch via stub:', message.id);
-    return true;
+  public async send(_message: MeshMessage): Promise<boolean> {
+    // Échec explicite : aucun transport natif n'est connecté dans le navigateur
+    return false;
   }
 
   public onMessage(callback: (message: MeshMessage) => void): () => void {
@@ -34,19 +35,7 @@ export class BluetoothLEStub implements ITransportAdapter {
   }
 
   public async discoverPeers(): Promise<MeshPeer[]> {
-    return [
-      {
-        id: 'peer_ble_phone_1',
-        alias: 'Smartphone Voisin (BLE)',
-        transport: 'bluetooth',
-        hops: 1,
-        rssi: -68,
-        lastSeen: Date.now() - 45000,
-        isGateway: false,
-        capabilities: ['p2p_direct'],
-        batteryPercent: 88,
-        verified: false
-      }
-    ];
+    // STRICT TRUTH : Aucun pair simulé inventé
+    return [];
   }
 }

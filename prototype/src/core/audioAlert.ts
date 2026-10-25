@@ -21,7 +21,7 @@ export function playEmergencyChime(severity: 'critical' | 'urgent' | 'advisory' 
       const now = ctx.currentTime;
 
       if (severity === 'critical') {
-        // High-contrast alternating warning tone (SOS beacon)
+        // Sonnerie d'alerte haute priorité
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(880, now);
         osc.frequency.setValueAtTime(1760, now + 0.15);

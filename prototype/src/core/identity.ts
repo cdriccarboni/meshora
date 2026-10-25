@@ -1,21 +1,13 @@
 /**
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
- * MESHORA — Un réseau qui relie les autres.
+ * MESHORA — Gestion de l'Identité Cryptographique Réelle
  */
 
 import { AppIdentity } from '../types';
+import { MeshoraCrypto } from './crypto';
 
-const IDENTITY_KEY = 'meshora_device_identity_v01';
-
-function generateRandomHex(length: number): string {
-  const chars = '0123456789abcdef';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+const IDENTITY_KEY = 'meshora_device_identity_v02';
 
 const DEFAULT_ALIASES = [
   'Nœud-Orion',
@@ -28,46 +20,103 @@ const DEFAULT_ALIASES = [
   'Relais-Polaris'
 ];
 
+let cachedIdentity: AppIdentity | null = null;
+let initPromise: Promise<AppIdentity> | null = null;
+
+export async function ensureCryptographicIdentity(): Promise<AppIdentity> {
+  if (cachedIdentity && cachedIdentity.privateKeyPkcs8Hex) {
+    return cachedIdentity;
+  }
+
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = (async () => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(IDENTITY_KEY) : null;
+      if (raw) {
+        const parsed: AppIdentity = JSON.parse(raw);
+        // Vérifier qu'il s'agit bien d'une vraie clé SPKI hexadécimale valide et d'une clé privée
+        if (parsed.publicKey && parsed.privateKeyPkcs8Hex && !parsed.publicKey.startsWith('ed25519_')) {
+          cachedIdentity = parsed;
+          return parsed;
+        }
+      }
+    } catch {
+      // Régénération si corrompu
+    }
+
+    // Génération d'une paire de clés ECDSA P-256 réelle
+    const keyPair = await MeshoraCrypto.generateIdentityKeyPair();
+    const fingerprint = await MeshoraCrypto.computeFingerprint(keyPair.publicKeyHex);
+    const randomAlias = DEFAULT_ALIASES[Math.floor(Math.random() * DEFAULT_ALIASES.length)] + '-' + Math.floor(100 + Math.random() * 900);
+    const id = 'msh_' + fingerprint.replace(/:/g, '').substring(0, 12);
+
+    const newIdentity: AppIdentity = {
+      id,
+      alias: randomAlias,
+      fingerprint,
+      publicKey: keyPair.publicKeyHex,
+      privateKeyPkcs8Hex: keyPair.privateKeyPkcs8Hex,
+      createdAt: Date.now()
+    };
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(IDENTITY_KEY, JSON.stringify(newIdentity));
+      }
+    } catch {
+      // Quota fallback
+    }
+
+    cachedIdentity = newIdentity;
+    return newIdentity;
+  })();
+
+  return initPromise;
+}
+
 export function getOrCreateIdentity(): AppIdentity {
+  if (cachedIdentity) {
+    return cachedIdentity;
+  }
+
   try {
-    const raw = localStorage.getItem(IDENTITY_KEY);
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(IDENTITY_KEY) : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.id && parsed.fingerprint) {
+      if (parsed.publicKey && parsed.privateKeyPkcs8Hex && !parsed.publicKey.startsWith('ed25519_')) {
+        cachedIdentity = parsed;
         return parsed;
       }
     }
   } catch {
-    // fallback to new identity
+    // Fallback
   }
 
-  const id = 'msh_' + generateRandomHex(12);
-  const randomAlias = DEFAULT_ALIASES[Math.floor(Math.random() * DEFAULT_ALIASES.length)] + '-' + Math.floor(100 + Math.random() * 900);
-  const fingerprint = '4d53:' + generateRandomHex(4) + ':' + generateRandomHex(4) + ':' + generateRandomHex(4) + ':' + generateRandomHex(4);
-  const publicKey = 'ed25519_' + generateRandomHex(32);
+  // Déclencher l'initialisation asynchrone en arrière-plan
+  ensureCryptographicIdentity();
 
-  const newIdentity: AppIdentity = {
-    id,
-    alias: randomAlias,
-    fingerprint,
-    publicKey,
+  // Objet temporaire valide le temps que l'asynchrone termine (immédiat)
+  const tempIdentity: AppIdentity = {
+    id: 'msh_init_' + Math.random().toString(36).substring(2, 8),
+    alias: 'Nœud-Meshora',
+    fingerprint: 'En cours de génération...',
+    publicKey: '',
     createdAt: Date.now()
   };
-
-  try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify(newIdentity));
-  } catch {
-    // Ignore storage quota
-  }
-
-  return newIdentity;
+  return tempIdentity;
 }
 
 export function updateIdentityAlias(newAlias: string): AppIdentity {
   const current = getOrCreateIdentity();
   const updated = { ...current, alias: newAlias.trim() || current.alias };
+  cachedIdentity = updated;
   try {
-    localStorage.setItem(IDENTITY_KEY, JSON.stringify(updated));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(IDENTITY_KEY, JSON.stringify(updated));
+    }
   } catch {
     // Ignore
   }

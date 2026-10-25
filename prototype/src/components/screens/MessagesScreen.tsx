@@ -78,7 +78,7 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
       channelId: selectedChannel,
       content: inputText.trim(),
       timestamp: Date.now(),
-      status: networkStatus === 'offline' ? 'queued' : 'delivered',
+      status: 'queued',
       transport: 'broadcast',
       hops: 0,
       encrypted: true
@@ -90,18 +90,19 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
 
   const handleSendSimulatedNeighbor = () => {
     const neighborAliases = ['Relais-Sélène-88', 'Nœud-Zénith-12', 'Vigie-Atlas-99'];
-    const alias = neighborAliases[Math.floor(Math.random() * neighborAliases.length)];
+    const rawAlias = neighborAliases[Math.floor(Math.random() * neighborAliases.length)];
+    const alias = `[SIMULATION] ${rawAlias}`;
     const simulatedMsg: MeshMessage = {
       id: 'sim_msg_' + Date.now(),
-      senderId: 'msh_neighbor_' + Math.random().toString(36).substring(2, 6),
+      senderId: 'msh_neighbor_sim_' + Math.random().toString(36).substring(2, 6),
       senderAlias: alias,
       recipientId: 'broadcast',
       channelId: selectedChannel,
       content: lang === 'fr' 
-        ? `Bonjour du ${alias}. Liaison radio locale établie avec succès.`
-        : `Hello from ${alias}. Local direct radio link established.`,
+        ? `[SIMULATION LOCALE] Paquet de test injecté pour démonstration d'interface.`
+        : `[LOCAL SIMULATION] Test packet injected for UI demonstration.`,
       timestamp: Date.now(),
-      status: 'delivered',
+      status: 'relayed',
       transport: 'lan',
       hops: 1,
       encrypted: true
@@ -209,21 +210,32 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
                 {isMe && (
                   <div className="flex items-center gap-1 mt-0.5 text-[10px] text-neutral-400 px-1">
                     {msg.status === 'queued' && (
-                      <span className="flex items-center gap-1 text-amber-500">
+                      <span className="flex items-center gap-1 text-amber-500" title="En attente dans la file locale">
                         <Clock className="w-3 h-3" />
                         {t.status.queued}
                       </span>
                     )}
+                    {msg.status === 'sent' && (
+                      <span className="flex items-center gap-1 text-sky-500" title="Transmis au transport (en attente d'accusé de réception)">
+                        <Send className="w-3 h-3" />
+                        {t.status.sent}
+                      </span>
+                    )}
                     {msg.status === 'relayed' && (
-                      <span className="flex items-center gap-1 text-blue-500">
+                      <span className="flex items-center gap-1 text-blue-500" title="Relayé par un nœud intermédiaire">
                         <RefreshCw className="w-3 h-3" />
                         {t.status.relayed}
                       </span>
                     )}
                     {msg.status === 'delivered' && (
-                      <span className="flex items-center gap-1 text-emerald-500">
+                      <span className="flex items-center gap-1 text-emerald-500 font-medium" title="Accusé de réception vérifié">
                         <Check className="w-3 h-3" />
                         {t.status.delivered}
+                      </span>
+                    )}
+                    {msg.status === 'failed' && (
+                      <span className="flex items-center gap-1 text-rose-500" title="Échec d'envoi">
+                        ✕ {t.status.failed}
                       </span>
                     )}
                     <span className="text-neutral-500">·</span>

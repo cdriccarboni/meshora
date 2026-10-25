@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
- * Panneau de Diffusion d'Urgence Mesh & Bluetooth
+ * Panneau d'Entraide et d'Alertes Locales (Simulation)
  */
 
 import React, { useState, useEffect } from 'react';
@@ -54,7 +54,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
   const [filterType, setFilterType] = useState<'all' | 'critical' | 'resources'>('all');
   
   // Composer form state
-  const [selectedType, setSelectedType] = useState<EmergencyBroadcastType>('sos');
+  const [selectedType, setSelectedType] = useState<EmergencyBroadcastType>('medical');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [severity, setSeverity] = useState<EmergencySeverity>('critical');
@@ -89,13 +89,13 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
     icon: React.ReactNode; 
     color: string 
   }> = {
-    sos: {
-      labelFr: 'SOS Vitale',
-      labelEn: 'Vital SOS',
-      titleFr: '[SOS VITAL] Détresse civile immédiate',
-      titleEn: '[VITAL SOS] Immediate civil distress',
-      msgFr: 'Personne en danger immédiat sans réseau ni secours. Assistance de proximité requise.',
-      msgEn: 'Person in immediate danger with no cellular access. Proximity mutual aid required.',
+    priority: {
+      labelFr: 'Alerte Prioritaire',
+      labelEn: 'Priority Alert',
+      titleFr: '[SIMULATION] Alerte civile locale',
+      titleEn: '[SIMULATION] Local civil alert',
+      msgFr: 'Message de vigilance et d’entraide locale. Ne remplace pas le 112.',
+      msgEn: 'Proximity vigilance notice. Does not replace 112.',
       severity: 'critical',
       icon: <AlertTriangle className="w-4 h-4 text-rose-500" />,
       color: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
@@ -165,7 +165,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
     setSeverity(p.severity);
   };
 
-  const handleOpenComposer = (defaultType: EmergencyBroadcastType = 'sos') => {
+  const handleOpenComposer = (defaultType: EmergencyBroadcastType = 'priority') => {
     handleSelectPreset(defaultType);
     setShowComposer(true);
   };
@@ -292,7 +292,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
 
   // Filtered broadcast list
   const filteredBroadcasts = broadcasts.filter((b) => {
-    if (filterType === 'critical') return b.severity === 'critical' || b.type === 'sos' || b.type === 'medical';
+    if (filterType === 'critical') return b.severity === 'critical' || b.type === 'priority' || b.type === 'medical';
     if (filterType === 'resources') return b.type === 'water_food' || b.type === 'shelter';
     return true;
   });
@@ -302,12 +302,16 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
       {/* Notice de sécurité impérative */}
       <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-2">
         <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-        <p className="leading-snug m-0">
-          <strong>{lang === 'fr' ? 'Réseau civil de proximité :' : 'Civil mesh network:'}</strong>{' '}
-          {lang === 'fr' 
-            ? 'Ces alertes sont diffusées de pair-à-pair entre utilisateurs proches de MESHORA. Elles ne joignent PAS directement les services officiels d’urgence (112, 15, 17, 18). En cas d’urgence vitale, composez le 112 si le réseau cellulaire est disponible.'
-            : 'These alerts are relayed peer-to-peer among nearby MESHORA users. They do NOT contact official emergency services (112, 911). In a life-threatening emergency, call 112/911 if cellular service is available.'}
-        </p>
+        <div className="leading-snug m-0">
+          <p className="font-semibold text-amber-800 dark:text-amber-200 mb-1">
+            ⚠️ {lang === 'fr' ? 'Fonction expérimentale. Aucune réception d’alerte n’est garantie. Ne remplace pas les services d’urgence.' : 'Experimental feature. Alert delivery is not guaranteed. Does not replace emergency services.'}
+          </p>
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 m-0">
+            {lang === 'fr' 
+              ? 'Ces avis sont échangés de pair-à-pair sur le maillage local civil. Ils ne contactent PAS le 112, le 15 ou les pompiers. Pour toute situation critique, composez le 112 dès qu’un réseau cellulaire est disponible.'
+              : 'These notices are relayed peer-to-peer on the local civil mesh. They do NOT contact official 112/911 emergency services. In a life-threatening situation, call 112/911 when cellular service is available.'}
+          </p>
+        </div>
       </div>
 
       {/* Header with emergency beacon signal */}
@@ -323,7 +327,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
               <span>{t.resilience.broadcastTitle}</span>
             </h2>
             <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-              BLE + Mesh Radio
+              Canal Local (Broadcast / Relais)
             </span>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -355,7 +359,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
           </button>
 
           <button
-            onClick={() => handleOpenComposer('sos')}
+            onClick={() => handleOpenComposer('priority')}
             className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-sm transition active:scale-95 flex items-center gap-1.5"
           >
             <Radio className="w-4 h-4 animate-pulse" />
@@ -460,7 +464,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={lang === 'fr' ? 'Ex: [SOS VITAL] Blessé secteur pont...' : 'Ex: [VITAL SOS] Injured near bridge...'}
+                placeholder={lang === 'fr' ? 'Ex: [SIMULATION] Route coupée secteur pont...' : 'Ex: [SIMULATION] Blocked road near bridge...'}
                 className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 font-medium"
                 required
               />
@@ -564,7 +568,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
                   : 'text-neutral-500 hover:text-rose-500'
               }`}
             >
-              {lang === 'fr' ? 'SOS & Médical' : 'SOS & Medical'}
+              {lang === 'fr' ? 'Priorité & Médical' : 'Priority & Medical'}
             </button>
             <button
               onClick={() => setFilterType('resources')}
@@ -591,7 +595,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
             filteredBroadcasts.map((b) => {
               const isCritical = b.severity === 'critical';
               const isUrgent = b.severity === 'urgent';
-              const p = presets[b.type] || presets.sos;
+              const p = presets[b.type] || presets.priority;
 
               return (
                 <div
@@ -720,7 +724,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
         </div>
       </div>
 
-      {/* Visual SOS & Whistle Strobe Fullscreen Modal */}
+      {/* Visual Strobe & Whistle Survival Tool Modal */}
       {showStrobeModal && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 bg-black/95 backdrop-blur-md text-white animate-fade-in">
           {/* Strobe flasher surface */}
@@ -739,7 +743,7 @@ export const EmergencyBroadcastPanel: React.FC<EmergencyBroadcastPanelProps> = (
             <div className="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full border border-white/20">
               <Eye className="w-4 h-4 text-amber-400 animate-pulse" />
               <span className="text-xs font-bold tracking-wider">
-                BALISE DE DÉTRESSE VISUELLE SOS (... --- ...)
+                SIGNAL LUMINEUX DE VISIBILITÉ LOCALE
               </span>
             </div>
             <button

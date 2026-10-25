@@ -19,7 +19,7 @@ import { DiscoverScreen } from './components/screens/DiscoverScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { AutomatedTestsModal } from './components/AutomatedTestsModal';
 import { Language } from './core/i18n';
-import { getOrCreateIdentity } from './core/identity';
+import { getOrCreateIdentity, ensureCryptographicIdentity } from './core/identity';
 import { NetworkSentinel } from './core/networkSentinel';
 import { ShieldManager } from './shield/ShieldManager';
 import { MessageStore } from './core/storage';
@@ -36,8 +36,12 @@ export default function App() {
   const [outboxCount, setOutboxCount] = useState<number>(0);
   const [isTestsModalOpen, setIsTestsModalOpen] = useState(false);
 
-  // Initialize network sentinel & services
+  // Initialize cryptographic identity, network sentinel & services
   useEffect(() => {
+    ensureCryptographicIdentity().then((realId) => {
+      setIdentity(realId);
+    });
+
     NetworkSentinel.init();
     TransportManager.getInstance();
 

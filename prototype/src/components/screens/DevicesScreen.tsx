@@ -61,9 +61,27 @@ export const DevicesScreen: React.FC<DevicesScreenProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Peer list */}
+      {/* Peer list or empty state */}
       <div className="space-y-2.5">
-        {peers.map((peer) => (
+        {peers.length === 0 && !isScanning ? (
+          <div className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-3">
+            <Radio className="w-8 h-8 text-neutral-400 mx-auto" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                {lang === 'fr' ? 'Aucun appareil à proximité détecté' : 'No nearby devices detected'}
+              </h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                {lang === 'fr'
+                  ? 'Pour tester en direct : ouvrez un second onglet sur ce navigateur (découverte par BroadcastChannel) ou connectez un relais WebSocket.'
+                  : 'To test live: open a second tab in this browser (discovered via BroadcastChannel) or connect a WebSocket relay.'}
+              </p>
+            </div>
+            <div className="inline-block px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] text-neutral-600 dark:text-neutral-400 font-mono">
+              BLE & Radio physique : en attente de runtime natif
+            </div>
+          </div>
+        ) : (
+          peers.map((peer) => (
           <div
             key={peer.id}
             className="p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center justify-between gap-3 text-xs"
@@ -112,7 +130,8 @@ export const DevicesScreen: React.FC<DevicesScreenProps> = ({ lang }) => {
               </div>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </div>
   );

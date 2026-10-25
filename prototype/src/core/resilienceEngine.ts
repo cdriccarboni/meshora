@@ -21,32 +21,31 @@ import { playEmergencyChime } from './audioAlert';
 const EMERGENCY_DOCS: EmergencyDoc[] = [
   {
     id: 'doc_secours_01',
-    title: 'Fiche d’Urgence : Premiers Secours & Numéros de Continuité',
+    title: 'Fiche Réflexe : Premiers Secours (Source : Croix-Rouge / Service-public.fr)',
     category: 'medical',
-    summary: 'Protocoles de premier secours, position latérale de sécurité, massage cardiaque et fréquences locales.',
-    content: `1. Protection et Alerte : Évaluer la sécurité de la zone avant d'intervenir.
-2. Numéro européen d'urgence universel : 112 (fonctionne sans carte SIM sur tout réseau mobile détecté).
-3. Position Latérale de Sécurité (PLS) : Si la victime est inconsciente mais respire normalement.
-4. Réanimation Cardio-Pulmonaire : 30 compressions thoraciques au centre de la poitrine, rythme 100 à 120 bpm, puis 2 insufflations.
-5. Fiche médicale locale : Garder une copie écrite des groupes sanguins et allergies du foyer dans un étui étanche.`,
+    summary: 'Protocoles de premier secours : protection, alerte, PLS, arrêt cardiaque et DAE.',
+    content: `1. Protection et Alerte : Évaluer la sécurité de la zone avant d'intervenir. Alerter immédiatement le 15 (SAMU), le 18 (Pompiers) ou le 112 (Numéro d'urgence européen, appel gratuit sur tout réseau cellulaire disponible).
+2. Position Latérale de Sécurité (PLS) : Si la victime est inconsciente mais respire normalement, la placer sur le côté en maintenant les voies aériennes libres.
+3. Arrêt cardiaque & DAE : Faire apporter immédiatement un Défibrillateur Automatisé Externe (DAE). Réaliser 30 compressions thoraciques au centre de la poitrine (rythme 100 à 120 bpm) suivies de 2 insufflations, ou compressions continues jusqu'à l'arrivée des secours.
+4. Fiche médicale : Conserver une copie des traitements vitaux, allergies et groupes sanguins du foyer dans un étui étanche.`,
     updatedAt: '2026-10-25'
   },
   {
     id: 'doc_radio_02',
-    title: 'Protocole Radio PMR446 & Canaux Mesh Locaux',
+    title: 'Protocole Radio PMR446 & Meshtastic (Source : meshtastic.org)',
     category: 'radio',
     summary: 'Canaux de communication de proximité libres sans licence (PMR446, LoRa Meshtastic).',
-    content: `1. Canal PMR446 Canal 7 (446.08125 MHz) CTCSS 7 (85.4 Hz) : Fréquence d'appel de sécurité en zone montagne / rurale.
-2. Canal PMR446 Canal 8 (446.09375 MHz) : Canal d'appel général de proximité.
-3. LoRa Meshtastic : Canal "LongFast" par défaut (Slot 868.250 MHz en Europe, 915 MHz aux Amériques).
-4. Règles de transmission : Soyez bref, clair, annoncez votre identifiant et écoutez 5 secondes avant d'émettre pour ne pas saturer le relais.`,
+    content: `1. Canal PMR446 Canal 7 (446.08125 MHz) CTCSS 7 (85.4 Hz) : Fréquence d'appel de sécurité en zone rurale / montagneuse.
+2. Canal PMR446 Canal 8 (446.09375 MHz) : Canal d'appel général de proximité libre.
+3. LoRa Meshtastic Europe : Canal LongFast par défaut à 869.525 MHz (sous-bande 869.4-869.65 MHz, max 500mW ERP, duty cycle 10% conforme réglementation CE).
+4. Règles de transmission : Soyez bref, clair, annoncez votre identifiant et écoutez 5 secondes avant d'émettre pour ne pas saturer le maillage.`,
     updatedAt: '2026-10-25'
   },
   {
     id: 'doc_eau_03',
     title: 'Protocole de Continuité : Eau Potable & Énergie',
     category: 'survival',
-    summary: 'Procédés simples de filtration, ébullition et gestion sobre de l’énergie de vos appareils.',
+    summary: 'Procédés de filtration, ébullition et gestion sobre de l’énergie des appareils.',
     content: `1. Ébullition : Faire bouillir à gros bouillons pendant 1 minute complète (3 minutes au-delà de 2000m d'altitude).
 2. Conservation de batterie : Basculez votre smartphone en mode avion dès que le signal mobile est nul (la recherche continue de réseau décharge 5x plus vite la batterie).
 3. Stock tampon : Prévoir au moins 2 litres d'eau potable par personne et par jour pour une autonomie minimale de 72 heures.`,
@@ -54,71 +53,11 @@ const EMERGENCY_DOCS: EmergencyDoc[] = [
   }
 ];
 
-const INITIAL_ALERTS: CommunityAlert[] = [
-  {
-    id: 'alert_001',
-    senderId: 'msh_relais_commune_04',
-    senderAlias: 'Mairie / Relais Municipalité',
-    title: 'Point d’eau potable et recharge solaire ouvert',
-    message: 'Le gymnase central met à disposition des prises pour recharge d’appareils et une fontaine d’eau potable en continu.',
-    level: 'info',
-    timestamp: Date.now() - 7200000,
-    signature: 'sig_ed25519_verified_94a7',
-    verified: true
-  }
-];
+const INITIAL_ALERTS: CommunityAlert[] = [];
 
-const EMERGENCY_BROADCASTS_KEY = 'meshora_emergency_broadcasts_v02';
+const EMERGENCY_BROADCASTS_KEY = 'meshora_emergency_broadcasts_v03';
 
-const INITIAL_EMERGENCY_BROADCASTS: EmergencyBroadcast[] = [
-  {
-    id: 'broadcast_sos_med_01',
-    type: 'medical',
-    title: 'Urgence Médicale · Besoin trousse de réanimation / pansements',
-    message: 'Personne blessée suite à chute de débris secteur Rue des Relais. Conscience conservée, besoin urgent de pansements compressifs et désinfectant.',
-    severity: 'critical',
-    senderId: 'msh_neighbor_med_01',
-    senderAlias: 'Secours-Citoyen-Quartier',
-    timestamp: Date.now() - 15 * 60 * 1000,
-    coordinates: {
-      lat: 48.859,
-      lng: 2.355,
-      gridX: 510,
-      gridY: 160,
-      label: 'Poste de Premiers Secours (510, 160)'
-    },
-    hops: 1,
-    transportUsed: 'BroadcastChannel + BLE Beacon (Relayé)',
-    signature: 'sig_ed25519_8bf2',
-    verified: true,
-    relayCount: 3,
-    relayedBy: ['Relais-Boréal-24', 'Nœud-Zénith-12'],
-    batteryPercent: 78
-  },
-  {
-    id: 'broadcast_eau_02',
-    type: 'water_food',
-    title: 'Distribution d’eau potable gravitaire active',
-    message: 'La borne fontaine publique du parc fonctionne à débit nominal continu sans électricité. Récipients propres disponibles sur place.',
-    severity: 'advisory',
-    senderId: 'msh_water_stn_02',
-    senderAlias: 'Vigie-Ravitaillement-Sud',
-    timestamp: Date.now() - 45 * 60 * 1000,
-    coordinates: {
-      lat: 48.854,
-      lng: 2.348,
-      gridX: 260,
-      gridY: 310,
-      label: 'Borne Fontaine d’Eau Potable (260, 310)'
-    },
-    hops: 2,
-    transportUsed: 'LoRa Meshtastic (LongFast 868MHz)',
-    signature: 'sig_ed25519_17e4',
-    verified: true,
-    relayCount: 5,
-    relayedBy: ['Relais-Boréal-24', 'Passerelle-Sud-62']
-  }
-];
+const INITIAL_EMERGENCY_BROADCASTS: EmergencyBroadcast[] = [];
 
 const MAP_POINTS_KEY = 'meshora_offline_map_points_v01';
 
@@ -166,7 +105,7 @@ const INITIAL_MAP_POINTS: OfflineMapPoint[] = [
     description: 'Fontaine publique gravitaire en débit continu, opérationnelle sans alimentation électrique.',
     status: 'active',
     verified: true,
-    contactAlias: 'Services Techniques Mairie',
+    contactAlias: 'Point d’Eau Citoyen',
     lastUpdated: Date.now() - 86400000,
     distanceMeters: 310
   },
@@ -211,7 +150,7 @@ const INITIAL_MAP_POINTS: OfflineMapPoint[] = [
     description: 'Salle d’accueil chauffée avec couchages de secours, point d’information et réserve d’eau.',
     status: 'active',
     verified: true,
-    contactAlias: 'Coordination Municipale',
+    contactAlias: 'Collectif d’Entraide Locale',
     lastUpdated: Date.now() - 21600000,
     distanceMeters: 620
   },
@@ -551,8 +490,8 @@ export class ResilienceEngine {
       message: message.trim(),
       level: 'advisory',
       timestamp: Date.now(),
-      signature: 'sig_ed25519_' + Math.random().toString(36).substring(2, 8),
-      verified: true
+      signature: '',
+      verified: false
     };
     this.alerts.unshift(newAlert);
     this.notify();
@@ -608,11 +547,12 @@ export class ResilienceEngine {
       senderAlias: data.senderAlias,
       senderId: data.senderId,
       timestamp: Date.now(),
+      status: 'queued',
       coordinates: data.coordinates,
       hops: 0,
-      transportUsed: 'BroadcastChannel + BLE Beacon (Direct)',
-      signature: 'sig_ed25519_' + Math.random().toString(36).substring(2, 8),
-      verified: true,
+      transportUsed: 'BroadcastChannel (Local)',
+      signature: '',
+      verified: false,
       relayCount: 0,
       relayedBy: [],
       batteryPercent: data.batteryPercent ?? 85
@@ -702,7 +642,7 @@ export class ResilienceEngine {
     return true;
   }
 
-  public simulateNeighborBroadcast(type: EmergencyBroadcastType = 'sos'): EmergencyBroadcast {
+  public simulateNeighborBroadcast(type: EmergencyBroadcastType = 'priority'): EmergencyBroadcast {
     const neighborNodes = [
       { alias: 'Relais-Boréal-24', id: 'msh_peer_boreal', x: 380, y: 220, lat: 48.856, lng: 2.352 },
       { alias: 'Poste-Secours-Centre', id: 'msh_peer_secours', x: 510, y: 160, lat: 48.859, lng: 2.355 },
@@ -711,9 +651,9 @@ export class ResilienceEngine {
     const node = neighborNodes[Math.floor(Math.random() * neighborNodes.length)];
 
     const presets: Record<EmergencyBroadcastType, { title: string; message: string; severity: EmergencySeverity }> = {
-      sos: {
-        title: '[SOS VITAL] Détresse civile signalée',
-        message: 'Personne isolée sans électricité ni accès routier, demande de contact radio PMR446 ou assistance physique.',
+      priority: {
+        title: '[SIMULATION] Avis d’entraide civile locale',
+        message: 'Simulation de message de proximité pour démonstration technique d’interface.',
         severity: 'critical'
       },
       medical: {
@@ -728,7 +668,7 @@ export class ResilienceEngine {
       },
       water_food: {
         title: '[RESSOURCES] Rations d’urgence partagées',
-        message: 'Stock tampon de 50L d’eau potable et sachets de réhydratation disponibles au refuge municipal.',
+        message: 'Stock tampon de 50L d’eau potable et sachets de réhydratation disponibles au refuge citoyen.',
         severity: 'advisory'
       },
       shelter: {
@@ -743,7 +683,7 @@ export class ResilienceEngine {
       }
     };
 
-    const chosen = presets[type] || presets.sos;
+    const chosen = presets[type] || presets.priority;
     const sim: EmergencyBroadcast = {
       id: 'sim_bc_' + Date.now(),
       type,
@@ -761,9 +701,9 @@ export class ResilienceEngine {
         label: `${node.alias} (${node.x}, ${node.y})`
       },
       hops: 1,
-      transportUsed: 'Bluetooth Low Energy (GATT Beacon) + LoRa 868MHz',
-      signature: 'sig_ed25519_' + Math.random().toString(36).substring(2, 8),
-      verified: true,
+      transportUsed: 'BroadcastChannel (Simulation)',
+      signature: '',
+      verified: false,
       relayCount: 1,
       relayedBy: [node.alias],
       batteryPercent: 82
@@ -797,11 +737,11 @@ export class ResilienceEngine {
     batteryPercent?: number;
   }): Promise<EmergencyBroadcast> {
     const coords = params.coordsOverride || this.getLastCoordinates();
-    const title = params.title || 'DÉTRESSE VITALE — SOS IMMÉDIAT';
-    const message = params.message || 'Signal de détresse d’urgence déclenché. Besoin d’assistance immédiate sur site.';
+    const title = params.title || '[SIMULATION] ALERTE PRIORITAIRE LOCALE';
+    const message = params.message || '[SIMULATION LOCALE] Signal préparé pour essai technique. Ne remplace pas le 112.';
 
     const broadcast = await this.sendEmergencyBroadcast({
-      type: 'sos',
+      type: 'priority',
       title,
       message,
       severity: 'critical',

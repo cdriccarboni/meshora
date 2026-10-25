@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
+ * Spécification et Stub Meshtastic LoRa (Matériel compagnon requis).
  */
 
 import { MeshMessage, MeshPeer } from '../types';
@@ -19,12 +20,11 @@ export class MeshtasticStub implements ITransportAdapter {
   }
 
   public isNativeRequired(): boolean {
-    return true; // Requires native serial / Bluetooth gateway bridge
+    return true; // Exige une radio connectée (USB Série / Bluetooth compagnon)
   }
 
-  public async send(message: MeshMessage): Promise<boolean> {
-    console.info('[MESHORA-Meshtastic] Packet routed to LoRa queue:', message.id);
-    return true;
+  public async send(_message: MeshMessage): Promise<boolean> {
+    return false;
   }
 
   public onMessage(callback: (message: MeshMessage) => void): () => void {
@@ -33,19 +33,6 @@ export class MeshtasticStub implements ITransportAdapter {
   }
 
   public async discoverPeers(): Promise<MeshPeer[]> {
-    return [
-      {
-        id: 'node_lora_colline',
-        alias: 'Relais Sommet LoRa (Meshtastic)',
-        transport: 'meshtastic',
-        hops: 2,
-        rssi: -82,
-        lastSeen: Date.now() - 120000,
-        isGateway: true,
-        capabilities: ['lora_long_range', 'repeater'],
-        batteryPercent: 94,
-        verified: true
-      }
-    ];
+    return [];
   }
 }

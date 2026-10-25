@@ -2,7 +2,7 @@
 <html lang="fr" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>MESHORA — Un réseau qui relie les autres</title>
     <meta name="description" content="MESHORA est une application libre multi-réseaux permettant de communiquer localement et via passerelles avec les modules Mesh, Connect, Shield et Resilience." />
     
@@ -11,7 +11,7 @@
     <meta property="og:description" content="MESHORA est une application libre multi-réseaux permettant de communiquer localement et via passerelles avec les modules Mesh, Connect, Shield et Resilience." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#090a0c" />
+    <meta name="theme-color" content="#121316" />
 
     <!-- PWA & Mobile Web App Meta -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -19,24 +19,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="MESHORA" />
     
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
-    <!-- Fonts: Inter / Plus Jakarta Sans font style via clean system stack & Google Fonts fallback -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/app/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/app/icon.svg" />
+    <link rel="apple-touch-icon" href="/app/apple-touch-icon.png" />
   </head>
   <body class="bg-neutral-950 text-neutral-100 antialiased selection:bg-neutral-700 selection:text-white min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' }).catch(() => {});
-        });
-      }
-    </script>
   </body>
 </html>

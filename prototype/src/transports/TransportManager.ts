@@ -2,9 +2,10 @@
  * @license
  * SPDX-License-Identifier: AGPL-3.0-or-later
  * MESHORA — Un réseau qui relie les autres.
+ * Gestionnaire des transports avec accusés de réception réels et vérité des états.
  */
 
-import { MeshMessage, MeshPeer, TransportType } from '../types';
+import { MeshMessage, MeshPeer, TransportType, MessageAck } from '../types';
 import { ITransportAdapter } from './TransportInterface';
 import { BroadcastTransport } from './BroadcastTransport';
 import { WebSocketTransport } from './WebSocketTransport';
@@ -15,16 +16,19 @@ import { MessageStore } from '../core/storage';
 import { NetworkSentinel } from '../core/networkSentinel';
 
 export const MESH_SCAN_INTERVALS = {
-  NORMAL: 10000,      // 10s: Continuous real-time detection
-  BATTERY_SAVER: 60000, // 60s: Duty-cycled grid-down preservation mode (~65% energy saved)
-  EXTREME_SAVER: 120000 // 120s: Extended blackout survival mode (~80% energy saved)
+  NORMAL: 10000,      // 10s: Détection continue
+  BATTERY_SAVER: 60000, // 60s: Mode économie d'énergie
+  EXTREME_SAVER: 120000 // 120s: Mode coupure prolongée
 } as const;
+
+const DEDUP_KEY = 'meshora_processed_ids_v02';
 
 export class TransportManager {
   private static instance: TransportManager | null = null;
   private adapters: Map<TransportType, ITransportAdapter> = new Map();
   private processedMessageIds: Set<string> = new Set();
   private messageCallbacks: Set<(msg: MeshMessage) => void> = new Set();
+  private ackCallbacks: Set<(ack: MessageAck) => void> = new Set();
 
   // Background Mesh Discovery & Battery Saver state
   private batterySaver: boolean = false;
@@ -36,21 +40,55 @@ export class TransportManager {
   private scanUpdateListeners: Set<(intervalMs: number, isBatterySaver: boolean, lastScanTime: number) => void> = new Set();
 
   private constructor() {
-    this.registerAdapter(new BroadcastTransport());
-    this.registerAdapter(new WebSocketTransport());
-    this.registerAdapter(new BluetoothLEStub());
-    this.registerAdapter(new MeshtasticStub());
-    this.registerAdapter(new ReticulumStub());
+    this.loadDeduplicationCache();
 
-    // Listen to network changes to flush outbox automatically
+    const broadcastAdapter = new BroadcastTransport();
+    const wsAdapter = new WebSocketTransport();
+    const bleStub = new BluetoothLEStub();
+    const meshStub = new MeshtasticStub();
+    const retStub = new ReticulumStub();
+
+    this.registerAdapter(broadcastAdapter);
+    this.registerAdapter(wsAdapter);
+    this.registerAdapter(bleStub);
+    this.registerAdapter(meshStub);
+    this.registerAdapter(retStub);
+
+    // Listen to ACKs across bidirectional transports
+    broadcastAdapter.onAck((ack) => this.handleAck(ack));
+    wsAdapter.onAck((ack) => this.handleAck(ack));
+
+    // Listen to network sentinel changes to flush outbox
     NetworkSentinel.subscribe((status) => {
       if (status !== 'offline') {
         this.flushPendingOutbox();
       }
     });
 
-    // Start background scanner with default cadence
     this.startBackgroundScanner();
+  }
+
+  private loadDeduplicationCache(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(DEDUP_KEY);
+        if (raw) {
+          const list: string[] = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            this.processedMessageIds = new Set(list.slice(-500));
+          }
+        }
+      }
+    } catch {}
+  }
+
+  private saveDeduplicationCache(): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const list = Array.from(this.processedMessageIds).slice(-500);
+        localStorage.setItem(DEDUP_KEY, JSON.stringify(list));
+      }
+    } catch {}
   }
 
   public static getInstance(): TransportManager {
@@ -63,7 +101,6 @@ export class TransportManager {
   public registerAdapter(adapter: ITransportAdapter): void {
     this.adapters.set(adapter.type, adapter);
 
-    // Bind incoming message listener
     adapter.onMessage((incoming) => {
       this.handleIncomingMessage(incoming);
     });
@@ -80,20 +117,20 @@ export class TransportManager {
   public async broadcast(message: MeshMessage): Promise<boolean> {
     const status = NetworkSentinel.getStatus();
 
-    // If completely offline, save strictly in outbox and do not fail silently
+    // 1. Completely offline without available local transport
     if (status === 'offline') {
       const queuedMessage: MeshMessage = {
         ...message,
         status: 'queued'
       };
       MessageStore.saveMessage(queuedMessage);
-      return true; // Accusé de prise en charge par la file hors-ligne
+      return false;
     }
 
-    // Try available real transports first (broadcast channel + websocket)
+    // 2. Dispatch through real active transports
     let dispatched = false;
-
     const realTransports: TransportType[] = ['broadcast', 'websocket'];
+
     for (const t of realTransports) {
       const adapter = this.adapters.get(t);
       if (adapter && adapter.isAvailable()) {
@@ -101,15 +138,15 @@ export class TransportManager {
           const ok = await adapter.send(message);
           if (ok) dispatched = true;
         } catch {
-          // Continue to next transport
+          // Continue
         }
       }
     }
 
-    // Mark as delivered/relayed
+    // 3. STRICT TRUTH: Dispatched on transport means 'sent', NEVER 'delivered' without ACK!
     const finalMsg: MeshMessage = {
       ...message,
-      status: dispatched ? 'delivered' : 'queued'
+      status: dispatched ? 'sent' : 'queued'
     };
     MessageStore.saveMessage(finalMsg);
     this.processedMessageIds.add(message.id);
@@ -119,29 +156,58 @@ export class TransportManager {
 
   public flushPendingOutbox(): number {
     return MessageStore.flushOutbox((msg) => {
-      // Try sending via real local transport
-      const broadcastAdapter = this.adapters.get('broadcast');
-      if (broadcastAdapter && broadcastAdapter.isAvailable()) {
-        broadcastAdapter.send(msg);
-        return true;
+      let dispatched = false;
+      const realTransports: TransportType[] = ['broadcast', 'websocket'];
+      for (const t of realTransports) {
+        const adapter = this.adapters.get(t);
+        if (adapter && adapter.isAvailable()) {
+          adapter.send(msg);
+          dispatched = true;
+        }
       }
-      return false;
+      return dispatched;
     });
   }
 
   private handleIncomingMessage(msg: MeshMessage): void {
+    // 1. Validation stricte du schéma
+    if (!msg || typeof msg !== 'object') return;
+    if (typeof msg.id !== 'string' || msg.id.length < 3 || msg.id.length > 128) return;
+    if (typeof msg.content !== 'string' || msg.content.length > 65536) return;
+    if (typeof msg.timestamp !== 'number' || isNaN(msg.timestamp)) return;
+    if (typeof msg.senderId !== 'string') return;
+
+    // 2. Déduplication persistante
     if (this.processedMessageIds.has(msg.id)) {
-      return; // Deduplication
+      return;
     }
     this.processedMessageIds.add(msg.id);
+    this.saveDeduplicationCache();
 
-    // Save locally
+    // 3. Sauvegarde locale
     MessageStore.saveMessage(msg);
 
-    // Notify listeners
+    // 4. Notification des écouteurs d'interface
     this.messageCallbacks.forEach((cb) => {
       try {
         cb(msg);
+      } catch {}
+    });
+  }
+
+  public handleAck(ack: MessageAck): void {
+    const existing = MessageStore.getMessageById(ack.messageId);
+    if (existing && existing.status !== 'delivered') {
+      const confirmed: MeshMessage = {
+        ...existing,
+        status: 'delivered'
+      };
+      MessageStore.saveMessage(confirmed);
+    }
+
+    this.ackCallbacks.forEach((cb) => {
+      try {
+        cb(ack);
       } catch {}
     });
   }
@@ -151,12 +217,19 @@ export class TransportManager {
     return () => this.messageCallbacks.delete(callback);
   }
 
+  public onAck(callback: (ack: MessageAck) => void): () => void {
+    this.ackCallbacks.add(callback);
+    return () => this.ackCallbacks.delete(callback);
+  }
+
   public async aggregatePeers(): Promise<MeshPeer[]> {
     const results: MeshPeer[] = [];
     for (const adapter of this.adapters.values()) {
       try {
-        const peers = await adapter.discoverPeers();
-        results.push(...peers);
+        if (adapter.isAvailable()) {
+          const peers = await adapter.discoverPeers();
+          results.push(...peers);
+        }
       } catch {}
     }
     this.cachedPeers = results;
@@ -164,10 +237,6 @@ export class TransportManager {
     return results;
   }
 
-  /**
-   * Configure Battery Saver mode which throttles periodic mesh background scans
-   * to preserve critical mobile battery in blackout / off-grid emergencies.
-   */
   public setBatterySaver(enabled: boolean, customIntervalMs?: number): void {
     this.batterySaver = enabled;
     if (customIntervalMs && customIntervalMs >= 5000) {
@@ -207,10 +276,6 @@ export class TransportManager {
     return [...this.cachedPeers];
   }
 
-  /**
-   * Forces an immediate proximity discovery burst across all mesh transports
-   * without waiting for the scheduled background timer to expire.
-   */
   public async triggerImmediateScan(): Promise<MeshPeer[]> {
     this.isScanningActive = true;
     try {

@@ -42,7 +42,7 @@ export const NetworkScreen: React.FC<NetworkScreenProps> = ({ lang, identity }) 
     },
     {
       id: 'node_relais_nord',
-      alias: 'Relais-Nord-84',
+      alias: '[SIMULATION] Relais-Nord-84',
       x: 310,
       y: 90,
       type: 'relay',
@@ -52,7 +52,7 @@ export const NetworkScreen: React.FC<NetworkScreenProps> = ({ lang, identity }) 
     },
     {
       id: 'node_gateway_wan',
-      alias: 'Passerelle-Fibre-Tetaneutral',
+      alias: '[SIMULATION] Passerelle-Fibre',
       x: 440,
       y: 160,
       type: 'gateway',
@@ -62,7 +62,7 @@ export const NetworkScreen: React.FC<NetworkScreenProps> = ({ lang, identity }) 
     },
     {
       id: 'node_lora_colline',
-      alias: 'Balise-Colline-LoRa',
+      alias: '[SIMULATION] Balise-LoRa',
       x: 230,
       y: 240,
       type: 'lora',
@@ -72,7 +72,7 @@ export const NetworkScreen: React.FC<NetworkScreenProps> = ({ lang, identity }) 
     },
     {
       id: 'node_voisin_sud',
-      alias: 'Voisin-Sud-BLE',
+      alias: '[SIMULATION] Voisin-Sud',
       x: 90,
       y: 220,
       type: 'relay',

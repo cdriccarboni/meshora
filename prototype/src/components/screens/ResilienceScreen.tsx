@@ -130,7 +130,7 @@ export const ResilienceScreen: React.FC<ResilienceScreenProps> = ({ lang, identi
         </p>
       </div>
 
-      {/* Mesh & Bluetooth Emergency Broadcast Panel */}
+      {/* Panneau d'Entraide et Alertes Locales */}
       <EmergencyBroadcastPanel
         lang={lang}
         identity={identity}
@@ -530,7 +530,7 @@ export const ResilienceScreen: React.FC<ResilienceScreenProps> = ({ lang, identi
         </div>
       </div>
 
-      {/* Quick SOS Floating Action Button (Long-press emergency trigger) */}
+      {/* Bouton d'Aide d'Urgence 112 */}
       <QuickSOSButton
         lang={lang}
         identity={identity}

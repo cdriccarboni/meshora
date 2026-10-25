@@ -14,7 +14,17 @@ export type TransportType =
   | 'meshtastic'
   | 'reticulum';
 
-export type MessageStatus = 'queued' | 'relayed' | 'delivered' | 'failed';
+export type MessageStatus = 'queued' | 'sent' | 'relayed' | 'delivered' | 'failed';
+
+export interface MessageAck {
+  messageId: string;
+  recipientId: string;
+  recipientAlias: string;
+  timestamp: number;
+  transport: TransportType;
+  signature?: string;
+  verified?: boolean;
+}
 
 export interface MeshMessage {
   id: string;
@@ -121,6 +131,7 @@ export interface AppIdentity {
   alias: string;
   fingerprint: string;
   publicKey: string;
+  privateKeyPkcs8Hex?: string;
   createdAt: number;
 }
 
@@ -177,7 +188,7 @@ export interface WalkingRoute {
 }
 
 export type EmergencyBroadcastType = 
-  | 'sos'
+  | 'priority'
   | 'medical'
   | 'evacuation'
   | 'water_food'
@@ -209,5 +220,8 @@ export interface EmergencyBroadcast {
   relayCount: number;
   relayedBy?: string[];
   batteryPercent?: number;
+  status?: 'prepared' | 'queued' | 'sent_to_transport' | 'delivered_ack' | 'failed';
+  ackCount?: number;
+  isSimulation?: boolean;
 }
 
