@@ -4,7 +4,5 @@
     .s{stroke:#2A2E35}.f{fill:#2A2E35}.a{fill:#3566C8}
     @media (prefers-color-scheme: dark){.s{stroke:#E8EBF0}.f{fill:#E8EBF0}.a{fill:#8DB0F5}}
   </style>
-  <ellipse class="s" cx="32" cy="32" rx="26" ry="12" fill="none" stroke-width="3" transform="rotate(-24 32 32)"/>
-  <circle class="f" cx="32" cy="32" r="7"/>
-  <circle class="a" cx="55.4" cy="22.7" r="4.5"/>
+  <ellipse cx="32" cy="32" rx="28" ry="7.5" fill="none" class="s" stroke-width="3" stroke-linecap="round" transform="rotate(-28 32 32)"/><circle cx="32" cy="32" r="11" class="f"/><circle cx="51.1" cy="17.3" r="4.5" class="a"/>
 </svg>
