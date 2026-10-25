@@ -5,7 +5,7 @@
 
 Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
-**État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.**
+**État au 25 octobre 2026 : aucune fonction n'est testée sur appareil. Tout ce qui existe est spécifié ou simulé.** Audit du prototype V0.2 : `docs/audits/AUDIT-PR3-V0.2.md` (8 P0, 12 P1 ; 0 critère sur 18 de messagerie opérationnelle rempli).
 
 | Pilier | Fonction | État | Plateformes testées | Rapport |
 |---|---|---|---|---|
@@ -31,12 +31,13 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Mesh (Nearby) | Reconnaissance par identifiant tournant | 📐 | — | N2–N5 |
 | Mesh (Nearby) | Révocation d'un contact | 📐 | — | N6 |
 | Mesh (Nearby) | Appairage de relais (AccessorySetupKit / CompanionDeviceManager) | 📐 | — | N10 |
-| Prototype V0.2 | Messagerie entre onglets d'un même navigateur (BroadcastChannel) | 🔧 | — | Annoncé par AI Studio, non vérifié ; ne vaut pas messagerie entre appareils (M1) |
-| Prototype V0.2 | Relais WebSocket sur réseau local | 🔧 | — | Annoncé, non vérifié ; nécessite un serveur local |
-| Prototype V0.2 | File d'attente hors ligne (IndexedDB, Outbox) | 🔧 | — | Annoncé, non vérifié |
+| Prototype V0.2 | Messagerie entre onglets d'un même navigateur (BroadcastChannel) | 🔧 | — | Fonctionne entre onglets seulement ; statut « Délivré » faux (audit PR #3, P0-3) |
+| Prototype V0.2 | Relais WebSocket | ⛔ | — | Aucun serveur ; « disponible » et « envoyé » toujours vrais (audit PR #3, P0-3, P1-1) |
+| Prototype V0.2 | File d'attente hors ligne | ⛔ | — | `localStorage` seulement ; messages retirés de la file sans accusé (audit PR #3, P0-4) |
 | Prototype V0.2 | VPN (WireGuard, VpnService, NEPacketTunnelProvider) | 🎭 | — | Interfaces factices « nécessite un module natif » |
 | Prototype V0.2 | Cartes et repères hors ligne | 🔧 | — | Annoncé, non vérifié |
-| Prototype V0.2 | Diffusion d'urgence / SOS | ⛔ | — | Bloqué pour publication (COORDINATION §5, A1) |
+| Prototype V0.2 | Diffusion d'urgence / SOS | ⛔ | — | Bloqué pour publication (COORDINATION §5, A1 ; audit PR #3, P0-1) |
+| Prototype V0.2 | Signatures, « vérifié », chiffrement | ⛔ | — | Fabriqués (`Math.random`), aucune cryptographie (audit PR #3, P0-2, P0-5) |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 
