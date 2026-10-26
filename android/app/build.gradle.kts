@@ -10,17 +10,23 @@ plugins {
 
 // Signature de publication : JAMAIS dans le dépôt (contre-audit V0.2).
 // Fichier hors dépôt : $MESHORA_SIGNING_PROPERTIES ou ~/.meshora/signing.properties
-//   storeFile=/chemin/absolu/meshora-upload.jks
-//   storePassword=…   keyAlias=…   keyPassword=…
+//   storeFile=/chemin/absolu/vers/la/cle.jks
+//   keyAlias=meshora-upload
+// Les mots de passe ne sont écrits nulle part sur disque : ils viennent des variables
+// MESHORA_KEYSTORE_PASSWORD / MESHORA_KEY_PASSWORD, que tools/android/build-signed.sh lit
+// dans le trousseau macOS. (storePassword/keyPassword dans le fichier restent acceptés, déconseillés.)
 val signingProps = Properties().apply {
     val path = System.getenv("MESHORA_SIGNING_PROPERTIES")
         ?: (System.getProperty("user.home") + "/.meshora/signing.properties")
     val f = File(path)
     if (f.exists()) f.inputStream().use { load(it) }
 }
-val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
-    .all { !signingProps.getProperty(it).isNullOrBlank() } &&
-    File(signingProps.getProperty("storeFile")).exists()
+val releaseStoreFile: String? = signingProps.getProperty("storeFile")
+val releaseKeyAlias: String? = signingProps.getProperty("keyAlias")
+val releaseStorePassword: String? = System.getenv("MESHORA_KEYSTORE_PASSWORD") ?: signingProps.getProperty("storePassword")
+val releaseKeyPassword: String? = System.getenv("MESHORA_KEY_PASSWORD") ?: signingProps.getProperty("keyPassword") ?: releaseStorePassword
+val hasReleaseSigning = listOf(releaseStoreFile, releaseKeyAlias, releaseStorePassword, releaseKeyPassword)
+    .all { !it.isNullOrBlank() } && File(releaseStoreFile!!).exists()
 
 android {
     namespace = "org.meshora.app"
@@ -30,8 +36,8 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0-beta"
+        versionCode = 3
+        versionName = "0.2.1-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,10 +48,10 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {
-                storeFile = file(signingProps.getProperty("storeFile"))
-                storePassword = signingProps.getProperty("storePassword")
-                keyAlias = signingProps.getProperty("keyAlias")
-                keyPassword = signingProps.getProperty("keyPassword")
+                storeFile = File(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
