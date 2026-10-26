@@ -97,3 +97,41 @@ table.status-table th { color: var(--text-2); font-weight: 500; }
 .table-scroll { overflow-x: auto; }
 ol.steps { padding-left: 1.2em; } ol.steps li { margin: 6px 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Statuts : vérifié / en développement / futur (forme + texte, jamais la couleur seule) */
+.badge { display: inline-block; font-size: .78rem; font-weight: 600; line-height: 1.2; padding: 3px 9px; border-radius: 999px; border: 1.5px solid currentColor; white-space: nowrap; vertical-align: middle; }
+.badge.b-ok { color: var(--ok); }
+.badge.b-dev { color: var(--accent); border-style: dashed; }
+.badge.b-fut { color: var(--text-2); border-style: dotted; }
+.card .pill { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.card.release { margin: 12px 0 20px; }
+.card h3 .badge { margin-left: 6px; }
+
+/* Schéma « Découvrir » */
+.mesh-diagram { margin: 16px 0 8px; padding: 12px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.mesh-diagram svg { display: block; width: 100%; height: auto; }
+.md-tall { display: none !important; }
+@media (max-width: 680px) { .md-wide { display: none !important; } .md-tall { display: block !important; } }
+.md .edge, .legend .edge { fill: none; stroke-width: 3; stroke-linecap: round; }
+.e-ok { stroke: var(--ok); }
+.e-dev { stroke: var(--accent); stroke-dasharray: 10 7; }
+.e-fut { stroke: var(--text-2); stroke-dasharray: 1 8; }
+.md .node circle { fill: var(--bg); stroke-width: 2.5; }
+.md .n-ok circle { stroke: var(--ok); }
+.md .n-dev circle { stroke: var(--accent); stroke-dasharray: 8 5; }
+.md .n-fut circle { stroke: var(--text-2); stroke-dasharray: 1 6; stroke-linecap: round; }
+.md .ico { fill: none; stroke: var(--text); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.md text { font-family: inherit; fill: var(--text); paint-order: stroke; stroke: var(--bg-2); stroke-width: 6px; stroke-linejoin: round; }
+.md .elabel text { stroke: none; }
+.md .nl { font-size: 16px; font-weight: 600; }
+.md .nc { font-size: 13px; fill: var(--text-2); }
+.md .elabel rect { fill: var(--bg); stroke: var(--line); }
+.md .elabel text { font-size: 13px; fill: var(--text-2); }
+.legend { list-style: none; padding: 0; margin: 8px 0 12px; display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.legend svg.lg { width: 48px; height: 12px; flex-shrink: 0; }
+details.reading, details.verify { margin: 8px 0 0; }
+details summary { cursor: pointer; color: var(--accent); font-weight: 500; min-height: 44px; display: flex; align-items: center; }
+details.reading li { margin: 8px 0; }
+details.verify dl { margin: 8px 0; } details.verify dt { color: var(--text-2); font-size: .9rem; margin-top: 8px; }
+details.verify dd { margin: 2px 0 0; } details.verify code, .reading code { overflow-wrap: anywhere; font-size: .85rem; }

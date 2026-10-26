@@ -91,8 +91,8 @@ def layout(meta, body):
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="/assets/meshora.css?v={VERSION}">
-  <script src="/assets/site.js?v={VERSION}" defer></script>
+  <link rel="stylesheet" href="/assets/meshora.css?v={VERSION}-{COMMIT}">
+  <script src="/assets/site.js?v={VERSION}-{COMMIT}" defer></script>
 </head>
 <body>
 {band}  <div class="wrap">
@@ -240,13 +240,13 @@ def build():
     return urls
 
 APP_STATUS = {
-    ("fr", False): """<p class="status"><span class="dot note" aria-hidden="true"></span>En préparation — la démo de l'interface sera disponible ici prochainement.</p>""",
-    ("en", False): """<p class="status"><span class="dot note" aria-hidden="true"></span>In preparation — the interface demo will be available here soon.</p>""",
-    ("fr", True): """<p class="status"><span class="dot note" aria-hidden="true"></span>Démo de l'interface disponible — réseau simulé, les messages ne sont pas encore réellement envoyés.</p>
-        <div class="actions"><a class="btn primary" href="/app/">Ouvrir la démo</a><button class="btn" type="button" data-install hidden>Installer l'application web</button></div>
+    ("fr", False): """<p class="status"><span class="dot note" aria-hidden="true"></span>En préparation — l'application web sera disponible ici prochainement.</p>""",
+    ("en", False): """<p class="status"><span class="dot note" aria-hidden="true"></span>In preparation — the web app will be available here soon.</p>""",
+    ("fr", True): """<p class="status"><span class="dot ok" aria-hidden="true"></span>Version d'essai — messagerie chiffrée vérifiée par Internet avec un téléphone Android ; certaines rubriques (carte, alertes, VPN) sont encore des démonstrations.</p>
+        <div class="actions"><a class="btn primary" href="/app/">Ouvrir l'application web</a><button class="btn" type="button" data-install hidden>Installer l'application web</button></div>
         <div data-platform="ios" hidden><p>Sur iPhone ou iPad, dans Safari :</p><ol class="steps"><li>touchez le bouton Partager ;</li><li>choisissez « Sur l'écran d'accueil ».</li></ol></div>""",
-    ("en", True): """<p class="status"><span class="dot note" aria-hidden="true"></span>Interface demo available — simulated network, messages are not actually sent yet.</p>
-        <div class="actions"><a class="btn primary" href="/app/">Open the demo</a><button class="btn" type="button" data-install hidden>Install the web app</button></div>
+    ("en", True): """<p class="status"><span class="dot ok" aria-hidden="true"></span>Test version — encrypted messaging verified over the internet with an Android phone; some sections (map, alerts, VPN) are still demonstrations.</p>
+        <div class="actions"><a class="btn primary" href="/app/">Open the web app</a><button class="btn" type="button" data-install hidden>Install the web app</button></div>
         <div data-platform="ios" hidden><p>On iPhone or iPad, in Safari:</p><ol class="steps"><li>tap the Share button;</li><li>choose “Add to Home Screen”.</li></ol></div>""",
 }
 
@@ -254,21 +254,31 @@ def render_app_status(body, lang):
     return body.replace("<!--@app-status-->", APP_STATUS[(lang, HAS_PROTO)])
 
 def render_releases(body, releases, lang):
-    """Remplace <!--@releases--> par le tableau des versions publiées (vide => « Pas encore disponible »)."""
+    """Remplace <!--@releases--> par le tableau des plateformes : publiée (lien vérifié), web, prévue, future."""
     if "<!--@releases-->" not in body: return body
+    fr = lang == "fr"
     names = {"android": "Android", "ios": "iPhone / iPad", "macos": "macOS", "windows": "Windows", "linux": "Linux", "raspberry-pi": "Raspberry Pi"}
-    na = "Pas encore disponible" if lang == "fr" else "Not available yet"
+    def badge(cls, txt): return f'<span class="badge {cls}">{txt}</span>'
     rows = []
     for key, label in names.items():
-        r = releases.get(key)
-        if isinstance(r, dict) and r.get("published") and r.get("url"):
-            cellv = f'<a href="{html.escape(r["url"])}" rel="noopener">{html.escape(r.get("label", r["url"]))}</a> <span class="muted">{html.escape(r.get("version", ""))}</span>'
+        r = releases.get(key) if isinstance(releases.get(key), dict) else {}
+        if r.get("published") and r.get("url"):
+            lab = r.get("label" if fr else "label_en", r.get("label", r["url"]))
+            cellv = (f'<a href="{html.escape(r["url"])}" rel="noopener">{html.escape(lab)}</a> <span class="muted">{html.escape(r.get("version", ""))}</span> '
+                     + badge("b-ok", "vérifiée par Internet" if fr else "verified over the internet"))
+        elif r.get("planned"):
+            cellv = badge("b-dev", "Prévue" if fr else "Planned") + (' <span class="muted">pas encore de version</span>' if fr else ' <span class="muted">no version yet</span>')
+        elif r.get("web"):
+            cellv = (f'<span class="muted">{"Pas d’application native : utilisez" if fr else "No native app: use"}</span> '
+                     f'<a href="{"/fr/installer/#web" if fr else "/en/install/#web"}">{"l’application web" if fr else "the web app"}</a>')
+        elif r.get("future"):
+            cellv = badge("b-fut", "Vision future" if fr else "Future vision") + (' <span class="muted">passerelle et relais fixe</span>' if fr else ' <span class="muted">gateway and fixed relay</span>')
         else:
-            cellv = f'<span class="status"><span class="dot" aria-hidden="true"></span>{na}</span>'
+            cellv = f'<span class="status"><span class="dot" aria-hidden="true"></span>{"Pas encore disponible" if fr else "Not available yet"}</span>'
         rows.append(f"<tr><td>{label}</td><td>{cellv}</td></tr>")
-    h = ("<th scope=\"col\">Plateforme</th><th scope=\"col\">Application native</th>" if lang == "fr"
-         else "<th scope=\"col\">Platform</th><th scope=\"col\">Native app</th>")
-    return body.replace("<!--@releases-->", f'<table class="platforms"><thead><tr>{h}</tr></thead><tbody>{"".join(rows)}</tbody></table>')
+    h = ("<th scope=\"col\">Plateforme</th><th scope=\"col\">Application</th>" if fr
+         else "<th scope=\"col\">Platform</th><th scope=\"col\">App</th>")
+    return body.replace("<!--@releases-->", f'<div class="table-scroll"><table class="platforms"><thead><tr>{h}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>')
 
 # ---------- Contrôles bloquants ----------
 SECRET_PATTERNS = [

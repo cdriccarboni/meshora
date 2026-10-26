@@ -1,31 +1,68 @@
-<!--{"lang":"en","path":"/en/install/","alt":"/fr/installer/","title":"Install","description":"Install MESHORA: web app and native apps by platform, with their real availability.","nav":"install"}-->
+<!--{"lang":"en","path":"/en/install/","alt":"/fr/installer/","title":"Install","description":"Install MESHORA: Android test app, web app, iPhone planned. Real status, app verification and warnings.","nav":"install"}-->
       <div class="hero">
         <h1>Install MESHORA</h1>
-        <p>Two ways to use MESHORA: the web app, to try the interface right away, and the native apps, which are the only ones able to use Bluetooth and nearby networks.</p>
+        <p>MESHORA is in testing. Here is, for each device, what really exists today, how to install it and what you should know.</p>
       </div>
 
-      <section>
-        <h2>Web app</h2>
-        <p>It opens in your browser and can be added to your home screen.</p>
-        <!--@app-status-->
+      <section aria-labelledby="android">
+        <h2 id="android">Android</h2>
+        <div class="card release">
+          <h3>Test version 0.2.1-beta <span class="badge b-ok">Verified over the internet</span></h3>
+          <p>End-to-end encrypted messaging through an internet test relay, delivery receipts, deferred sending after an outage. Tested on 26 October 2026 on a Google Pixel 9 with a computer, over Wi-Fi and 5G.</p>
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.2.1-beta-test1/MESHORA-0.2.1-beta-test.apk" rel="noopener">Download the APK (11 MB)</a>
+            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.2.1-beta-test1" rel="noopener">Release page</a>
+          </div>
+          <details class="verify">
+            <summary>Verify the app before installing it</summary>
+            <dl>
+              <dt>File SHA-256 fingerprint</dt><dd><code>dd56b3da19933fbfcb12c7b06d70a7fe2c6d3af68b8d8dd83ec55861f726e887</code></dd>
+              <dt>Signing certificate (SHA-256)</dt><dd><code>5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2</code></dd>
+              <dt>Package name</dt><dd><code>org.meshora.app</code>, version 0.2.1-beta (code 3), Android 8.0 or newer</dd>
+            </dl>
+            <p class="muted">On a computer: <code>shasum -a 256 MESHORA-0.2.1-beta-test.apk</code>. The certificate can be read with <code>apksigner verify --print-certs</code>.</p>
+          </details>
+        </div>
+        <h3>Install in 3 steps</h3>
+        <ol class="steps">
+          <li>On the phone, tap “Download the APK”, then open the downloaded file.</li>
+          <li>If Android asks, allow installs from your browser, then tap “Install”.</li>
+          <li>Open MESHORA. To exchange messages, go to the <strong>Network</strong> tab and enter the relay address and room given by the person who invited you.</li>
+        </ol>
+        <div class="notice">
+          <p>This version is not on Google Play yet. Android or Play Protect may show a warning: only install MESHORA from this page or the project's GitHub page, and compare the fingerprint above.</p>
+          <p>The test relay is temporary and may be unavailable. Do not use it in an emergency: call 112.</p>
+        </div>
+        <div class="card">
+          <h3>Bluetooth without the internet <span class="badge b-dev">In development</span></h3>
+          <p>A test version for testers (0.3.0-alpha) links phones over Bluetooth, without the internet. It has not yet been verified on real devices: it is meant for people who want to help us test it.</p>
+          <p><a href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-alpha-ble2" rel="noopener">See the Bluetooth test version and its instructions</a></p>
+        </div>
       </section>
 
-      <section>
-        <h2>Native apps</h2>
-        <p>Links only appear here once each app has actually been published and tested on real devices.</p>
+      <section aria-labelledby="web">
+        <h2 id="web">Web app</h2>
+        <p>It opens in the browser, on computers and phones, and can be added to your home screen.</p>
+        <!--@app-status-->
+        <p>To exchange with another device during testing, open the <strong>invitation link</strong> you were sent: it contains the test relay address, which the app asks you to accept.</p>
+      </section>
+
+      <section aria-labelledby="iphone">
+        <h2 id="iphone">iPhone and iPad</h2>
+        <p class="status"><span class="dot note" aria-hidden="true"></span>App planned — no version to install yet.</p>
+        <p>Meanwhile, the web app works in Safari to exchange over the internet with an invitation link. Bluetooth isn't available to web pages on iPhone: it will come with the app.</p>
+      </section>
+
+      <section aria-labelledby="all">
+        <h2 id="all">All platforms</h2>
         <!--@releases-->
       </section>
 
       <section>
         <h2>What you'll need</h2>
         <div class="grid">
-          <div class="card"><h3>A phone or a computer</h3><p>No account to create. The app generates your identity on your device.</p></div>
-          <div class="card"><h3>Bluetooth turned on</h3><p>To exchange with nearby devices when the internet isn't there (native apps).</p></div>
-          <div class="card"><h3>Optional: a gateway</h3><p>A small computer at home (Raspberry Pi) to link your local network to the internet and protect your browsing.</p></div>
+          <div class="card"><h3>A phone or a computer</h3><p>No account to create: the app generates your identity on your device.</p></div>
+          <div class="card"><h3>An invitation link</h3><p>During testing, it gives the internet relay address and the room to join.</p></div>
+          <div class="card"><h3>Bluetooth turned on</h3><p>Only for the Bluetooth test version, on an Android phone or a computer with Chrome or Edge.</p></div>
         </div>
-      </section>
-
-      <section>
-        <h2>Why the web app isn't enough</h2>
-        <p>Browsers, especially on iPhone, don't let a web page use Bluetooth to link devices together. Features that work without the internet will therefore come with the native apps.</p>
       </section>
