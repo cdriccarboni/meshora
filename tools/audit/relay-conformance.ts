@@ -209,13 +209,32 @@ async function main() {
       `300 Kio → fermé=${A.r.closed()} code=${A.r.code()} ; binaire → fermé=${B.r.closed()} code=${B.r.code()}`);
   }
 
-  // C10 — délai d'authentification : sans HELLO, fermeture après ~10 s
+  // C10 — délai d'authentification : sans HELLO, le relais envoie une trame de fermeture 1008 après ~10 s.
+  // Mesuré sur le fil (TCP/TLS brut) : l'événement onclose d'un client dépend aussi de la coupure TCP.
   {
-    const rm = room('c10');
-    const a = await raw(rm); const t0 = Date.now();
-    await waitFor(() => a.closed(), 16000);
-    const dt = Math.round((Date.now() - t0) / 1000);
-    record('C10', 'Connexion non authentifiée fermée après le délai (≈ 10 s)', a.closed() && dt >= 9 && dt <= 15, `fermé=${a.closed()} après ${dt} s code=${a.code()}`);
+    const u = new URL(RELAY.replace(/^ws/, 'http'));
+    const tls = await import('node:tls'); const net = await import('node:net');
+    const port = Number(u.port || (u.protocol === 'https:' ? 443 : 80));
+    const r = await new Promise<{ code: number; dt: number }>((resolve) => {
+      const t0 = Date.now(); let upgraded = false;
+      const onConn = () => s.write(`GET /?room=${room('c10')} HTTP/1.1\r\nHost: ${u.hostname}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ${crypto.randomBytes(16).toString('base64')}\r\nSec-WebSocket-Version: 13\r\n\r\n`);
+      const s: any = u.protocol === 'https:' ? tls.connect(port, u.hostname, { servername: u.hostname }, onConn) : net.connect(port, u.hostname, onConn);
+      let buf = Buffer.alloc(0);
+      s.on('data', (d: Buffer) => {
+        buf = Buffer.concat([buf, d]);
+        if (!upgraded) { const i = buf.indexOf('\r\n\r\n'); if (i < 0) return; upgraded = true; buf = buf.subarray(i + 4); }
+        while (buf.length >= 2) {
+          const op = buf[0] & 0x0f; const len = buf[1] & 0x7f; const hdr = len === 126 ? 4 : len === 127 ? 10 : 2;
+          const plen = len === 126 ? buf.readUInt16BE(2) : len === 127 ? Number(buf.readBigUInt64BE(2)) : len;
+          if (buf.length < hdr + plen) break;
+          if (op === 0x8) { s.destroy(); return resolve({ code: plen >= 2 ? buf.readUInt16BE(hdr) : 1005, dt: (Date.now() - t0) / 1000 }); }
+          buf = buf.subarray(hdr + plen);
+        }
+      });
+      s.on('error', () => resolve({ code: -1, dt: (Date.now() - t0) / 1000 }));
+      setTimeout(() => { s.destroy(); resolve({ code: 0, dt: (Date.now() - t0) / 1000 }); }, 16000);
+    });
+    record('C10', 'Connexion non authentifiée : trame de fermeture 1008 après le délai (≈ 10 s)', r.code === 1008 && r.dt >= 9 && r.dt <= 15, `code=${r.code} après ${r.dt.toFixed(1)} s`);
   }
 
   // C11 — bout en bout avec le VRAI code web : réception, accusé signé, réception différée, préemption d'identifiant

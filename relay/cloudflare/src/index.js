@@ -165,7 +165,15 @@ export class MeshoraRoom extends DurableObject {
   async fetch(request) {
     const url = new URL(request.url);
     const room = url.searchParams.get('room') || 'public_meshora';
-    if (this.ctx.getWebSockets().length >= LIMITS.maxClientsPerRoom) return new Response('Service Unavailable', { status: 503 });
+    // Balayage des connexions jamais authentifiées, puis plafond calculé sur les connexions OUVERTES
+    // (une connexion fermée côté relais n'occupe plus de place, même si le client tarde à couper le TCP).
+    const now = Date.now();
+    for (const w of this.ctx.getWebSockets()) {
+      const x = this.att(w);
+      if (!x.auth && w.readyState === 1 && now - x.opened >= LIMITS.helloTimeoutMs) this.closeWith(w, 1008, 'hello timeout');
+    }
+    const open = this.ctx.getWebSockets().filter((w) => w.readyState === 1).length;
+    if (open >= LIMITS.maxClientsPerRoom) return new Response('Service Unavailable', { status: 503 });
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
@@ -173,7 +181,11 @@ export class MeshoraRoom extends DurableObject {
     const a = { room, nonce: randomHex(16), auth: false, pub: null, id: null, alias: null, opened: Date.now(), win: Date.now(), cnt: 0 };
     this.setAtt(server, a);
     server.send(JSON.stringify({ type: 'MESHORA_CHALLENGE', nonce: a.nonce, room }));
-    await this.scheduleAlarm(Date.now() + LIMITS.helloTimeoutMs + 500);
+    // Délai d'authentification : minuterie (empêche l'hibernation 10 s au plus) + alarme de secours.
+    setTimeout(() => {
+      if (!this.att(server).auth && server.readyState === 1) this.closeWith(server, 1008, 'hello timeout');
+    }, LIMITS.helloTimeoutMs);
+    await this.scheduleAlarm(Date.now() + LIMITS.helloTimeoutMs + 2000);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -308,10 +320,8 @@ export class MeshoraRoom extends DurableObject {
     if (wasAuth) this.broadcastPeers(ws);
   }
 
-  async webSocketClose(ws, code) {
-    try {
-      ws.close(code === 1005 || code === 1006 ? 1000 : code, '');
-    } catch {}
+  async webSocketClose(ws) {
+    // Date de compatibilité ≥ 2026-04-07 : le moteur répond lui-même à la trame de fermeture.
     if (this.att(ws).auth) this.broadcastPeers(ws);
   }
 
@@ -330,7 +340,7 @@ export class MeshoraRoom extends DurableObject {
     let next = null;
     for (const w of this.ctx.getWebSockets()) {
       const x = this.att(w);
-      if (x.auth) continue;
+      if (x.auth || w.readyState !== 1) continue;
       const deadline = x.opened + LIMITS.helloTimeoutMs;
       if (now >= deadline) this.closeWith(w, 1008, 'hello timeout');
       else next = Math.min(next ?? Infinity, deadline + 500);
