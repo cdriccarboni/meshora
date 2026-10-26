@@ -9,9 +9,12 @@ import { MeshMessage, MeshPeer, MessageAck } from '../types';
 import { ITransportAdapter } from './TransportInterface';
 import { getOrCreateIdentity, ensureCryptographicIdentity } from '../core/identity';
 import { MeshoraCrypto, EncryptedEnvelope, SignedAck } from '../core/crypto';
+import { isAcceptableRelayUrl } from '../core/urlHygiene';
 
 interface WebSocketPacket {
-  type: 'MESHORA_MSG' | 'MESHORA_ENVELOPE' | 'MESHORA_ACK' | 'MESHORA_HELLO' | 'MESHORA_PEERS';
+  type: 'MESHORA_MSG' | 'MESHORA_ENVELOPE' | 'MESHORA_ACK' | 'MESHORA_HELLO' | 'MESHORA_PEERS' | 'MESHORA_CHALLENGE';
+  nonce?: string;
+  helloSignature?: string;
   channelId?: string;
   senderId?: string;
   senderAlias?: string;
@@ -36,6 +39,34 @@ export class WebSocketTransport implements ITransportAdapter {
   private reconnectTimer: any = null;
   private targetUrl: string | null = null;
   private currentRoom = 'public_meshora';
+  /** Contre-audit V0.2 : clés publiques auxquelles chaque message a réellement été chiffré (pour valider les ACK). */
+  /** Pour chaque message émis : empreinte de chaque enveloppe → clé du destinataire (validation des accusés v2). */
+  private sentTo: Map<string, Map<string, string>> = new Map();
+  private peersChangedListeners: Set<() => void> = new Set();
+
+  public onPeersChanged(callback: () => void): () => void {
+    this.peersChangedListeners.add(callback);
+    return () => this.peersChangedListeners.delete(callback);
+  }
+
+  private emitPeersChanged(): void {
+    this.peersChangedListeners.forEach((l) => {
+      try {
+        l();
+      } catch {}
+    });
+  }
+
+  /** Contre-audit V0.2 : l'identifiant annoncé doit dériver de la clé publique annoncée (anti-usurpation d'identifiant). */
+  private static async idMatchesKey(id: unknown, publicKeyHex: unknown): Promise<boolean> {
+    if (typeof id !== 'string' || typeof publicKeyHex !== 'string' || !/^[0-9a-f]+$/i.test(publicKeyHex)) return false;
+    try {
+      const fp = await MeshoraCrypto.computeFingerprint(publicKeyHex);
+      return id === 'msh_' + fp.replace(/:/g, '').substring(0, 12);
+    } catch {
+      return false;
+    }
+  }
 
   constructor(customUrl?: string) {
     this.targetUrl = this.resolveRelayUrl(customUrl);
@@ -56,15 +87,40 @@ export class WebSocketTransport implements ITransportAdapter {
         this.currentRoom = qRoom;
       }
       const qRelay = params.get('relay');
-      if (qRelay && (qRelay.startsWith('ws://') || qRelay.startsWith('wss://'))) {
-        return qRelay;
+      if (qRelay && isAcceptableRelayUrl(qRelay)) {
+        // Contre-audit V0.2 : un relais proposé par un lien n'est utilisé qu'avec l'accord explicite de l'utilisateur.
+        let stored: string | null = null;
+        try {
+          stored = localStorage.getItem('meshora_relay_url');
+        } catch {}
+        if (stored === qRelay) return qRelay;
+        const host = (() => {
+          try {
+            return new URL(qRelay).host;
+          } catch {
+            return qRelay;
+          }
+        })();
+        const accepted =
+          typeof window.confirm === 'function' &&
+          window.confirm(
+            `Ce lien propose d’utiliser le relais de test « ${host} ».\n` +
+              'Le relais voit les adresses techniques et l’horaire des échanges, pas le contenu chiffré.\n' +
+              'Utiliser ce relais ?'
+          );
+        if (accepted) {
+          try {
+            localStorage.setItem('meshora_relay_url', qRelay);
+          } catch {}
+          return qRelay;
+        }
       }
     } catch {}
 
     // 2. Préférence enregistrée dans le navigateur
     try {
       const stored = localStorage.getItem('meshora_relay_url');
-      if (stored) return stored;
+      if (stored && isAcceptableRelayUrl(stored)) return stored;
     } catch {}
 
     // 3. Relais local de développement ou démo (port 8787)
@@ -126,17 +182,10 @@ export class WebSocketTransport implements ITransportAdapter {
     try {
       this.ws = new WebSocket(this.targetUrl);
 
-      this.ws.onopen = async () => {
+      this.ws.onopen = () => {
         this.connected = true;
-        // Annonce d'identité avec vraie clé publique SPKI
-        const myId = await ensureCryptographicIdentity();
-        this.sendRaw({
-          type: 'MESHORA_HELLO',
-          senderId: myId.id,
-          senderAlias: myId.alias,
-          publicKey: myId.publicKey,
-          room: this.currentRoom
-        });
+        // Contre-audit V0.2 : l'annonce d'identité (HELLO) est envoyée en réponse au défi du relais,
+        // signée avec la clé d'identité (preuve de possession de la clé privée).
       };
 
       this.ws.onclose = () => {
@@ -173,6 +222,26 @@ export class WebSocketTransport implements ITransportAdapter {
     if (!packet) return;
 
     switch (packet.type) {
+      case 'MESHORA_CHALLENGE': {
+        if (typeof packet.nonce !== 'string' || !/^[0-9a-f]{16,128}$/i.test(packet.nonce)) break;
+        const myId = await ensureCryptographicIdentity();
+        if (!myId.privateKeyPkcs8Hex) break;
+        const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
+        const helloSignature = await MeshoraCrypto.signData(
+          privKey,
+          `MESHORA-HELLO|v1|${typeof packet.room === 'string' ? packet.room : this.currentRoom}|${packet.nonce}|${myId.publicKey}`
+        );
+        this.sendRaw({
+          type: 'MESHORA_HELLO',
+          senderId: myId.id,
+          senderAlias: myId.alias,
+          publicKey: myId.publicKey,
+          helloSignature,
+          room: this.currentRoom
+        });
+        break;
+      }
+
       case 'MESHORA_ENVELOPE': {
         // Enveloppe chiffrée E2EE reçue
         if (packet.envelope) {
@@ -196,11 +265,15 @@ export class WebSocketTransport implements ITransportAdapter {
               const senderPeer = Array.from(this.remotePeers.values()).find(
                 p => p.publicKey === env.senderPublicKeyHex
               );
+              const derivedSenderId =
+                'msh_' + (await MeshoraCrypto.computeFingerprint(env.senderPublicKeyHex)).replace(/:/g, '').substring(0, 12);
 
               const reconstructedMsg: MeshMessage = {
-                id: env.id,
-                senderId: senderPeer?.id || 'msh_' + env.senderPublicKeyHex.substring(0, 10),
-                senderAlias: senderPeer?.alias || 'Pair E2EE Vérifié',
+                // Identifiant local = expéditeur + identifiant : un tiers qui réutilise un identifiant
+                // ne peut pas faire écarter le vrai message comme doublon (contre-audit V0.2).
+                id: `${derivedSenderId}:${env.id}`,
+                senderId: senderPeer?.id || derivedSenderId,
+                senderAlias: senderPeer?.alias || 'Pair inconnu (clé non vérifiée)',
                 recipientId: myId.id,
                 channelId: 'general',
                 content: dec.plaintext,
@@ -220,11 +293,7 @@ export class WebSocketTransport implements ITransportAdapter {
 
               // Émission d'un accusé de réception signé (Signed ACK)
               const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
-              const signedAck = await MeshoraCrypto.createSignedAck(
-                env.id,
-                privKey,
-                myId.publicKey
-              );
+              const signedAck = await MeshoraCrypto.createSignedAck(env, privKey);
 
               this.sendRaw({
                 type: 'MESHORA_ACK',
@@ -248,39 +317,31 @@ export class WebSocketTransport implements ITransportAdapter {
       }
 
       case 'MESHORA_MSG': {
-        if (packet.message) {
-          const msg = packet.message;
-          this.messageListeners.forEach((l) => {
-            try {
-              l(msg);
-            } catch {}
-          });
-
-          // Accusé de réception standard
-          const myId = await ensureCryptographicIdentity();
-          this.sendRaw({
-            type: 'MESHORA_ACK',
-            ack: {
-              messageId: msg.id,
-              recipientId: myId.id,
-              recipientAlias: myId.alias,
-              timestamp: Date.now(),
-              transport: 'websocket',
-              verified: false
-            }
-          });
-        }
+        // Contre-audit V0.2 : les messages en clair sont refusés (aucune réception, aucun ACK).
+        console.warn('[MESHORA] Message en clair refusé (chiffrement de bout en bout obligatoire).');
         break;
       }
 
       case 'MESHORA_ACK': {
         if (packet.ack) {
           const ack = packet.ack;
-          // Vérification cryptographique de l'accusé s'il contient une signature
-          if (ack.signedAck) {
-            const isValid = await MeshoraCrypto.verifySignedAck(ack.signedAck);
-            ack.verified = isValid;
+          // Contre-audit V0.2 : un ACK n'est « vérifié » que s'il est signé par une clé
+          // à laquelle CE message a effectivement été chiffré, et s'il porte le même identifiant.
+          ack.transport = 'websocket';
+          ack.verified = false;
+          const sa = ack.signedAck;
+          const expected = this.sentTo.get(ack.messageId);
+          const me = getOrCreateIdentity();
+          if (
+            sa &&
+            expected &&
+            sa.messageId === ack.messageId &&
+            sa.senderPublicKeyHex === me.publicKey &&
+            expected.get(sa.envelopeHash) === sa.recipientPublicKeyHex
+          ) {
+            ack.verified = await MeshoraCrypto.verifySignedAck(sa);
           }
+          if (!ack.verified) break;
 
           this.ackListeners.forEach((l) => {
             try {
@@ -292,7 +353,7 @@ export class WebSocketTransport implements ITransportAdapter {
       }
 
       case 'MESHORA_HELLO': {
-        if (packet.senderId) {
+        if (packet.senderId && (await WebSocketTransport.idMatchesKey(packet.senderId, packet.publicKey))) {
           this.remotePeers.set(packet.senderId, {
             id: packet.senderId,
             alias: packet.senderAlias || 'Pair Distant (Relais)',
@@ -303,8 +364,10 @@ export class WebSocketTransport implements ITransportAdapter {
             lastSeen: Date.now(),
             isGateway: false,
             capabilities: ['messages', 'files', 'e2ee'],
-            verified: !!packet.publicKey
+            // Clé cohérente avec l'identifiant, mais non vérifiée hors bande (pas encore de QR / TOFU)
+            verified: false
           });
+          this.emitPeersChanged();
         }
         break;
       }
@@ -312,12 +375,13 @@ export class WebSocketTransport implements ITransportAdapter {
       case 'MESHORA_PEERS': {
         if (Array.isArray(packet.peers)) {
           this.remotePeers.clear();
-          packet.peers.forEach((p) => {
-            const myId = getOrCreateIdentity();
-            if (p.id !== myId.id) {
-              this.remotePeers.set(p.id, p);
+          const myId = getOrCreateIdentity();
+          for (const p of packet.peers) {
+            if (p && p.id !== myId.id && (await WebSocketTransport.idMatchesKey(p.id, (p as MeshPeer & { publicKey?: string }).publicKey))) {
+              this.remotePeers.set(p.id, { ...p, verified: false });
             }
-          });
+          }
+          this.emitPeersChanged();
         }
         break;
       }
@@ -351,46 +415,48 @@ export class WebSocketTransport implements ITransportAdapter {
 
     const myId = await ensureCryptographicIdentity();
 
-    // Déterminer si le destinataire possède une clé publique connue pour chiffrement E2EE
-    let targetPeer: (MeshPeer & { publicKey?: string }) | undefined;
+    // Contre-audit V0.2 : chiffrement de bout en bout OBLIGATOIRE.
+    // Message adressé → la clé du destinataire ; message de salon → une enveloppe par pair dont la clé est connue.
+    // Aucun envoi en clair : sans clé connue, l'envoi échoue et le message reste dans l'Outbox.
+    let targets: Array<MeshPeer & { publicKey?: string }>;
     if (message.recipientId && message.recipientId !== 'broadcast') {
-      targetPeer = this.remotePeers.get(message.recipientId);
-    } else if (this.remotePeers.size === 1) {
-      // S'il n'y a qu'un seul interlocuteur dans le salon privé, chiffrer à destination de sa clé
-      targetPeer = Array.from(this.remotePeers.values())[0];
+      const p = this.remotePeers.get(message.recipientId);
+      targets = p ? [p] : [];
+    } else {
+      targets = Array.from(this.remotePeers.values());
+    }
+    targets = targets.filter((p) => typeof p.publicKey === 'string' && p.publicKey.length > 0);
+    if (targets.length === 0 || !myId.privateKeyPkcs8Hex) {
+      return false;
     }
 
-    if (targetPeer && targetPeer.publicKey && myId.privateKeyPkcs8Hex) {
-      try {
-        const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
+    let sentAny = false;
+    try {
+      const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
+      const recipients = this.sentTo.get(message.id) ?? new Map<string, string>();
+      for (const peer of targets) {
         const envelope = await MeshoraCrypto.encryptEnvelope({
           messageId: message.id,
           senderPrivateKey: privKey,
           senderPublicKeyHex: myId.publicKey,
-          recipientPublicKeyHex: targetPeer.publicKey,
+          recipientPublicKeyHex: peer.publicKey!,
           plaintext: message.content
         });
-
-        return this.sendRaw({
-          type: 'MESHORA_ENVELOPE',
-          envelope,
-          room: this.currentRoom
-        });
-      } catch (err) {
-        console.warn('[E2EE] Erreur lors du chiffrement, bascule d’envoi standard:', err);
+        if (this.sendRaw({ type: 'MESHORA_ENVELOPE', envelope, room: this.currentRoom })) {
+          recipients.set(await MeshoraCrypto.envelopeHash(envelope), peer.publicKey!);
+          sentAny = true;
+        }
       }
+      this.sentTo.set(message.id, recipients);
+      if (this.sentTo.size > 500) {
+        const oldest = this.sentTo.keys().next().value;
+        if (oldest) this.sentTo.delete(oldest);
+      }
+    } catch (err) {
+      console.warn('[E2EE] Chiffrement impossible : message conservé dans l’Outbox.', err);
+      return false;
     }
-
-    // Message broadcast en clair ou salon public
-    return this.sendRaw({
-      type: 'MESHORA_MSG',
-      message: {
-        ...message,
-        encrypted: false,
-        transport: 'websocket'
-      },
-      room: this.currentRoom
-    });
+    return sentAny;
   }
 
   public onMessage(callback: (message: MeshMessage) => void): () => void {

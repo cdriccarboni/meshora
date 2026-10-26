@@ -2,8 +2,10 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="meshora_identity.xml" />
+        <exclude domain="sharedpref" path="meshora_messages.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="meshora_identity.xml" />
+        <exclude domain="sharedpref" path="meshora_messages.xml" />
     </device-transfer>
 </data-extraction-rules>

@@ -96,7 +96,10 @@ class CryptoEngineTest {
         val bob = CryptoEngine.generateIdentityKeyPair()
         val bobPrivateKey = CryptoEngine.importPrivateKey(bob.privateKeyPkcs8Hex)
 
-        val ack = CryptoEngine.createSignedAck("msg-999", bobPrivateKey, bob.publicKeyHex)
+        // Contre-audit V0.2 : accusé v2, lié à une enveloppe réelle
+        val alice = CryptoEngine.generateIdentityKeyPair()
+        val env = CryptoEngine.encryptEnvelope("msg-999", CryptoEngine.importPrivateKey(alice.privateKeyPkcs8Hex), alice.publicKeyHex, bob.publicKeyHex, "ok")
+        val ack = CryptoEngine.createSignedAck(env, bobPrivateKey)
         assertEquals("msg-999", ack.messageId)
         assertEquals(bob.publicKeyHex, ack.recipientPublicKeyHex)
 

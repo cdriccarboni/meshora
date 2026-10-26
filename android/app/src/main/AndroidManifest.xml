@@ -39,6 +39,13 @@
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
+    <!-- Évite la fonctionnalité implicite « bluetooth » requise (sinon appareils sans Bluetooth exclus sur Play) -->
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
 
     <application
         android:name=".MeshoraApp"

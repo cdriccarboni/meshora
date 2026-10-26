@@ -1,3 +1,6 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,16 +8,36 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Signature de publication : JAMAIS dans le dépôt (contre-audit V0.2).
+// Fichier hors dépôt : $MESHORA_SIGNING_PROPERTIES ou ~/.meshora/signing.properties
+//   storeFile=/chemin/absolu/vers/la/cle.jks
+//   keyAlias=meshora-upload
+// Les mots de passe ne sont écrits nulle part sur disque : ils viennent des variables
+// MESHORA_KEYSTORE_PASSWORD / MESHORA_KEY_PASSWORD, que tools/android/build-signed.sh lit
+// dans le trousseau macOS. (storePassword/keyPassword dans le fichier restent acceptés, déconseillés.)
+val signingProps = Properties().apply {
+    val path = System.getenv("MESHORA_SIGNING_PROPERTIES")
+        ?: (System.getProperty("user.home") + "/.meshora/signing.properties")
+    val f = File(path)
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val releaseStoreFile: String? = signingProps.getProperty("storeFile")
+val releaseKeyAlias: String? = signingProps.getProperty("keyAlias")
+val releaseStorePassword: String? = System.getenv("MESHORA_KEYSTORE_PASSWORD") ?: signingProps.getProperty("storePassword")
+val releaseKeyPassword: String? = System.getenv("MESHORA_KEY_PASSWORD") ?: signingProps.getProperty("keyPassword") ?: releaseStorePassword
+val hasReleaseSigning = listOf(releaseStoreFile, releaseKeyAlias, releaseStorePassword, releaseKeyPassword)
+    .all { !it.isNullOrBlank() } && File(releaseStoreFile!!).let { it.isAbsolute && it.exists() }
+
 android {
     namespace = "org.meshora.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "org.meshora.app"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-beta"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "0.2.1-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -23,13 +46,12 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val keystoreFile = rootProject.file("meshora-upload.jks")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = System.getenv("MESHORA_KEYSTORE_PASSWORD") ?: "meshora-play-upload-2026"
-                keyAlias = "meshora-upload"
-                keyPassword = System.getenv("MESHORA_KEY_PASSWORD") ?: "meshora-play-upload-2026"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = File(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -41,12 +63,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val keystoreFile = rootProject.file("meshora-upload.jks")
-            signingConfig = if (keystoreFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Sans configuration de signature hors dépôt, la version de publication reste NON signée
+            // (pas de repli silencieux sur la clé de débogage).
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -103,4 +122,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// Essai d'interopérabilité Android ↔ web (tools/audit/interop-android.sh) : transmis aux tests JVM.
+tasks.withType<Test>().configureEach {
+    environment("MESHORA_INTEROP_RELAY", System.getenv("MESHORA_INTEROP_RELAY") ?: "")
+    environment("MESHORA_INTEROP_ROOM", System.getenv("MESHORA_INTEROP_ROOM") ?: "interop")
 }

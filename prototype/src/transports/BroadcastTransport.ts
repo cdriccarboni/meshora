@@ -56,7 +56,8 @@ export class BroadcastTransport implements ITransportAdapter {
       lastSeen: Date.now(),
       isGateway: false,
       capabilities: ['messages', 'broadcast'],
-      verified: true
+      // Autre onglet du même navigateur : aucune vérification d'identité n'est effectuée
+      verified: false
     };
   }
 

@@ -27,9 +27,17 @@ export interface EncryptedEnvelope {
   timestamp: number;
 }
 
+/**
+ * Accusé de réception signé, version 2 (contre-audit V0.2) : lie l'identifiant, l'expéditeur,
+ * le destinataire et l'empreinte de l'enveloppe effectivement reçue.
+ * Chaîne signée : ACK2|messageId|senderPublicKeyHex|recipientPublicKeyHex|envelopeHash|timestamp
+ * envelopeHash = SHA-256 (hex) de la chaîne UTF-8 envelope.signatureHex.
+ */
 export interface SignedAck {
   messageId: string;
+  senderPublicKeyHex: string;
   recipientPublicKeyHex: string;
+  envelopeHash: string;
   timestamp: number;
   signatureHex: string;
 }
@@ -356,31 +364,32 @@ export class MeshoraCrypto {
     };
   }
 
-  /**
-   * Crée un accusé de réception (ACK) signé par le destinataire
-   */
-  public static async createSignedAck(
-    messageId: string,
-    recipientPrivateKey: CryptoKey,
-    recipientPublicKeyHex: string
-  ): Promise<SignedAck> {
-    const timestamp = Date.now();
-    const ackPayload = `ACK|${messageId}|${recipientPublicKeyHex}|${timestamp}`;
-    const signatureHex = await this.signData(recipientPrivateKey, ackPayload);
+  /** Empreinte d'une enveloppe (SHA-256 hex de sa signature, qui couvre tous ses champs). */
+  public static async envelopeHash(envelope: EncryptedEnvelope): Promise<string> {
+    const digest = await getSubtle().digest('SHA-256', new TextEncoder().encode(envelope.signatureHex) as unknown as BufferSource);
+    return bytesToHex(new Uint8Array(digest));
+  }
 
+  /** Crée l'accusé signé (v2) d'une enveloppe reçue et déchiffrée. */
+  public static async createSignedAck(envelope: EncryptedEnvelope, recipientPrivateKey: CryptoKey): Promise<SignedAck> {
+    const timestamp = Date.now();
+    const envelopeHash = await this.envelopeHash(envelope);
+    const payload = `ACK2|${envelope.id}|${envelope.senderPublicKeyHex}|${envelope.recipientPublicKeyHex}|${envelopeHash}|${timestamp}`;
+    const signatureHex = await this.signData(recipientPrivateKey, payload);
     return {
-      messageId,
-      recipientPublicKeyHex,
+      messageId: envelope.id,
+      senderPublicKeyHex: envelope.senderPublicKeyHex,
+      recipientPublicKeyHex: envelope.recipientPublicKeyHex,
+      envelopeHash,
       timestamp,
       signatureHex
     };
   }
 
-  /**
-   * Vérifie la validité cryptographique d'un accusé de réception (ACK)
-   */
+  /** Vérifie la signature d'un accusé v2 (le contrôle de correspondance avec l'envoi reste à l'appelant). */
   public static async verifySignedAck(ack: SignedAck): Promise<boolean> {
-    const ackPayload = `ACK|${ack.messageId}|${ack.recipientPublicKeyHex}|${ack.timestamp}`;
-    return this.verifySignature(ack.recipientPublicKeyHex, ack.signatureHex, ackPayload);
+    if (!ack || typeof ack.senderPublicKeyHex !== 'string' || typeof ack.envelopeHash !== 'string') return false;
+    const payload = `ACK2|${ack.messageId}|${ack.senderPublicKeyHex}|${ack.recipientPublicKeyHex}|${ack.envelopeHash}|${ack.timestamp}`;
+    return this.verifySignature(ack.recipientPublicKeyHex, ack.signatureHex, payload);
   }
 }

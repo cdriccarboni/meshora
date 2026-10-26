@@ -496,7 +496,7 @@ export const ResilienceScreen: React.FC<ResilienceScreenProps> = ({ lang, identi
                 disabled={!newAlertTitle.trim() || !newAlertMsg.trim()}
                 className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
               >
-                {lang === 'fr' ? 'Publier l’avis signé' : 'Publish signed alert'}
+                {lang === 'fr' ? 'Publier l’avis local' : 'Publish local notice'}
               </button>
             </div>
           </form>
@@ -521,8 +521,8 @@ export const ResilienceScreen: React.FC<ResilienceScreenProps> = ({ lang, identi
               </p>
               <div className="pt-1 flex items-center justify-between text-[10px] text-neutral-400 border-t border-neutral-100 dark:border-neutral-800">
                 <span>Émis par : <strong>{al.senderAlias}</strong></span>
-                <span className="font-mono text-blue-500 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" /> Signature Ed25519 vérifiée
+                <span className="text-neutral-500 dark:text-neutral-400">
+                  {lang === 'fr' ? 'Avis local · non signé · non vérifié' : 'Local notice · unsigned · unverified'}
                 </span>
               </div>
             </div>

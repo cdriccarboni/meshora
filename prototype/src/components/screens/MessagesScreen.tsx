@@ -81,7 +81,8 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
       status: 'queued',
       transport: 'broadcast',
       hops: 0,
-      encrypted: true
+      // Contre-audit V0.2 : positionné à true par TransportManager seulement si une enveloppe E2EE est partie
+      encrypted: false
     };
 
     setInputText('');
@@ -105,7 +106,7 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
       status: 'relayed',
       transport: 'lan',
       hops: 1,
-      encrypted: true
+      encrypted: false
     };
     MessageStore.saveMessage(simulatedMsg);
   };
@@ -238,8 +239,14 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
                         ✕ {t.status.failed}
                       </span>
                     )}
-                    <span className="text-neutral-500">·</span>
-                    <Lock className="w-2.5 h-2.5 text-neutral-400" />
+                    {msg.encrypted && (
+                      <>
+                        <span className="text-neutral-500">·</span>
+                        <span title={lang === 'fr' ? 'Chiffré de bout en bout (clé du pair non vérifiée hors bande)' : 'End-to-end encrypted (peer key not verified out of band)'}>
+                          <Lock className="w-2.5 h-2.5 text-neutral-400" aria-label={lang === 'fr' ? 'Chiffré' : 'Encrypted'} />
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

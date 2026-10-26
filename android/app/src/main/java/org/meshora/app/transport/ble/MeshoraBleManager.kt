@@ -31,7 +31,7 @@ class MeshoraBleManager(private val context: Context) {
     private val _isAdvertising = MutableStateFlow(false)
     val isAdvertising: StateFlow<Boolean> = _isAdvertising.asStateFlow()
 
-    private val _statusMessage = MutableStateFlow("Architecture BLE native intégrée (GATT 0xFE60). En attente d'épreuve physique.")
+    private val _statusMessage = MutableStateFlow("Bluetooth LE : non implémenté dans cette version (spécification seulement).")
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
     fun isBleSupported(): Boolean {
@@ -67,8 +67,10 @@ class MeshoraBleManager(private val context: Context) {
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
                 .build()
 
-            _isScanning.value = true
-            _statusMessage.value = "Balayage BLE actif (Recherche de nœuds 0xFE60)..."
+            // Contre-audit V0.2 : aucun appel à scanner.startScan() n'est encore implémenté.
+            // Ne pas afficher « actif » tant que rien ne balaie réellement.
+            _isScanning.value = false
+            _statusMessage.value = "Balayage BLE non implémenté dans cette version (aucune recherche lancée)."
         } catch (e: SecurityException) {
             _statusMessage.value = "Autorisations Bluetooth SCAN manquantes."
             _isScanning.value = false
@@ -92,8 +94,9 @@ class MeshoraBleManager(private val context: Context) {
                 _statusMessage.value = "Mode Périphérique BLE non supporté sur ce matériel."
                 return
             }
-            _isAdvertising.value = true
-            _statusMessage.value = "Annonce périphérique BLE active (Service 0xFE60)."
+            // Contre-audit V0.2 : aucun appel à advertiser.startAdvertising() n'est encore implémenté.
+            _isAdvertising.value = false
+            _statusMessage.value = "Annonce BLE non implémentée dans cette version (rien n'est émis)."
         } catch (e: SecurityException) {
             _statusMessage.value = "Autorisations Bluetooth ADVERTISE manquantes."
             _isAdvertising.value = false

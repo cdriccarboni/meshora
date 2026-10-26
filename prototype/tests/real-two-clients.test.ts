@@ -12,6 +12,7 @@ function connectTestClient(urlStr: string): Promise<{
   send: (data: any) => void;
   onMessage: (cb: (data: any) => void) => void;
   close: () => void;
+  challenge: Promise<{ nonce: string; room: string }>;
 }> {
   return new Promise((resolve, reject) => {
     const targetUrl = new URL(urlStr);
@@ -32,7 +33,13 @@ function connectTestClient(urlStr: string): Promise<{
     req.on('upgrade', (res, socket, head) => {
       let buffer = head && head.length > 0 ? head : Buffer.alloc(0);
       const messageListeners: ((data: any) => void)[] = [];
+      // Contre-audit V0.2 : le relais envoie un défi dès l'ouverture ; il est mémorisé ici
+      let resolveChallenge: (c: { nonce: string; room: string }) => void = () => {};
+      const challenge = new Promise<{ nonce: string; room: string }>((r) => (resolveChallenge = r));
 
+      // Contre-audit V0.2 : les octets reçus avec la réponse 101 (« head ») contiennent déjà le défi du relais ;
+      // ils sont décodés immédiatement au lieu d'attendre le prochain paquet.
+      setImmediate(() => socket.emit('data', Buffer.alloc(0)));
       socket.on('data', (chunk) => {
         buffer = Buffer.concat([buffer, chunk]);
 
@@ -62,6 +69,7 @@ function connectTestClient(urlStr: string): Promise<{
           if (opcode === 0x01) {
             try {
               const parsed = JSON.parse(payload.toString('utf8'));
+              if (parsed.type === 'MESHORA_CHALLENGE') resolveChallenge({ nonce: parsed.nonce, room: parsed.room });
               messageListeners.forEach((l) => l(parsed));
             } catch {}
           }
@@ -95,6 +103,7 @@ function connectTestClient(urlStr: string): Promise<{
       }
 
       resolve({
+        challenge,
         send,
         onMessage: (cb) => messageListeners.push(cb),
         close: () => {
@@ -110,6 +119,20 @@ function connectTestClient(urlStr: string): Promise<{
     req.on('error', reject);
     req.end();
   });
+}
+
+/** HELLO authentifié : identifiant dérivé de la clé + signature du défi du relais (contre-audit V0.2). */
+async function authenticatedHello(
+  client: { send: (d: any) => void; challenge: Promise<{ nonce: string; room: string }> },
+  kp: { publicKeyHex: string; privateKey: CryptoKey },
+  alias: string
+): Promise<string> {
+  const { nonce, room } = await client.challenge;
+  const fp = await MeshoraCrypto.computeFingerprint(kp.publicKeyHex);
+  const senderId = 'msh_' + fp.replace(/:/g, '').substring(0, 12);
+  const helloSignature = await MeshoraCrypto.signData(kp.privateKey, `MESHORA-HELLO|v1|${room}|${nonce}|${kp.publicKeyHex}`);
+  client.send({ type: 'MESHORA_HELLO', senderId, senderAlias: alias, publicKey: kp.publicKeyHex, helloSignature });
+  return senderId;
 }
 
 export async function runRealTwoClientsTests() {
@@ -161,22 +184,11 @@ export async function runRealTwoClientsTests() {
     // Test II : Connexion au Relais & Découverte Réelle des Pairs
     // -------------------------------------------------------------
     const room = 'salle_test_' + Date.now();
-    const clientA = await connectTestClient(`http://localhost:8999/?room=${room}`);
-    const clientB = await connectTestClient(`http://localhost:8999/?room=${room}`);
+    const clientA = await connectTestClient(`http://127.0.0.1:8999/?room=${room}`);
+    const clientB = await connectTestClient(`http://127.0.0.1:8999/?room=${room}`);
 
-    clientA.send({
-      type: 'MESHORA_HELLO',
-      senderId: 'msh_alice',
-      senderAlias: 'Alice-M4',
-      publicKey: alice.publicKeyHex
-    });
-
-    clientB.send({
-      type: 'MESHORA_HELLO',
-      senderId: 'msh_bob',
-      senderAlias: 'Bob-iPhone',
-      publicKey: bob.publicKeyHex
-    });
+    await authenticatedHello(clientA, alice, 'Alice-M4');
+    await authenticatedHello(clientB, bob, 'Bob-iPhone');
 
     await new Promise((r) => setTimeout(r, 500));
 
@@ -206,11 +218,7 @@ export async function runRealTwoClientsTests() {
           bobVerifiedSender = decrypted.verifiedSender;
 
           // Bob émet un accusé de réception signé (Signed ACK)
-          const signedAck = await MeshoraCrypto.createSignedAck(
-            msg.envelope.id,
-            bob.privateKey,
-            bob.publicKeyHex
-          );
+          const signedAck = await MeshoraCrypto.createSignedAck(msg.envelope, bob.privateKey);
 
           clientB.send({
             type: 'MESHORA_ACK',
@@ -358,7 +366,7 @@ export async function runRealTwoClientsTests() {
 
     // Reconnexion de Bob après coup
     let bobReceivedOfflineMsg: string | null = null;
-    const clientBReconnected = await connectTestClient(`http://localhost:8999/?room=${room}`);
+    const clientBReconnected = await connectTestClient(`http://127.0.0.1:8999/?room=${room}`);
     clientBReconnected.onMessage(async (msg) => {
       if (msg.type === 'MESHORA_ENVELOPE' && msg.envelope?.id === 'msg_offline_04') {
         const dec = await MeshoraCrypto.decryptEnvelope({
@@ -370,12 +378,7 @@ export async function runRealTwoClientsTests() {
     });
 
     // Annonce d'identité par Bob pour vider sa boîte aux lettres
-    clientBReconnected.send({
-      type: 'MESHORA_HELLO',
-      senderId: 'msh_bob',
-      senderAlias: 'Bob-iPhone',
-      publicKey: bob.publicKeyHex
-    });
+    await authenticatedHello(clientBReconnected, bob, 'Bob-iPhone');
 
     await new Promise((r) => setTimeout(r, 800));
 

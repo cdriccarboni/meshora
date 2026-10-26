@@ -37,6 +37,7 @@ fun MessagesScreen(
     val connectionState by transportManager.webSocketTransport.connectionState.collectAsState()
 
     var recipientKeyInput by remember { mutableStateOf("") }
+    var sendError by remember { mutableStateOf<String?>(null) }
     var textInput by remember { mutableStateOf("") }
 
     // Si des pairs sont disponibles et qu'aucun destinataire n'est saisi, pré-sélectionner le premier
@@ -147,8 +148,11 @@ fun MessagesScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Champ de saisie et bouton d'envoi
+        sendError?.let {
+            Text(text = it, color = MeshoraError, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+        }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().imePadding(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
@@ -162,8 +166,13 @@ fun MessagesScreen(
             IconButton(
                 onClick = {
                     if (textInput.isNotBlank() && recipientKeyInput.isNotBlank()) {
-                        transportManager.sendMessage(recipientKeyInput.trim(), textInput.trim())
-                        textInput = ""
+                        val id = transportManager.sendMessage(recipientKeyInput.trim(), textInput.trim())
+                        if (id == null) {
+                            sendError = "Clé publique du destinataire invalide : message non enregistré."
+                        } else {
+                            sendError = null
+                            textInput = ""
+                        }
                     }
                 },
                 modifier = Modifier

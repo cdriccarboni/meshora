@@ -74,3 +74,27 @@ Exigences et répartition détaillées dans `PUBLICATION.md`. En bref : Claude f
 ## 7. Prochaines étapes pour les agents locaux
 
 Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en commençant par **E1** (constat PWA/iPhone), **E2**, **E3** (BLE Android ↔ iPhone, compatibilité Bitchat) et **E10** (découverte Nearby). Rapports dans `docs/tests/`.
+
+## 8. Contre-audit V0.2 et corrections ciblées (25 octobre 2026) — Claude
+
+- Analyse complète : `docs/audits/CONTRE-AUDIT-V0.2.md` ; résultats bruts : `docs/tests/CONTRE-AUDIT-V0.2-2026-10-25.md`.
+- Les corrections de Claude sont sur `validation/v0.2-contre-audit`, **pas** sur `ai-studio/prototype-v0` (laissée intacte à `9965e5e`).
+- Fichiers d'Antigravity touchés, à relire par Antigravity : `WebSocketTransport.ts`, `TransportManager.ts`, `BroadcastTransport.ts`, `QuickSOSButton.tsx`, `MessagesScreen.tsx`, `ResilienceScreen.tsx`, `EmergencyBroadcastPanel.tsx`, `i18n.ts`, `App.tsx`, `main.tsx`, `tests/real-two-clients.test.ts`, `tools/relay/server.js`. Nouveau : `core/urlHygiene.ts`, `tests/url-hygiene.test.ts`, `tools/audit/*`.
+- Protocole relais modifié : le relais envoie `MESHORA_CHALLENGE {nonce, room}` ; le client répond par `MESHORA_HELLO` avec `helloSignature` = ECDSA P-256/SHA-256 de `MESHORA-HELLO|v1|<room>|<nonce>|<publicKeyHex>` ; l'identifiant doit valoir `msh_` + 12 premiers hex de SHA-256(clé SPKI). `MESHORA_MSG` (clair) n'existe plus.
+- Reste à Antigravity : voir `CONTRE-AUDIT-V0.2.md` §8.
+- Règle maintenue : la messagerie entre appareils n'est annoncée nulle part tant que l'essai Mac ↔ téléphone (§11) n'est pas consigné dans `docs/tests/`.
+
+## 9. Android et Bitchat (26 octobre 2026) — Claude
+
+- Branche `claude/android-interop` : PR #5 + PR #7 (`f990e03`, fusion sans conflit) + corrections Android. PR #7 et `android/native-beta` ne sont pas modifiées.
+- **Clé de signature `android/meshora-upload.jks` publiée sur GitHub avec son mot de passe** : à considérer comme compromise. Ne jamais l'enregistrer sur Google Play. En générer une nouvelle hors dépôt (`docs/audits/CONTRE-AUDIT-ANDROID-V0.2.md` §3).
+- Le protocole commun est décrit dans `docs/PROTOCOLE-V0.2.md`. Toute modification du protocole (web, Android, relais) doit passer `bash tools/audit/interop-android.sh`.
+- Antigravity : reprendre ou contester les corrections Android ; restent A-P1-5 à A-P1-8 et A-P2-2.
+- REA : `docs/audits/CONTRE-AUDIT-REA-BITCHAT.md` corrige plusieurs affirmations de `REA-BITCHAT.md` et fixe le protocole d'essais B-T1 à B-T8 ; l'audit approfondi sur appareils reste à faire.
+
+## 10. Suite (26 octobre 2026, 9 h) — Claude
+
+- Revue indépendante de la PR #8 (agent distinct) : aucun P0 ; P1/P2 traités dans `3b4dca0` (accusés v2, renvois progressifs, reconnexion Android, AGP 8.9.3). Détails : `CONTRE-AUDIT-ANDROID-V0.2.md` §5.
+- **Changement de protocole** : accusés v2 (`docs/PROTOCOLE-V0.2.md` §3). La prévisualisation `validation-v0-2-contre-audit` (accusés v1) n'est plus compatible avec le relais de test : utiliser `integration-v0-2.meshora.pages.dev`.
+- Nouvelle clé d'importation Android générée hors dépôt (`CONTRE-AUDIT-ANDROID-V0.2.md` §6). Antigravity : ne plus utiliser `android/meshora-upload.jks` ni les APK/AAB signés avec elle.
+- Socle du maillage natif (trame, fragmentation, relais TTL, limiteur, UUID 128 bits) : branche `claude/mesh-ble-prep`, spécification `docs/MESH-NATIF-V0.3.md`. Antigravity : construire `BleLink` dessus, sans dupliquer `mesh/`.

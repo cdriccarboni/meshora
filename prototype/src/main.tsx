@@ -1,6 +1,10 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { cleanAddressBar } from './core/urlHygiene';
+
+// Contre-audit V0.2 : retire utm_* et identifiants de clic de l'adresse affichée (paramètres fonctionnels conservés)
+cleanAddressBar();
 
 // Enregistrement du Service Worker dans le bundle (conforme CSP script-src 'self')
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {

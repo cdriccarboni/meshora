@@ -22,6 +22,9 @@ export const MESH_SCAN_INTERVALS = {
 } as const;
 
 const DEDUP_KEY = 'meshora_processed_ids_v02';
+const OUTBOX_RETRY_MS = 15000;
+const OUTBOX_MAX_BACKOFF_MS = 10 * 60 * 1000;
+const MAX_PER_PASS = 20;
 
 export class TransportManager {
   private static instance: TransportManager | null = null;
@@ -61,9 +64,17 @@ export class TransportManager {
     // Listen to network sentinel changes to flush outbox
     NetworkSentinel.subscribe((status) => {
       if (status !== 'offline') {
-        this.flushPendingOutbox();
+        void this.flushPendingOutbox(true);
       }
     });
+
+    // Contre-audit V0.2 : renvoi aussi quand un pair (re)devient joignable, et périodiquement tant que l'Outbox n'est pas vide.
+    wsAdapter.onPeersChanged(() => {
+      void this.flushPendingOutbox(true);
+    });
+    setInterval(() => {
+      if (MessageStore.getOutboxMessages().length > 0) void this.flushPendingOutbox();
+    }, OUTBOX_RETRY_MS);
 
     this.startBackgroundScanner();
   }
@@ -129,6 +140,7 @@ export class TransportManager {
 
     // 2. Dispatch through real active transports
     let dispatched = false;
+    let viaE2EE = false;
     const realTransports: TransportType[] = ['broadcast', 'websocket'];
 
     for (const t of realTransports) {
@@ -136,7 +148,11 @@ export class TransportManager {
       if (adapter && adapter.isAvailable()) {
         try {
           const ok = await adapter.send(message);
-          if (ok) dispatched = true;
+          if (ok) {
+            dispatched = true;
+            // Le transport WebSocket n'émet plus que des enveloppes chiffrées (contre-audit V0.2)
+            if (t === 'websocket') viaE2EE = true;
+          }
         } catch {
           // Continue
         }
@@ -146,6 +162,7 @@ export class TransportManager {
     // 3. STRICT TRUTH: Dispatched on transport means 'sent', NEVER 'delivered' without ACK!
     const finalMsg: MeshMessage = {
       ...message,
+      encrypted: viaE2EE,
       status: dispatched ? 'sent' : 'queued'
     };
     MessageStore.saveMessage(finalMsg);
@@ -154,19 +171,53 @@ export class TransportManager {
     return dispatched;
   }
 
-  public flushPendingOutbox(): number {
-    return MessageStore.flushOutbox((msg) => {
-      let dispatched = false;
+  private flushing = false;
+  /** Dernier envoi et nombre de tentatives par message (attente progressive). */
+  private retryState: Map<string, { attempts: number; nextAt: number }> = new Map();
+
+  /**
+   * Contre-audit V0.2 : renvoi réel de l'Outbox, avec attente progressive par message
+   * (15 s, 30 s, 1 min… plafonnée à 10 min) et au plus MAX_PER_PASS envois par passe,
+   * pour ne pas saturer le relais (limite de débit, boîte aux lettres) ni le destinataire.
+   * Un message n'est marqué « envoyé » que si un transport l'a accepté.
+   * @param force renvoie sans attendre (arrivée d'un pair, retour du réseau).
+   */
+  public async flushPendingOutbox(force = false): Promise<number> {
+    if (this.flushing) return 0;
+    this.flushing = true;
+    let count = 0;
+    try {
+      const now = Date.now();
       const realTransports: TransportType[] = ['broadcast', 'websocket'];
-      for (const t of realTransports) {
-        const adapter = this.adapters.get(t);
-        if (adapter && adapter.isAvailable()) {
-          adapter.send(msg);
-          dispatched = true;
+      const due = MessageStore.getOutboxMessages().filter((m) => {
+        const st = this.retryState.get(m.id);
+        return force || !st || st.nextAt <= now;
+      });
+      for (const msg of due.slice(0, MAX_PER_PASS)) {
+        let ok = false;
+        for (const t of realTransports) {
+          const adapter = this.adapters.get(t);
+          if (adapter && adapter.isAvailable()) {
+            try {
+              if (await adapter.send(msg)) ok = true;
+            } catch {}
+          }
+        }
+        const prev = this.retryState.get(msg.id)?.attempts ?? 0;
+        const attempts = ok ? prev + 1 : prev;
+        this.retryState.set(msg.id, { attempts, nextAt: now + Math.min(OUTBOX_RETRY_MS * 2 ** attempts, OUTBOX_MAX_BACKOFF_MS) });
+        if (ok) {
+          count++;
+          if (msg.status === 'queued') MessageStore.markStatus(msg.id, 'sent');
         }
       }
-      return dispatched;
-    });
+      // Nettoyage des messages sortis de l'Outbox
+      const live = new Set(MessageStore.getOutboxMessages().map((m) => m.id));
+      for (const id of this.retryState.keys()) if (!live.has(id)) this.retryState.delete(id);
+    } finally {
+      this.flushing = false;
+    }
+    return count;
   }
 
   private handleIncomingMessage(msg: MeshMessage): void {
@@ -196,6 +247,10 @@ export class TransportManager {
   }
 
   public handleAck(ack: MessageAck): void {
+    // Contre-audit V0.2 : « délivré » exige un ACK signé et vérifié (relais WebSocket),
+    // ou un ACK d'un autre onglet du MÊME navigateur (BroadcastChannel, même origine : portée locale uniquement).
+    const trusted = ack.verified === true || ack.transport === 'broadcast';
+    if (!trusted) return;
     const existing = MessageStore.getMessageById(ack.messageId);
     if (existing && existing.status !== 'delivered') {
       const confirmed: MeshMessage = {
