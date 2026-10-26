@@ -1,0 +1,248 @@
+/**
+ * MESHORA — Banc de conformité « boîte noire » du relais (protocole V0.2, docs/PROTOCOLE-V0.2.md §4).
+ * Vise N'IMPORTE QUEL relais par son URL : relais Node local, Worker en local (wrangler dev) ou déployé.
+ * Utilise le vrai code applicatif web (tools/audit/app-client.ts) pour les scénarios de bout en bout.
+ *
+ * Usage (depuis prototype/) :
+ *   RELAY=ws://127.0.0.1:8787 npx tsx ../tools/audit/relay-conformance.ts
+ *   RELAY=wss://meshora-relay-preprod.<compte>.workers.dev npx tsx ../tools/audit/relay-conformance.ts
+ * Option : ORIGIN=https://meshora.pages.dev (Origin envoyé par les clients navigateur simulés).
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+import path from 'node:path';
+import http from 'node:http';
+import https from 'node:https';
+import crypto from 'node:crypto';
+import { fork, ChildProcess } from 'node:child_process';
+import { MeshoraCrypto } from '../../prototype/src/core/crypto';
+
+const RELAY = (process.env.RELAY || 'ws://127.0.0.1:8787').replace(/\/+$/, '');
+const HERE = path.dirname(new URL(import.meta.url).pathname);
+const RUN = crypto.randomBytes(3).toString('hex'); // salons uniques : la boîte aux lettres peut être persistante
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const results: { id: string; title: string; pass: boolean; evidence: string }[] = [];
+const record = (id: string, title: string, pass: boolean, evidence: string) => {
+  results.push({ id, title, pass, evidence });
+  console.log(`${pass ? '✅ PASS' : '❌ FAIL'}  ${id} — ${title}\n         ${evidence}`);
+};
+const room = (s: string) => `c${RUN}_${s}`;
+
+// ---------- clients bruts ----------
+type Raw = { ws: WebSocket; inbox: any[]; send: (o: any) => void; sendRaw: (d: any) => void; close: () => void; nonce: () => Promise<string>; closed: () => boolean; code: () => number | null };
+async function raw(r: string): Promise<Raw> {
+  const ws = new WebSocket(`${RELAY}/?room=${r}`);
+  const inbox: any[] = [];
+  let isClosed = false; let code: number | null = null;
+  ws.onmessage = (e) => { try { inbox.push(JSON.parse(String(e.data))); } catch {} };
+  ws.onclose = (e) => { isClosed = true; code = e.code; };
+  await new Promise<void>((res, rej) => { ws.onopen = () => res(); ws.onerror = () => rej(new Error('ws open failed')); });
+  const nonce = async () => {
+    for (let i = 0; i < 100; i++) { const c = inbox.find((p) => p.type === 'MESHORA_CHALLENGE'); if (c) return c.nonce as string; await sleep(30); }
+    return '';
+  };
+  return { ws, inbox, send: (o) => { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }, sendRaw: (d) => { if (ws.readyState === 1) ws.send(d); }, close: () => ws.close(), nonce, closed: () => isClosed, code: () => code };
+}
+type Keys = Awaited<ReturnType<typeof MeshoraCrypto.generateIdentityKeyPair>>;
+const idOf = async (pub: string) => 'msh_' + (await MeshoraCrypto.computeFingerprint(pub)).replace(/:/g, '').substring(0, 12);
+async function hello(r: Raw, rm: string, k: Keys, alias: string, claimedId?: string, badSig = false) {
+  const n = await r.nonce();
+  const sig = badSig ? '00'.repeat(64) : await MeshoraCrypto.signData(await MeshoraCrypto.importPrivateKey(k.privateKeyPkcs8Hex), `MESHORA-HELLO|v1|${rm}|${n}|${k.publicKeyHex}`);
+  r.send({ type: 'MESHORA_HELLO', senderId: claimedId ?? (await idOf(k.publicKeyHex)), senderAlias: alias, publicKey: k.publicKeyHex, helloSignature: sig, room: rm });
+}
+async function authed(rm: string, alias: string) {
+  const k = await MeshoraCrypto.generateIdentityKeyPair();
+  const r = await raw(rm); await hello(r, rm, k, alias);
+  for (let i = 0; i < 60 && !r.inbox.some((p) => p.type === 'MESHORA_PEERS'); i++) await sleep(50);
+  return { r, k };
+}
+const waitFor = async (pred: () => boolean, ms = 4000) => { const t = Date.now(); while (Date.now() - t < ms) { if (pred()) return true; await sleep(50); } return pred(); };
+
+/** Ouverture HTTP brute (pour l'Origin et les codes de refus) : renvoie 101 ou le code HTTP. */
+function upgradeStatus(query: string, origin?: string): Promise<number> {
+  const u = new URL(RELAY.replace(/^ws/, 'http'));
+  const mod = u.protocol === 'https:' ? https : http;
+  return new Promise((resolve) => {
+    const req = mod.request({ host: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: '/' + query, method: 'GET', headers: {
+      Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': crypto.randomBytes(16).toString('base64'), ...(origin ? { Origin: origin } : {})
+    } });
+    req.on('upgrade', (_res, socket) => { socket.destroy(); resolve(101); });
+    req.on('response', (res) => { res.resume(); resolve(res.statusCode || 0); });
+    req.on('error', () => resolve(-1));
+    req.setTimeout(8000, () => { req.destroy(); resolve(-2); });
+    req.end();
+  });
+}
+
+// ---------- clients applicatifs réels ----------
+type Client = { proc: ChildProcess; call: (cmd: any) => Promise<any> };
+async function appClient(rm: string): Promise<Client> {
+  const proc = fork(path.join(HERE, 'app-client.ts'), [], {
+    execArgv: ['--import', 'tsx'], cwd: path.resolve(HERE, '../../prototype'),
+    env: { ...process.env, RELAY, ROOM: rm }, stdio: ['ignore', 'ignore', 'ignore', 'ipc']
+  });
+  let seq = 0; const pending = new Map<number, (v: any) => void>();
+  await new Promise<void>((res) => proc.on('message', (m: any) => { if (m.ready) res(); else if (pending.has(m.rid)) { pending.get(m.rid)!(m); pending.delete(m.rid); } }));
+  const call = (cmd: any) => new Promise<any>((res) => { const rid = ++seq; pending.set(rid, res); proc.send({ ...cmd, rid }); }).then((m: any) => { if (!m.ok) throw new Error(m.error); return m.data; });
+  return { proc, call };
+}
+
+async function main() {
+  console.log(`Relais visé : ${RELAY}   (série ${RUN})\n`);
+
+  // C1 — santé
+  {
+    let body: any = null;
+    try { body = await (await fetch(RELAY.replace(/^ws/, 'http') + '/health')).json(); } catch {}
+    record('C1', 'Point de santé /health', body?.status === 'ok', `réponse=${JSON.stringify(body)}`);
+  }
+
+  // C2 — Origin hors liste blanche, Origin autorisé, salon invalide
+  {
+    const bad = await upgradeStatus(`?room=${room('c2')}`, 'https://site-malveillant.example');
+    const good = await upgradeStatus(`?room=${room('c2')}`, 'https://meshora.pages.dev');
+    const badRoom = await upgradeStatus(`?room=${encodeURIComponent('../x y')}`);
+    record('C2', 'Origin non autorisé refusé, Origin du site accepté, salon invalide refusé', bad === 403 && good === 101 && badRoom === 400,
+      `Origin malveillant=${bad} ; meshora.pages.dev=${good} ; salon invalide=${badRoom}`);
+  }
+
+  // C3 — HELLO avec signature invalide, puis identifiant revendiqué ≠ identifiant dérivé
+  {
+    const rm = room('c3');
+    const k = await MeshoraCrypto.generateIdentityKeyPair();
+    const a = await raw(rm); await hello(a, rm, k, 'X', undefined, true);
+    const other = await MeshoraCrypto.generateIdentityKeyPair();
+    const b = await raw(rm); await hello(b, rm, k, 'Y', await idOf(other.publicKeyHex));
+    await waitFor(() => a.closed() && b.closed());
+    record('C3', 'HELLO à signature fausse ou à identifiant usurpé : connexion fermée (1008)', a.closed() && b.closed() && a.code() === 1008 && b.code() === 1008,
+      `signature fausse → fermé=${a.closed()} code=${a.code()} ; identifiant usurpé → fermé=${b.closed()} code=${b.code()}`);
+  }
+
+  // C4 — liste des pairs : seuls les authentifiés, mise à jour à la déconnexion
+  {
+    const rm = room('c4');
+    const A = await authed(rm, 'Alice'); const anon = await raw(rm); await anon.nonce();
+    const B = await authed(rm, 'Bob');
+    await waitFor(() => (A.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers.length ?? 0) === 2);
+    const two = A.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers.length;
+    const anonSees = anon.inbox.some((p) => p.type === 'MESHORA_PEERS');
+    B.r.close();
+    await waitFor(() => (A.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers.length ?? 0) === 1);
+    const one = A.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers.length;
+    record('C4', 'Pairs : seuls les clients authentifiés, liste à jour après départ', two === 2 && one === 1 && !anonSees,
+      `pairs avec Bob=${two} ; après départ de Bob=${one} ; liste reçue par un non-authentifié=${anonSees}`);
+    A.r.close(); anon.close();
+  }
+
+  // C5 — texte en clair refusé ; enveloppe à expéditeur usurpé refusée
+  {
+    const rm = room('c5');
+    const A = await authed(rm, 'Alice'); const B = await authed(rm, 'Bob'); const M = await authed(rm, 'Mallory');
+    M.r.send({ type: 'MESHORA_MSG', content: 'CLAIR-' + RUN, recipientId: 'broadcast' });
+    const forged = await MeshoraCrypto.encryptEnvelope({ messageId: 'forge', senderPrivateKey: M.k.privateKey, senderPublicKeyHex: M.k.publicKeyHex, recipientPublicKeyHex: B.k.publicKeyHex, plaintext: 'x' });
+    M.r.send({ type: 'MESHORA_ENVELOPE', envelope: { ...forged, senderPublicKeyHex: A.k.publicKeyHex }, room: rm });
+    await sleep(1500);
+    const clear = [A, B].some((c) => c.r.inbox.some((p) => JSON.stringify(p).includes('CLAIR-' + RUN)));
+    const spoof = B.r.inbox.some((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.id === 'forge');
+    record('C5', 'Texte en clair non relayé ; enveloppe dont l\'expéditeur n\'est pas la clé authentifiée non relayée', !clear && !spoof,
+      `clair relayé=${clear} ; enveloppe usurpée relayée=${spoof}`);
+    [A, B, M].forEach((c) => c.r.close());
+  }
+
+  // C6 — boîte aux lettres : seul le détenteur prouvé de la clé retire le courrier ; renvoi = remplacement
+  {
+    const rm = room('c6');
+    const bobK = await MeshoraCrypto.generateIdentityKeyPair();
+    const A = await authed(rm, 'Alice');
+    const env = await MeshoraCrypto.encryptEnvelope({ messageId: 'mbx1', senderPrivateKey: A.k.privateKey, senderPublicKeyHex: A.k.publicKeyHex, recipientPublicKeyHex: bobK.publicKeyHex, plaintext: 'C6' });
+    A.r.send({ type: 'MESHORA_ENVELOPE', envelope: env, room: rm });
+    await sleep(400);
+    A.r.send({ type: 'MESHORA_ENVELOPE', envelope: env, room: rm }); // renvoi de l'Outbox
+    await sleep(600);
+    const M = await raw(rm); await hello(M, rm, bobK, 'X', undefined, true); await sleep(1200);
+    const stolen = M.inbox.some((p) => p.type === 'MESHORA_ENVELOPE');
+    const B = await raw(rm); await hello(B, rm, bobK, 'Bob');
+    await waitFor(() => B.inbox.some((p) => p.type === 'MESHORA_ENVELOPE'));
+    await sleep(700);
+    const copies = B.inbox.filter((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.id === 'mbx1').length;
+    B.close(); await sleep(500);
+    const B2 = await raw(rm); await hello(B2, rm, bobK, 'Bob'); await sleep(1500);
+    const again = B2.inbox.filter((p) => p.type === 'MESHORA_ENVELOPE').length;
+    record('C6', 'Courrier différé : non retiré par un imposteur, remis une seule fois au vrai destinataire, puis effacé', !stolen && copies === 1 && again === 0,
+      `retiré par imposteur=${stolen} ; copies reçues par Bob=${copies} ; recopies à la reconnexion=${again}`);
+    A.r.close(); B2.close();
+  }
+
+  // C7 — accusé : exige la clé authentifiée du destinataire, remis seulement à l'expéditeur
+  {
+    const rm = room('c7');
+    const A = await authed(rm, 'Alice'); const B = await authed(rm, 'Bob'); const C = await authed(rm, 'Carol');
+    const env = await MeshoraCrypto.encryptEnvelope({ messageId: 'ack1', senderPrivateKey: A.k.privateKey, senderPublicKeyHex: A.k.publicKeyHex, recipientPublicKeyHex: B.k.publicKeyHex, plaintext: 'C7' });
+    const signed = await MeshoraCrypto.createSignedAck(env as any, await MeshoraCrypto.importPrivateKey(B.k.privateKeyPkcs8Hex));
+    C.r.send({ type: 'MESHORA_ACK', ack: { messageId: 'ack1', recipientId: 'x', timestamp: Date.now(), transport: 'websocket', signedAck: signed } }); // Carol relaie l'accusé de Bob
+    await sleep(800);
+    const viaCarol = A.r.inbox.some((p) => p.type === 'MESHORA_ACK');
+    B.r.send({ type: 'MESHORA_ACK', ack: { messageId: 'ack1', recipientId: 'x', timestamp: Date.now(), transport: 'websocket', signedAck: signed } });
+    await waitFor(() => A.r.inbox.some((p) => p.type === 'MESHORA_ACK'));
+    const toA = A.r.inbox.some((p) => p.type === 'MESHORA_ACK');
+    const toC = C.r.inbox.some((p) => p.type === 'MESHORA_ACK');
+    record('C7', 'Accusé accepté seulement de la clé du destinataire et remis seulement à l\'expéditeur', !viaCarol && toA && !toC,
+      `accusé relayé par un tiers=${viaCarol} ; reçu par l'expéditeur=${toA} ; vu par un tiers=${toC}`);
+    [A, B, C].forEach((c) => c.r.close());
+  }
+
+  // C8 — saturation : plus de 60 paquets en 10 s → fermeture
+  {
+    const rm = room('c8');
+    const A = await authed(rm, 'Flood');
+    for (let i = 0; i < 75; i++) A.r.send({ type: 'NOOP', i });
+    await waitFor(() => A.r.closed(), 5000);
+    record('C8', 'Limite de débit : > 60 paquets / 10 s → connexion fermée (1008)', A.r.closed() && A.r.code() === 1008, `fermé=${A.r.closed()} code=${A.r.code()}`);
+  }
+
+  // C9 — paquet trop gros (300 Kio) et paquet binaire → fermeture
+  {
+    const rm = room('c9');
+    const A = await authed(rm, 'Big'); A.r.send({ type: 'NOOP', pad: 'x'.repeat(300 * 1024) });
+    const B = await authed(rm, 'Bin'); B.r.sendRaw(new Uint8Array([1, 2, 3]));
+    await waitFor(() => A.r.closed() && B.r.closed(), 5000);
+    record('C9', 'Paquet > 256 Kio (1009) et paquet binaire (1003) : connexion fermée', A.r.closed() && B.r.closed() && A.r.code() === 1009 && B.r.code() === 1003,
+      `300 Kio → fermé=${A.r.closed()} code=${A.r.code()} ; binaire → fermé=${B.r.closed()} code=${B.r.code()}`);
+  }
+
+  // C10 — délai d'authentification : sans HELLO, fermeture après ~10 s
+  {
+    const rm = room('c10');
+    const a = await raw(rm); const t0 = Date.now();
+    await waitFor(() => a.closed(), 16000);
+    const dt = Math.round((Date.now() - t0) / 1000);
+    record('C10', 'Connexion non authentifiée fermée après le délai (≈ 10 s)', a.closed() && dt >= 9 && dt <= 15, `fermé=${a.closed()} après ${dt} s code=${a.code()}`);
+  }
+
+  // C11 — bout en bout avec le VRAI code web : réception, accusé signé, réception différée, préemption d'identifiant
+  {
+    const rm = room('c11');
+    const A = await appClient(rm); const B = await appClient(rm); await sleep(2000);
+    const secret = 'C11-' + crypto.randomBytes(3).toString('hex');
+    const { id } = await A.call({ cmd: 'send', text: secret });
+    let st = ''; for (let i = 0; i < 40 && st !== 'delivered'; i++) { await sleep(250); st = await A.call({ cmd: 'status', id }); }
+    const got = (await B.call({ cmd: 'received' })).some((m: any) => m.content === secret);
+    record('C11', 'Application web ↔ application web : reçu et « Délivré » (accusé signé)', got && st === 'delivered', `reçu=${got} ; statut=${st}`);
+    A.proc.kill(); B.proc.kill(); await sleep(300);
+  }
+  {
+    const rm = room('c12');
+    const A = await appClient(rm); await sleep(1500);
+    const secret = 'C12-' + crypto.randomBytes(3).toString('hex');
+    const { id } = await A.call({ cmd: 'send', text: secret }); await sleep(1000);
+    const B = await appClient(rm);
+    let got = false; for (let i = 0; i < 40 && !got; i++) { await sleep(250); got = (await B.call({ cmd: 'received' })).some((m: any) => m.content === secret); }
+    let st = ''; for (let i = 0; i < 40 && st !== 'delivered'; i++) { await sleep(250); st = await A.call({ cmd: 'status', id }); }
+    record('C12', 'Message envoyé avant l\'arrivée du destinataire : remis à sa connexion, puis « Délivré »', got && st === 'delivered', `reçu=${got} ; statut=${st}`);
+    A.proc.kill(); B.proc.kill(); await sleep(300);
+  }
+
+  const fails = results.filter((r) => !r.pass).length;
+  console.log(`\nRÉSULTAT : ${results.length - fails}/${results.length} vérifications réussies contre ${RELAY}`);
+  process.exit(fails ? 1 : 0);
+}
+main().catch((e) => { console.error(e); process.exit(2); });

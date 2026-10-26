@@ -1,0 +1,40 @@
+// MESHORA — relais de référence (préproduction). SPDX-License-Identifier: AGPL-3.0-or-later
+// Déploiement : npx wrangler@4 deploy            (préproduction, workers.dev)
+// La production (env "production") n'est PAS déployée sans l'accord du directeur artistique.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "meshora-relay-preprod",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  // Aucune journalisation applicative conservée.
+  "observability": { "enabled": false },
+  "logpush": false,
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "MeshoraRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MeshoraRoom"] }],
+  "ratelimits": [
+    { "name": "CONNECT_LIMITER", "namespace_id": "4201", "simple": { "limit": 30, "period": 60 } }
+  ],
+  "vars": {
+    "MESHORA_CHANNEL": "preprod",
+    "MESHORA_ALLOWED_ORIGINS": "https://meshora.pages.dev,https://*.meshora.pages.dev,http://localhost:*,http://127.0.0.1:*"
+  },
+  "env": {
+    "production": {
+      "name": "meshora-relay",
+      "vars": {
+        "MESHORA_CHANNEL": "production",
+        "MESHORA_ALLOWED_ORIGINS": "https://meshora.pages.dev"
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "ROOMS", "class_name": "MeshoraRoom" }]
+      },
+      "ratelimits": [
+        { "name": "CONNECT_LIMITER", "namespace_id": "4202", "simple": { "limit": 30, "period": 60 } }
+      ]
+    }
+  }
+}
