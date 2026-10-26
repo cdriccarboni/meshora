@@ -9,6 +9,7 @@ import { Language, i18nData } from '../../core/i18n';
 import { MeshMessage, AppIdentity, NetworkStatusType } from '../../types';
 import { MessageStore } from '../../core/storage';
 import { TransportManager } from '../../transports/TransportManager';
+import { BluetoothLinkBar } from '../BluetoothLinkBar';
 import { 
   Send, 
   Check, 
@@ -160,6 +161,8 @@ export const MessagesScreen: React.FC<MessagesScreenProps> = ({
             <span>{lang === 'fr' ? '+ Voisin simulé' : '+ Simulated peer'}</span>
           </button>
         </div>
+
+        <BluetoothLinkBar lang={lang === 'en' ? 'en' : 'fr'} />
 
         {/* Tip / Notice */}
         <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-[11px]">

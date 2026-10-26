@@ -10,6 +10,7 @@ import { ITransportAdapter } from './TransportInterface';
 import { BroadcastTransport } from './BroadcastTransport';
 import { WebSocketTransport } from './WebSocketTransport';
 import { BluetoothLEStub } from './BluetoothLEStub';
+import { WebBluetoothTransport } from './WebBluetoothTransport';
 import { MeshtasticStub } from './MeshtasticStub';
 import { ReticulumStub } from './ReticulumStub';
 import { MessageStore } from '../core/storage';
@@ -47,19 +48,26 @@ export class TransportManager {
 
     const broadcastAdapter = new BroadcastTransport();
     const wsAdapter = new WebSocketTransport();
-    const bleStub = new BluetoothLEStub();
+    // Web Bluetooth réel quand le navigateur le permet (Chrome, Edge), sinon l'adaptateur indisponible
+    const bleAdapter = WebBluetoothTransport.isSupported() ? new WebBluetoothTransport() : new BluetoothLEStub();
     const meshStub = new MeshtasticStub();
     const retStub = new ReticulumStub();
 
     this.registerAdapter(broadcastAdapter);
     this.registerAdapter(wsAdapter);
-    this.registerAdapter(bleStub);
+    this.registerAdapter(bleAdapter);
     this.registerAdapter(meshStub);
     this.registerAdapter(retStub);
 
     // Listen to ACKs across bidirectional transports
     broadcastAdapter.onAck((ack) => this.handleAck(ack));
     wsAdapter.onAck((ack) => this.handleAck(ack));
+    if (bleAdapter instanceof WebBluetoothTransport) {
+      bleAdapter.onAck((ack) => this.handleAck(ack));
+      bleAdapter.onPeersChanged(() => {
+        void this.flushPendingOutbox(true);
+      });
+    }
 
     // Listen to network sentinel changes to flush outbox
     NetworkSentinel.subscribe((status) => {
@@ -129,19 +137,13 @@ export class TransportManager {
     const status = NetworkSentinel.getStatus();
 
     // 1. Completely offline without available local transport
-    if (status === 'offline') {
-      const queuedMessage: MeshMessage = {
-        ...message,
-        status: 'queued'
-      };
-      MessageStore.saveMessage(queuedMessage);
-      return false;
-    }
+    // Hors ligne : on tente quand même les transports locaux (onglets, Bluetooth) ; sinon le message reste en attente.
+    void status;
 
     // 2. Dispatch through real active transports
     let dispatched = false;
     let viaE2EE = false;
-    const realTransports: TransportType[] = ['broadcast', 'websocket'];
+    const realTransports: TransportType[] = ['broadcast', 'websocket', 'bluetooth'];
 
     for (const t of realTransports) {
       const adapter = this.adapters.get(t);
@@ -151,7 +153,7 @@ export class TransportManager {
           if (ok) {
             dispatched = true;
             // Le transport WebSocket n'émet plus que des enveloppes chiffrées (contre-audit V0.2)
-            if (t === 'websocket') viaE2EE = true;
+            if (t === 'websocket' || t === 'bluetooth') viaE2EE = true;
           }
         } catch {
           // Continue
@@ -188,7 +190,7 @@ export class TransportManager {
     let count = 0;
     try {
       const now = Date.now();
-      const realTransports: TransportType[] = ['broadcast', 'websocket'];
+      const realTransports: TransportType[] = ['broadcast', 'websocket', 'bluetooth'];
       const due = MessageStore.getOutboxMessages().filter((m) => {
         const st = this.retryState.get(m.id);
         return force || !st || st.nextAt <= now;

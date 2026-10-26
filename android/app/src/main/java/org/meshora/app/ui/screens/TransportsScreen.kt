@@ -19,15 +19,18 @@ import org.meshora.app.ui.theme.*
 @Composable
 fun TransportsScreen() {
     val transportManager = MeshoraApp.instance.transportManager
-    val bleManager = MeshoraApp.instance.bleManager
+    val bleMesh = MeshoraApp.instance.bleMesh
 
     val connectionState by transportManager.webSocketTransport.connectionState.collectAsState()
-    val isScanning by bleManager.isScanning.collectAsState()
-    val isAdvertising by bleManager.isAdvertising.collectAsState()
-    val bleStatus by bleManager.statusMessage.collectAsState()
+    val bleRunning by bleMesh.running.collectAsState()
+    val bleLinks by bleMesh.linkCount.collectAsState()
+    val bleStatus by bleMesh.status.collectAsState()
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { bleMesh.start() }
 
     var relayUrlInput by remember { mutableStateOf("ws://10.0.2.2:8787") }
-    var roomInput by remember { mutableStateOf("general") }
+    var roomInput by remember { mutableStateOf("essai1") }
 
     Column(
         modifier = Modifier
@@ -134,61 +137,44 @@ fun TransportsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- SECTION BLUETOOTH LE (0xFE60) ---
+        // --- SECTION BLUETOOTH LE (maillage direct, sans Internet) ---
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MeshoraSurface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Bluetooth LE Natif (Spécification 0xFE60)",
+                    text = "Bluetooth direct (sans Internet)",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge
                 )
-
                 Spacer(modifier = Modifier.height(6.dp))
-
-                Surface(
-                    color = MeshoraAccent.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
+                Surface(color = MeshoraAccent.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp)) {
                     Text(
-                        text = "Règle de Vérité : L'architecture GATT native est intégrée dans l'APK. La déclaration d'un maillage opérationnel sans relais nécessite un banc d'essai physique avec validation de portée.",
+                        text = "Version d'essai : application ouverte et écran allumé. Portée de quelques mètres à quelques dizaines de mètres, à mesurer. Messages chiffrés de bout en bout, relayés jusqu'à 7 appareils.",
                         modifier = Modifier.padding(10.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MeshoraAccent
                     )
                 }
-
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Statut : $bleStatus",
-                    style = MaterialTheme.typography.labelSmall
-                )
-
+                Text(text = bleStatus, style = MaterialTheme.typography.labelSmall)
+                Text(text = "Liens Bluetooth directs : $bleLinks", style = MaterialTheme.typography.labelSmall)
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = {
-                            if (isScanning) bleManager.stopScan() else bleManager.startScan()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (isScanning) "Arrêter Scan" else "Lancer Scan BLE")
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    OutlinedButton(
-                        onClick = {
-                            if (isAdvertising) bleManager.stopAdvertising() else bleManager.startAdvertising()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (isAdvertising) "Arrêter Annonce" else "Annoncer Périphérique")
-                    }
+                Button(
+                    onClick = {
+                        if (bleRunning) {
+                            bleMesh.stop()
+                        } else if (bleMesh.hasPermissions()) {
+                            bleMesh.start()
+                        } else {
+                            permissionLauncher.launch(bleMesh.requiredPermissions())
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (bleRunning) MeshoraError else MeshoraPrimary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (bleRunning) "Arrêter le Bluetooth MESHORA" else "Activer le Bluetooth MESHORA")
                 }
             }
         }

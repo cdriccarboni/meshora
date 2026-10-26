@@ -15,6 +15,12 @@ import org.meshora.app.model.MessageStatus
 import org.meshora.app.model.Peer
 import org.meshora.app.storage.OutboxRepository
 import org.meshora.app.transport.ble.MeshoraBleManager
+import org.meshora.app.mesh.MeshFrame
+import org.meshora.app.mesh.MeshRouter
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -44,16 +50,49 @@ class TransportManager(
     private val retryState = ConcurrentHashMap<String, Retry>()
     private val lastAckAt = ConcurrentHashMap<String, Long>()
 
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
+    /** Pairs vus par le relais Internet et par le maillage radio, publiés ensemble. */
+    @Volatile private var relayPeers: List<Peer> = emptyList()
+    private val meshPeers = ConcurrentHashMap<String, Peer>()
+
+    private fun publishPeers() {
+        val now = clock()
+        meshPeers.entries.removeIf { now - it.value.lastSeen > MESH_PEER_TTL_MS }
+        val merged = LinkedHashMap<String, Peer>()
+        relayPeers.forEach { merged[it.publicKeyHex] = it }
+        meshPeers.values.forEach { p ->
+            val existing = merged[p.publicKeyHex]
+            merged[p.publicKeyHex] = if (existing == null) p else existing.copy(transport = existing.transport + " + Bluetooth")
+        }
+        outboxRepository.updatePeers(merged.values.toList())
+    }
+
     val webSocketTransport = WebSocketTransport(
         scope = scope,
         onEnvelopeReceived = { env -> handleIncomingEnvelope(env) },
         onAckReceived = { ack -> handleIncomingAck(ack) },
         onPeersUpdated = { peers ->
-            outboxRepository.updatePeers(peers)
+            relayPeers = peers
+            publishPeers()
             flushOutbox(force = true)
         },
         onAuthenticated = { flushOutbox(force = true) }
     )
+
+    /** Routeur du maillage radio (Bluetooth LE aujourd'hui), alimenté par BleMesh. */
+    val meshRouter = MeshRouter(onMessage = { type, payload, _, _ -> handleMeshMessage(type, payload) })
+
+    private fun meshAvailable() = meshRouter.linkCount() > 0
+    private fun anyTransport() = webSocketTransport.isConnected() || meshAvailable()
+
+    /** À appeler quand des liens radio apparaissent ou disparaissent. */
+    fun onMeshLinksChanged() {
+        if (meshAvailable()) {
+            announceOnMesh()
+            flushOutbox(force = true)
+        }
+    }
 
     init {
         scope.launch(Dispatchers.Default) {
@@ -61,6 +100,65 @@ class TransportManager(
                 delay(RETRY_MS)
                 flushOutbox()
             }
+        }
+        scope.launch(Dispatchers.Default) {
+            while (isActive) {
+                delay(ANNOUNCE_MS)
+                if (meshAvailable()) announceOnMesh()
+                publishPeers()
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ maillage radio
+
+    /** Annonce signée : clé publique, pseudonyme, horodatage (relayée sur 2 sauts). */
+    @Serializable
+    data class MeshAnnounce(val publicKey: String, val alias: String, val timestamp: Long, val signature: String)
+
+    private fun announcePayload(pub: String, al: String, ts: Long) = "MESHORA-ANNOUNCE|v1|$pub|$al|$ts"
+
+    fun announceOnMesh() {
+        val ts = clock()
+        val sig = CryptoEngine.signData(myPrivateKey, announcePayload(identity.publicKeyHex, alias, ts))
+        val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig)).toByteArray(StandardCharsets.UTF_8)
+        meshRouter.broadcast(MeshFrame.Type.ANNOUNCE, bytes, ttl = ANNOUNCE_TTL)
+    }
+
+    private fun handleMeshMessage(type: MeshFrame.Type, payload: ByteArray) {
+        val text = String(payload, StandardCharsets.UTF_8)
+        try {
+            when (type) {
+                MeshFrame.Type.ENVELOPE -> handleIncomingEnvelope(json.decodeFromString<EncryptedEnvelope>(text), via = "Bluetooth")
+                MeshFrame.Type.ACK -> handleIncomingAck(json.decodeFromString<SignedAck>(text))
+                MeshFrame.Type.ANNOUNCE -> {
+                    val a = json.decodeFromString<MeshAnnounce>(text)
+                    val now = clock()
+                    if (a.publicKey == identity.publicKeyHex) return
+                    if (kotlin.math.abs(now - a.timestamp) > ANNOUNCE_MAX_AGE_MS) return
+                    if (CryptoEngine.normalizePublicKeyHex(a.publicKey) != a.publicKey) return
+                    if (!CryptoEngine.verifySignature(a.publicKey, a.signature, announcePayload(a.publicKey, a.alias, a.timestamp))) return
+                    val fp = CryptoEngine.computeFingerprint(a.publicKey)
+                    val isNew = !meshPeers.containsKey(a.publicKey)
+                    meshPeers[a.publicKey] = Peer(a.publicKey, fp, "${a.alias.take(64)} · ${fp.take(9)}", now, "Bluetooth", true)
+                    publishPeers()
+                    if (isNew) flushOutbox(force = true)
+                }
+            }
+        } catch (_: Exception) {
+            // charge utile invalide : ignorée
+        }
+    }
+
+    /** Identifiant de trame radio dérivé de l'empreinte (enveloppe ou accusé) : stable pour la déduplication. */
+    private fun meshId(hashHex: String): ByteArray = CryptoEngine.hexToBytes(hashHex).copyOf(MeshFrame.ID_SIZE)
+
+    private fun sendAckEverywhere(ack: SignedAck) {
+        webSocketTransport.sendAck(ack)
+        if (meshAvailable()) {
+            val bytes = json.encodeToString(ack).toByteArray(StandardCharsets.UTF_8)
+            val id = java.security.MessageDigest.getInstance("SHA-256").digest(ack.signatureHex.toByteArray(StandardCharsets.UTF_8))
+            meshRouter.broadcast(MeshFrame.Type.ACK, bytes, ttl = MeshFrame.MAX_TTL, messageId = id.copyOf(MeshFrame.ID_SIZE))
         }
     }
 
@@ -115,14 +213,21 @@ class TransportManager(
     }
 
     private fun trySend(msg: Message): Boolean {
-        if (!webSocketTransport.isConnected()) return false
+        if (!anyTransport()) return false
         return try {
             val envelope = prepareEnvelope(msg)
-            val sent = webSocketTransport.sendEnvelope(envelope)
+            val viaRelay = webSocketTransport.sendEnvelope(envelope)
+            val viaMesh = meshAvailable() && meshRouter.broadcast(
+                MeshFrame.Type.ENVELOPE,
+                json.encodeToString(envelope).toByteArray(StandardCharsets.UTF_8),
+                ttl = MeshFrame.MAX_TTL,
+                messageId = meshId(CryptoEngine.envelopeHash(envelope))
+            ) > 0
+            val sent = viaRelay || viaMesh
             val previous = retryState[msg.id]?.attempts ?: 0
             val attempts = if (sent) previous + 1 else previous
             retryState[msg.id] = Retry(attempts, clock() + backoff(attempts))
-            if (sent) outboxRepository.markSent(msg.id, "WebSocket")
+            if (sent) outboxRepository.markSent(msg.id, listOfNotNull(if (viaRelay) "WebSocket" else null, if (viaMesh) "Bluetooth" else null).joinToString(" + "))
             sent
         } catch (e: Exception) {
             outboxRepository.markFailed(msg.id) // clé destinataire inutilisable : échec visible
@@ -130,7 +235,7 @@ class TransportManager(
         }
     }
 
-    fun handleIncomingEnvelope(envelope: EncryptedEnvelope) {
+    fun handleIncomingEnvelope(envelope: EncryptedEnvelope, via: String = "WebSocket") {
         if (envelope.recipientPublicKeyHex != identity.publicKeyHex) return
 
         val plaintext = try {
@@ -147,7 +252,7 @@ class TransportManager(
         val last = lastAckAt[localId]
         if (last == null || now - last >= ACK_REEMIT_MS) {
             lastAckAt[localId] = now
-            webSocketTransport.sendAck(CryptoEngine.createSignedAck(envelope, myPrivateKey))
+            sendAckEverywhere(CryptoEngine.createSignedAck(envelope, myPrivateKey))
             if (lastAckAt.size > 2000) lastAckAt.keys.take(500).forEach { lastAckAt.remove(it) }
         }
 
@@ -165,7 +270,7 @@ class TransportManager(
                 content = plaintext,
                 timestamp = envelope.timestamp,
                 status = MessageStatus.DELIVERED,
-                transportUsed = "WebSocket"
+                transportUsed = via
             )
         )
         outboxRepository.addOrUpdatePeer(
@@ -174,7 +279,7 @@ class TransportManager(
                 fingerprint = senderFingerprint,
                 displayName = "Pair ${senderFingerprint.take(9)}",
                 lastSeen = now,
-                transport = "WebSocket",
+                transport = via,
                 isDirect = true
             )
         )
@@ -196,7 +301,7 @@ class TransportManager(
      * au plus [MAX_PER_PASS] à la fois.
      */
     fun flushOutbox(force: Boolean = false) {
-        if (!webSocketTransport.isConnected()) return
+        if (!anyTransport()) return
         scope.launch(Dispatchers.Default) {
             if (!flushMutex.tryLock()) return@launch
             try {
@@ -219,6 +324,10 @@ class TransportManager(
         const val MAX_BACKOFF_MS = 10 * 60_000L
         const val MAX_PER_PASS = 20
         const val ACK_REEMIT_MS = 30_000L
+        const val ANNOUNCE_MS = 20_000L
+        const val ANNOUNCE_TTL = 2
+        const val ANNOUNCE_MAX_AGE_MS = 10 * 60_000L
+        const val MESH_PEER_TTL_MS = 90_000L
 
         fun backoff(attempts: Int): Long =
             minOf(RETRY_MS shl minOf(attempts, 10), MAX_BACKOFF_MS)
