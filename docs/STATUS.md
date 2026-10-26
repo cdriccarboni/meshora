@@ -5,7 +5,7 @@
 
 Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
-**État au 26 octobre 2026 : une seule fonction est testée sur appareil physique, l'échange chiffré Android ↔ web via un relais Internet de test (Pixel ↔ Mac). Tout le reste est spécifié, simulé ou testé sur ordinateur seulement.** (Mention historique du 25 octobre : aucune fonction n'était testée sur appareil. Tout ce qui existe est spécifié ou simulé.** Contre-audit et corrections (branche `validation/v0.2-contre-audit`) : `docs/audits/CONTRE-AUDIT-V0.2.md` ; messagerie vérifiée entre navigateurs **sur une seule machine**, pas entre appareils. Audit du prototype V0.2 : `docs/audits/AUDIT-PR3-V0.2.md` (8 P0, 12 P1 ; 0 critère sur 18 de messagerie opérationnelle rempli).
+**État au 26 octobre 2026 : une seule fonction est testée sur appareil physique, l'échange chiffré Android ↔ web via un relais Internet de test (Pixel ↔ Mac). Tout le reste est spécifié, simulé ou testé sur ordinateur seulement.** Contre-audit et corrections (branche `validation/v0.2-contre-audit`) : `docs/audits/CONTRE-AUDIT-V0.2.md` ; messagerie vérifiée entre navigateurs **sur une seule machine**, pas entre appareils. Audit du prototype V0.2 : `docs/audits/AUDIT-PR3-V0.2.md` (8 P0, 12 P1 ; 0 critère sur 18 de messagerie opérationnelle rempli).
 
 | Pilier | Fonction | État | Plateformes testées | Rapport |
 |---|---|---|---|---|
