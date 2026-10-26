@@ -30,7 +30,7 @@ BT=$(ls -d "${ANDROID_HOME:-$HOME/Library/Android/sdk}"/build-tools/* | sort -V 
 APK=app/build/outputs/apk/release/app-release.apk
 AAB=app/build/outputs/bundle/release/app-release.aab
 echo "== APK"; "$BT/apksigner" verify --verbose --print-certs "$APK" | grep -E "Verified using|Signer #1 certificate (DN|SHA-256)"
-echo "== AAB"; LC_ALL=C "$JAVA_HOME/bin/jarsigner" -J-Duser.language=en -verify "$AAB" | grep -E "jar verified|unsigned|not signed" || true
+echo "== AAB"; LC_ALL=C "$JAVA_HOME/bin/jarsigner" -J-Duser.language=en -verify "$AAB" | grep -E "^jar verified|^jar is unsigned" || true
 echo "== Empreinte de la clé d'importation"
 "$JAVA_HOME/bin/keytool" -J-Duser.language=en -list -v -keystore "$STORE" -alias "$ALIAS" -storepass:env MESHORA_KEYSTORE_PASSWORD | grep -E "SHA256:" | head -1 || true
 shasum -a 256 "$APK" "$AAB"

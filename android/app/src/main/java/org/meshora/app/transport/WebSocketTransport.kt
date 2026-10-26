@@ -1,12 +1,14 @@
 package org.meshora.app.transport
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +21,7 @@ import org.meshora.app.crypto.KeyIdentity
 import org.meshora.app.crypto.SignedAck
 import org.meshora.app.model.Peer
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 enum class ConnectionState {
     DISCONNECTED,
@@ -30,17 +33,13 @@ enum class ConnectionState {
 }
 
 /**
- * Transport WebSocket compatible avec le relais MESHORA (`tools/relay/server.js`) et l'application web.
+ * Transport WebSocket compatible avec le relais MESHORA et l'application web (docs/PROTOCOLE-V0.2.md).
  *
- * Protocole (contre-audit V0.2, identique au client web `prototype/src/transports/WebSocketTransport.ts`) :
- *  relais → MESHORA_CHALLENGE {nonce, room}
- *  client → MESHORA_HELLO {senderId, senderAlias, publicKey, helloSignature}
- *           helloSignature = ECDSA P-256/SHA-256 (IEEE P1363, hex) de "MESHORA-HELLO|v1|<room>|<nonce>|<publicKeyHex>"
- *           senderId = "msh_" + 12 premiers caractères hex de SHA-256(clé SPKI)
- *  relais → MESHORA_PEERS {peers:[{id, alias, publicKey}]}
- *  client ↔ MESHORA_ENVELOPE {envelope}
- *  client ↔ MESHORA_ACK {ack:{messageId, recipientId, timestamp, transport, signedAck}}
- * Aucun message en clair n'est émis ni accepté.
+ * Contre-audit V0.2 :
+ *  - chaque connexion porte un numéro de génération ; les événements d'une connexion remplacée sont ignorés ;
+ *  - reconnexion automatique avec attente progressive (2 s → 60 s) tant que l'utilisateur ne s'est pas déconnecté ;
+ *  - les trames sont traitées dans l'ordre, sur le fil de lecture OkHttp (déjà sérialisé) ;
+ *  - aucun message en clair n'est émis ni accepté.
  */
 class WebSocketTransport(
     private val scope: CoroutineScope,
@@ -54,66 +53,98 @@ class WebSocketTransport(
         .pingInterval(15, TimeUnit.SECONDS)
         .build()
 
-    private var webSocket: WebSocket? = null
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private var identity: KeyIdentity? = null
-    private var alias: String = "Android"
+    private val generation = AtomicInteger(0)
+    @Volatile private var webSocket: WebSocket? = null
+    @Volatile private var identity: KeyIdentity? = null
+    @Volatile private var alias: String = "Android"
+    @Volatile private var target: Pair<HttpUrl, String>? = null
+    @Volatile private var wantConnected = false
+    @Volatile private var reconnectAttempts = 0
+    private var reconnectJob: Job? = null
 
     /**
      * @param url adresse du relais, `wss://…` (ou `ws://` en local) ; le paramètre `room` est fixé à [room].
      * @return false si l'adresse est invalide.
      */
     fun connect(url: String, room: String, identity: KeyIdentity, alias: String = "Android"): Boolean {
-        disconnect()
-        this.identity = identity
-        this.alias = alias.take(64)
-
         val httpUrl = url.trim()
             .replaceFirst(Regex("^wss://", RegexOption.IGNORE_CASE), "https://")
             .replaceFirst(Regex("^ws://", RegexOption.IGNORE_CASE), "http://")
             .toHttpUrlOrNull() ?: return false
-        val finalUrl = httpUrl.newBuilder().setQueryParameter("room", room).build()
-        val request = Request.Builder().url(finalUrl).build()
+        if (!Regex("^[A-Za-z0-9_-]{1,64}$").matches(room)) return false
+        disconnect()
+        this.identity = identity
+        this.alias = alias.take(64)
+        this.target = httpUrl.newBuilder().setQueryParameter("room", room).build() to room
+        wantConnected = true
+        reconnectAttempts = 0
+        open()
+        return true
+    }
 
+    private fun open() {
+        val (url, _) = target ?: return
+        val gen = generation.incrementAndGet()
         _connectionState.value = ConnectionState.CONNECTING
-        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+        webSocket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
+            private fun current() = gen == generation.get()
+
             override fun onOpen(webSocket: WebSocket, response: Response) {
+                if (!current()) return webSocket.cancel()
                 _connectionState.value = ConnectionState.CONNECTED
                 // L'annonce d'identité attend le défi du relais (preuve de possession de la clé privée).
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                scope.launch(Dispatchers.Default) { handleIncomingJson(webSocket, text) }
+                if (!current()) return
+                handleIncomingJson(webSocket, text) // fil de lecture OkHttp : ordre préservé
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 webSocket.close(1000, null)
-                _connectionState.value = ConnectionState.DISCONNECTED
+                if (current()) lost()
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                _connectionState.value = ConnectionState.DISCONNECTED
+                if (current()) lost()
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                _connectionState.value = ConnectionState.DISCONNECTED
+                if (current()) lost()
             }
         })
-        return true
     }
 
+    private fun lost() {
+        webSocket = null
+        _connectionState.value = ConnectionState.DISCONNECTED
+        if (!wantConnected || reconnectJob?.isActive == true) return
+        val wait = minOf(2_000L shl minOf(reconnectAttempts, 5), 60_000L)
+        reconnectAttempts++
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            delay(wait)
+            if (wantConnected && webSocket == null) open()
+        }
+    }
+
+    /** Déconnexion voulue par l'utilisateur : pas de reconnexion automatique. */
     fun disconnect() {
+        wantConnected = false
+        reconnectJob?.cancel()
+        generation.incrementAndGet() // les événements de l'ancienne connexion seront ignorés
         webSocket?.close(1000, "Normal closure")
         webSocket = null
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 
     /** Vrai uniquement après authentification auprès du relais. */
-    fun isConnected(): Boolean = _connectionState.value == ConnectionState.AUTHENTICATED
+    fun isConnected(): Boolean = _connectionState.value == ConnectionState.AUTHENTICATED && webSocket != null
 
     fun sendEnvelope(envelope: EncryptedEnvelope): Boolean {
         val ws = webSocket ?: return false
@@ -134,10 +165,8 @@ class WebSocketTransport(
             putJsonObject("ack") {
                 put("messageId", ack.messageId)
                 put("recipientId", deriveId(me.publicKeyHex))
-                put("recipientAlias", alias)
                 put("timestamp", ack.timestamp)
                 put("transport", "websocket")
-                put("signature", ack.signatureHex)
                 put("signedAck", json.encodeToJsonElement(ack))
             }
         }
@@ -146,13 +175,17 @@ class WebSocketTransport(
 
     private fun handleIncomingJson(ws: WebSocket, text: String) {
         val me = identity ?: return
+        val root = try {
+            json.parseToJsonElement(text).jsonObject
+        } catch (_: Exception) {
+            return
+        }
         try {
-            val root = json.parseToJsonElement(text).jsonObject
-            when (root["type"]?.jsonPrimitive?.contentOrNull) {
+            when ((root["type"] as? JsonPrimitive)?.contentOrNull) {
                 "MESHORA_CHALLENGE" -> {
-                    val nonce = root["nonce"]?.jsonPrimitive?.contentOrNull ?: return
+                    val nonce = (root["nonce"] as? JsonPrimitive)?.contentOrNull ?: return
                     if (!Regex("^[0-9a-fA-F]{16,128}$").matches(nonce)) return
-                    val room = root["room"]?.jsonPrimitive?.contentOrNull ?: return
+                    val room = (root["room"] as? JsonPrimitive)?.contentOrNull ?: return
                     val privateKey = CryptoEngine.importPrivateKey(me.privateKeyPkcs8Hex)
                     val signature = CryptoEngine.signData(privateKey, helloPayload(room, nonce, me.publicKeyHex))
                     val hello = buildJsonObject {
@@ -161,38 +194,41 @@ class WebSocketTransport(
                         put("senderAlias", alias)
                         put("publicKey", me.publicKeyHex)
                         put("helloSignature", signature)
-                        put("room", room)
                     }
                     ws.send(hello.toString())
                 }
                 "MESHORA_PEERS" -> {
-                    val wasAuthenticated = _connectionState.value == ConnectionState.AUTHENTICATED
-                    _connectionState.value = ConnectionState.AUTHENTICATED
                     val peers = mutableListOf<Peer>()
-                    root["peers"]?.jsonArray?.forEach { el ->
-                        val obj = el.jsonObject
-                        val pub = obj["publicKey"]?.jsonPrimitive?.contentOrNull ?: return@forEach
-                        val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: return@forEach
-                        // L'identifiant annoncé doit dériver de la clé (anti-usurpation) ; on s'ignore soi-même.
-                        if (pub == me.publicKeyHex || id != deriveIdOrNull(pub)) return@forEach
-                        val fp = CryptoEngine.computeFingerprint(pub)
-                        val peerAlias = obj["alias"]?.jsonPrimitive?.contentOrNull?.take(64) ?: "Pair"
-                        peers.add(Peer(pub, fp, "$peerAlias · ${fp.take(9)}", System.currentTimeMillis(), "WebSocket", true))
+                    (root["peers"] as? JsonArray)?.forEach { el ->
+                        runCatching {
+                            val obj = el.jsonObject
+                            val pub = obj["publicKey"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
+                            val id = obj["id"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
+                            // L'identifiant annoncé doit dériver de la clé (anti-usurpation) ; on s'ignore soi-même.
+                            if (pub == me.publicKeyHex || id != deriveIdOrNull(pub)) return@runCatching
+                            val fp = CryptoEngine.computeFingerprint(pub)
+                            val peerAlias = obj["alias"]?.jsonPrimitive?.contentOrNull?.take(64) ?: "Pair"
+                            peers.add(Peer(pub, fp, "$peerAlias · ${fp.take(9)}", System.currentTimeMillis(), "WebSocket", true))
+                        }
                     }
+                    val first = _connectionState.value != ConnectionState.AUTHENTICATED
+                    _connectionState.value = ConnectionState.AUTHENTICATED
+                    reconnectAttempts = 0
                     onPeersUpdated(peers.distinctBy { it.publicKeyHex })
-                    if (!wasAuthenticated) onAuthenticated()
+                    if (first) onAuthenticated()
                 }
                 "MESHORA_ENVELOPE" -> {
                     val envJson = root["envelope"] ?: return
                     onEnvelopeReceived(json.decodeFromJsonElement<EncryptedEnvelope>(envJson))
                 }
                 "MESHORA_ACK" -> {
-                    val signed = root["ack"]?.jsonObject?.get("signedAck") ?: return
+                    val signed = (root["ack"] as? JsonObject)?.get("signedAck") ?: return
                     onAckReceived(json.decodeFromJsonElement<SignedAck>(signed))
                 }
                 else -> Unit // MESHORA_MSG (clair) et types inconnus : ignorés
             }
         } catch (_: Exception) {
+            // trame invalide : ignorée
         }
     }
 

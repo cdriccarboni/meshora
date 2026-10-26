@@ -14,10 +14,17 @@ data class EncryptedEnvelope(
     val timestamp: Long
 )
 
+/**
+ * Accusé signé v2 (docs/PROTOCOLE-V0.2.md §3) : lie identifiant, expéditeur, destinataire et
+ * empreinte de l'enveloppe reçue. Chaîne signée :
+ * ACK2|messageId|senderPublicKeyHex|recipientPublicKeyHex|envelopeHash|timestamp
+ */
 @Serializable
 data class SignedAck(
     val messageId: String,
+    val senderPublicKeyHex: String,
     val recipientPublicKeyHex: String,
+    val envelopeHash: String,
     val timestamp: Long,
     val signatureHex: String
 )

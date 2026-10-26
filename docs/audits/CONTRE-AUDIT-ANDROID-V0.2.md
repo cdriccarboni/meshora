@@ -75,3 +75,35 @@ APK de débogage construit à `68e7822` : `~/meshora-test-relay/MESHORA-android-
 5. Répéter en 4G/5G, puis téléphone hors ligne → envoi Mac → retour en ligne.
 
 Note : l'application web envoie au **salon** (une enveloppe par pair), l'application Android à **un destinataire** (premier pair listé ou clé saisie).
+
+## 5. Revue indépendante de la PR #8 et suites (26 octobre 2026)
+
+Une revue en lecture seule par un agent distinct (n'ayant pas écrit le code) a conclu « corrections acceptables, aucun P0 » et relevé des P1/P2. Traitement (commit `3b4dca0`) :
+
+| Constat | Gravité | Traitement |
+|---|---|---|
+| Renvois sans fin toutes les 15 s, boîte aux lettres du relais saturable, rafales d'accusés, coupure 1008 | P1 | Attente progressive 15 s → 10 min, 20 messages par passe, renvoi forcé seulement vers un destinataire présent ; accusé réémis au plus toutes les 30 s ; le relais remplace un renvoi (même expéditeur, même id) au lieu de l'empiler. Même logique côté web |
+| Événements d'une connexion remplacée qui écrasent l'état | P1 | Numéro de génération par connexion |
+| Pas de reconnexion automatique | P1 | Reconnexion 2 s → 60 s sauf déconnexion volontaire |
+| Accusé ne liant ni l'expéditeur ni le contenu ; déduplication sur l'id seul ; accusés diffusés à tout le salon | P1 (protocole) | **Accusé v2** (`ACK2|id|expéditeur|destinataire|SHA-256(enveloppe)|ts`), messages reçus indexés par (expéditeur, id), relais : accusé remis à l'expéditeur seul. Web, Android et relais alignés ; banc T11 ajouté |
+| API 36 avec AGP 8.7.3 | P1 | AGP 8.9.3, compilation et tests verts |
+| Trames traitées dans le désordre ; `PEERS` malformé ; champs partagés sans `@Volatile` | P2 | Traitement sur le fil de lecture OkHttp, analyse élément par élément, `@Volatile` |
+| Clé destinataire saisie sans validation (plantage possible) | P2 | Normalisation et validation ; message d'erreur dans l'interface |
+| Test d'identifiant tautologique ; affirmations non testées | P2 | Vecteur indépendant calculé avec Node ; tests réécrits (accusé de tiers, enveloppe jamais émise, préemption d'id, clé invalide, attente progressive) |
+| Script d'interopérabilité qui ne détecte pas un essai ignoré | P2 | Échec si robot non prêt ou essai ignoré ; attente de `/health` |
+| `storeFile` relatif ; `*.p12/*.pfx/*.pem` non ignorés ; historique dans les sauvegardes ; clavier sur la saisie | P2 | Chemin absolu exigé ; motifs ajoutés ; `meshora_messages.xml` exclu ; `imePadding()` |
+| Service de premier plan sans contrôle de permission ; trafic en clair limité à quelques IP | P2 | Non traités (service non utilisé ; `wss://` documenté) |
+
+## 6. Nouvelle clé d'importation (26 octobre 2026)
+
+| | |
+|---|---|
+| Emplacement | `~/.meshora/meshora-upload-2026-10.jks` sur le Mac (dossier `700`, fichier `600`), **hors dépôt** |
+| Type | PKCS12, RSA 4096, alias `meshora-upload`, valable jusqu'en 2054, `CN=MESHORA Upload, O=MESHORA, C=FR` |
+| Mot de passe | Généré aléatoirement (40 caractères), stocké **uniquement** dans le trousseau macOS (service `org.meshora.android.upload`) ; jamais écrit sur disque ni affiché |
+| Empreinte SHA-256 | `5F:18:1E:DB:A7:93:98:21:EF:69:01:57:5B:51:BF:3A:87:23:7E:A0:13:6A:E8:96:70:26:7A:92:3C:2D:F2:F2` |
+| Ancienne clé (compromise) | `07:6D:EA:03:29:2A:0C:21:…:CE:EB:C1:BA` — différente ; jamais utilisée |
+| Construction | `bash tools/android/build-signed.sh` → APK signé (schéma v2 vérifié par `apksigner`), AAB signé (`jar verified`), version `0.2.1-beta` (3), `targetSdk 36` |
+| Contrôles | Aucun `.jks`, `.keystore`, `.p12`, fichier de signature ni mot de passe suivi par Git sur la branche ; l'ancien fichier subsiste seulement dans `android/native-beta` et dans le dossier local d'Antigravity |
+
+**Sauvegarde à faire par le directeur artistique** : copier `~/.meshora/meshora-upload-2026-10.jks` et le mot de passe (trousseau → « MESHORA Android upload key ») dans un coffre (gestionnaire de mots de passe). Avec Play App Signing, une clé d'importation perdue se réinitialise, mais cela prend du temps.

@@ -21,13 +21,15 @@
 - Signature de l'expéditeur sur la chaîne UTF-8 : `id|senderPublicKeyHex|recipientPublicKeyHex|ephemeralPublicKeyHex|ivHex|ciphertextHex|timestamp`.
 - Le destinataire vérifie la signature **avant** de déchiffrer. Un message de salon = une enveloppe par destinataire.
 
-## 3. Accusé de réception signé
+## 3. Accusé de réception signé (version 2)
 
 ```
-SignedAck { messageId, recipientPublicKeyHex, timestamp, signatureHex }
+SignedAck { messageId, senderPublicKeyHex, recipientPublicKeyHex, envelopeHash, timestamp, signatureHex }
 ```
-Signature du destinataire sur `ACK|messageId|recipientPublicKeyHex|timestamp`.
-**Règle « Délivré »** : l'expéditeur n'accepte un accusé que si `recipientPublicKeyHex` est une clé à laquelle **ce** message a été chiffré et si la signature est valide. Le destinataire réémet l'accusé à chaque réception valide, y compris en double.
+- `envelopeHash` = SHA-256 (hex) de la chaîne UTF-8 `envelope.signatureHex` (la signature couvre tous les champs de l'enveloppe).
+- Signature du destinataire sur `ACK2|messageId|senderPublicKeyHex|recipientPublicKeyHex|envelopeHash|timestamp`.
+- **Règle « Délivré »** : l'expéditeur n'accepte l'accusé que si `senderPublicKeyHex` est sa propre clé, si `envelopeHash` est l'empreinte d'une enveloppe qu'il a **réellement émise** pour ce message, vers ce `recipientPublicKeyHex`, et si la signature est valide.
+- Le destinataire identifie un message reçu par **(expéditeur, identifiant)** : un tiers qui réutilise un identifiant ne peut ni faire écarter le vrai message ni le faire passer à « Délivré » (banc T11). Il réémet l'accusé à chaque réception valide, au plus une fois par 30 s et par message.
 
 ## 4. Relais WebSocket (`wss://`, ou `ws://` en local)
 
@@ -36,14 +38,14 @@ Signature du destinataire sur `ACK|messageId|recipientPublicKeyHex|timestamp`.
 | relais → client | `MESHORA_CHALLENGE` | `{nonce (32 hex), room}` dès l'ouverture |
 | client → relais | `MESHORA_HELLO` | `{senderId, senderAlias, publicKey, helloSignature}` ; signature de `MESHORA-HELLO|v1|<room>|<nonce>|<publicKeyHex>` ; `senderId` doit valoir l'identifiant dérivé ; sinon fermeture 1008 |
 | relais → clients du salon | `MESHORA_PEERS` | `{peers:[{id, alias, publicKey, verified:false}]}` ; chaque client revérifie `id` = identifiant dérivé de `publicKey` |
-| client ↔ relais | `MESHORA_ENVELOPE` | `{envelope}` ; le relais exige `senderPublicKeyHex` = clé authentifiée de la connexion, remet au(x) client(s) de `recipientPublicKeyHex` ou met en boîte aux lettres (24 h, 50/destinataire, 1000/salon, mémoire vive) |
-| client ↔ relais | `MESHORA_ACK` | `{ack:{messageId, recipientId, timestamp, transport, signedAck}}` ; le relais exige `signedAck.recipientPublicKeyHex` = clé authentifiée |
+| client ↔ relais | `MESHORA_ENVELOPE` | `{envelope}` ; le relais exige `senderPublicKeyHex` = clé authentifiée de la connexion, remet au(x) client(s) de `recipientPublicKeyHex` ou met en boîte aux lettres (24 h, 50/destinataire, 1000/salon, mémoire vive ; un renvoi de même expéditeur et même identifiant remplace la copie en attente) |
+| client ↔ relais | `MESHORA_ACK` | `{ack:{messageId, recipientId, timestamp, transport, signedAck}}` ; le relais exige `signedAck.recipientPublicKeyHex` = clé authentifiée et ne remet l'accusé **qu'aux connexions de `signedAck.senderPublicKeyHex`** |
 
 Refusé : `MESHORA_MSG` (texte en clair), trames non masquées, fragmentées ou > 256 Kio, Origin hors liste blanche, > 60 paquets / 10 s. Salon : `[A-Za-z0-9_-]{1,64}`.
 
 ## 5. États d'un message (expéditeur)
 
-`QUEUED`/`queued` (dans l'Outbox, non émis) → `SENT`/`sent` (au moins une enveloppe acceptée par un transport) → `DELIVERED`/`delivered` (accusé signé valide, §3). Les messages `QUEUED` et `SENT` restent dans l'Outbox et sont renvoyés à l'authentification, à l'arrivée d'un pair et toutes les 15 s. Le destinataire déduplique par `id`.
+`QUEUED`/`queued` (dans l'Outbox, non émis) → `SENT`/`sent` (au moins une enveloppe acceptée par un transport) → `DELIVERED`/`delivered` (accusé signé valide, §3). Les messages `QUEUED` et `SENT` restent dans l'Outbox. Renvoi avec attente progressive par message (15 s, 30 s, 1 min… plafonnée à 10 min), au plus 20 messages par passe ; renvoi immédiat quand le destinataire (re)devient présent. Le destinataire déduplique par (expéditeur, `id`).
 
 ## 6. Limites connues (à traiter avant tout usage réel)
 
