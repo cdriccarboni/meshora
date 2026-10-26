@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import org.meshora.app.R
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,11 +40,11 @@ fun IdentityScreen() {
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Identité Cryptographique",
+            text = stringResource(R.string.identity_title),
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Clé asymétrique souveraine stockée localement sur l'appareil.",
+            text = stringResource(R.string.identity_sub),
             style = MaterialTheme.typography.bodySmall,
             color = MeshoraTextSecondary
         )
@@ -57,12 +59,12 @@ fun IdentityScreen() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Key,
-                        contentDescription = "Empreinte",
+                        contentDescription = null,
                         tint = MeshoraAccent
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Empreinte Publique Vérifiable",
+                        text = stringResource(R.string.fingerprint_title),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -84,11 +86,13 @@ fun IdentityScreen() {
                         fontSize = 14.sp
                     )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(stringResource(R.string.fingerprint_help), style = MaterialTheme.typography.bodySmall, color = MeshoraTextSecondary)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Clé Publique Hexadécimale (SPKI P-256)",
+                    text = stringResource(R.string.pubkey_title),
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -117,14 +121,14 @@ fun IdentityScreen() {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val clip = ClipData.newPlainText("MESHORA Public Key", identity.publicKeyHex)
                         clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "Clé publique copiée dans le presse-papier", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.key_copied), Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MeshoraPrimary),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copier", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Copier ma clé publique")
+                    Text(stringResource(R.string.copy_key))
                 }
             }
         }
@@ -137,16 +141,25 @@ fun IdentityScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Paramètres de Sécurité",
+                    text = stringResource(R.string.security_title),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "• Algorithme : ECDSA secp256r1 (P-256)\n• Hachage : SHA-256\n• Chiffrement de session : AES-256-GCM\n• Dérivation : ECDH standard NIST",
+                    text = stringResource(R.string.security_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MeshoraTextSecondary
                 )
+            }
+        }
+    
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MeshoraSurface)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.limits_title), fontWeight = FontWeight.Bold, color = MeshoraWarning)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.limits_body), style = MaterialTheme.typography.bodySmall, color = MeshoraTextSecondary)
             }
         }
     }

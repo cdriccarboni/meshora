@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import org.meshora.app.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,11 +34,11 @@ fun EmergencyHelpScreen() {
             .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Assistance & Secours Officiels",
+            text = stringResource(R.string.emerg_title),
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Accès direct aux services de secours officiels d'urgence.",
+            text = stringResource(R.string.emerg_sub),
             style = MaterialTheme.typography.bodySmall,
             color = MeshoraTextSecondary
         )
@@ -54,21 +56,21 @@ fun EmergencyHelpScreen() {
             ) {
                 Icon(
                     imageVector = Icons.Default.Warning,
-                    contentDescription = "Avertissement Vital",
+                    contentDescription = null,
                     tint = MeshoraError,
                     modifier = Modifier.size(28.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "AVERTISSEMENT VITAL",
+                        text = stringResource(R.string.emerg_warning_title),
                         color = MeshoraError,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "MESHORA est une application d'entraide locale décentralisée. En cas de détresse ou d'urgence médicale vitale, n'attendez pas un relais maillé : contactez immédiatement les services d'urgence officiels par téléphone cellulaire ou satellite.",
+                        text = stringResource(R.string.emerg_warning),
                         color = MeshoraTextPrimary,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -89,9 +91,9 @@ fun EmergencyHelpScreen() {
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Default.Call, contentDescription = "112")
+            Icon(Icons.Default.Call, contentDescription = null)
             Spacer(modifier = Modifier.width(10.dp))
-            Text("Appeler le 112 (Urgences Européennes)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.call_112), fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -106,9 +108,9 @@ fun EmergencyHelpScreen() {
                 .height(50.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Icon(Icons.Default.Call, contentDescription = "15")
+            Icon(Icons.Default.Call, contentDescription = null)
             Spacer(modifier = Modifier.width(10.dp))
-            Text("Appeler le 15 (SAMU)", fontSize = 15.sp)
+            Text(stringResource(R.string.call_15), fontSize = 15.sp)
         }
     }
 }

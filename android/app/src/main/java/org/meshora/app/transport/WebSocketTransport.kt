@@ -23,6 +23,23 @@ import org.meshora.app.model.Peer
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
+/** Cause de la dernière coupure, traduite en message clair par l'interface. */
+enum class RelayProblem {
+    NONE,
+    /** Pas de réseau sur le téléphone. */
+    NO_NETWORK,
+    /** Relais injoignable (adresse fausse, panne, pare-feu). */
+    UNREACHABLE,
+    /** Le relais a refusé l'identité (HELLO) : version incompatible ou horloge/clé invalide. */
+    REJECTED,
+    /** Trop de connexions ou de messages : le relais limite le débit. */
+    RATE_LIMITED,
+    /** Groupe complet (64 appareils connectés). */
+    ROOM_FULL,
+    /** Adresse de relais invalide. */
+    BAD_ADDRESS
+}
+
 enum class ConnectionState {
     DISCONNECTED,
     CONNECTING,
@@ -50,13 +67,23 @@ class WebSocketTransport(
 ) {
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
-        .pingInterval(15, TimeUnit.SECONDS)
+        .pingInterval(30, TimeUnit.SECONDS) // moins de réveils radio (batterie) ; Cloudflare coupe après ~100 s d'inactivité
         .build()
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _problem = MutableStateFlow(RelayProblem.NONE)
+    val problem: StateFlow<RelayProblem> = _problem.asStateFlow()
+
+    /** Heure (ms) de la prochaine tentative automatique, ou 0. */
+    private val _nextRetryAt = MutableStateFlow(0L)
+    val nextRetryAt: StateFlow<Long> = _nextRetryAt.asStateFlow()
+
+    /** Réseau du téléphone disponible (fourni par MeshoraApp via ConnectivityManager). */
+    @Volatile var networkAvailable: Boolean = true
 
     private val generation = AtomicInteger(0)
     @Volatile private var webSocket: WebSocket? = null
@@ -75,8 +102,11 @@ class WebSocketTransport(
         val httpUrl = url.trim()
             .replaceFirst(Regex("^wss://", RegexOption.IGNORE_CASE), "https://")
             .replaceFirst(Regex("^ws://", RegexOption.IGNORE_CASE), "http://")
-            .toHttpUrlOrNull() ?: return false
-        if (!Regex("^[A-Za-z0-9_-]{1,64}$").matches(room)) return false
+            .toHttpUrlOrNull()
+        if (httpUrl == null || !Regex("^[A-Za-z0-9_-]{1,64}$").matches(room)) {
+            _problem.value = RelayProblem.BAD_ADDRESS
+            return false
+        }
         disconnect()
         this.identity = identity
         this.alias = alias.take(64)
@@ -97,6 +127,7 @@ class WebSocketTransport(
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 if (!current()) return webSocket.cancel()
                 _connectionState.value = ConnectionState.CONNECTED
+                _problem.value = RelayProblem.NONE
                 // L'annonce d'identité attend le défi du relais (preuve de possession de la clé privée).
             }
 
@@ -107,7 +138,13 @@ class WebSocketTransport(
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
                 webSocket.close(1000, null)
-                if (current()) lost()
+                if (!current()) return
+                _problem.value = when {
+                    code == 1008 && reason.contains("rate") -> RelayProblem.RATE_LIMITED
+                    code == 1008 -> RelayProblem.REJECTED
+                    else -> RelayProblem.UNREACHABLE
+                }
+                lost()
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
@@ -115,7 +152,14 @@ class WebSocketTransport(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                if (current()) lost()
+                if (!current()) return
+                _problem.value = when {
+                    !networkAvailable -> RelayProblem.NO_NETWORK
+                    response?.code == 429 -> RelayProblem.RATE_LIMITED
+                    response?.code == 503 -> RelayProblem.ROOM_FULL
+                    else -> RelayProblem.UNREACHABLE
+                }
+                lost()
             }
         })
     }
@@ -127,11 +171,25 @@ class WebSocketTransport(
         val wait = minOf(2_000L shl minOf(reconnectAttempts, 5), 60_000L)
         reconnectAttempts++
         reconnectJob?.cancel()
+        _nextRetryAt.value = System.currentTimeMillis() + wait
         reconnectJob = scope.launch {
             delay(wait)
+            _nextRetryAt.value = 0L
             if (wantConnected && webSocket == null) open()
         }
     }
+
+    /** Retour du réseau ou de l'application au premier plan : nouvelle tentative immédiate. */
+    fun reconnectNow() {
+        if (!wantConnected || webSocket != null) return
+        reconnectJob?.cancel()
+        _nextRetryAt.value = 0L
+        reconnectAttempts = 0
+        open()
+    }
+
+    /** Vrai si une connexion est voulue (connectée ou en cours de reconnexion). */
+    fun isWanted(): Boolean = wantConnected
 
     /** Déconnexion voulue par l'utilisateur : pas de reconnexion automatique. */
     fun disconnect() {
@@ -140,6 +198,8 @@ class WebSocketTransport(
         generation.incrementAndGet() // les événements de l'ancienne connexion seront ignorés
         webSocket?.close(1000, "Normal closure")
         webSocket = null
+        _nextRetryAt.value = 0L
+        _problem.value = RelayProblem.NONE
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 

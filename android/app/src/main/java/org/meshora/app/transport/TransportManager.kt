@@ -38,9 +38,12 @@ class TransportManager(
     val identity: KeyIdentity,
     val outboxRepository: OutboxRepository,
     val bleManager: MeshoraBleManager? = null,
-    private val alias: String = "Android",
+    alias: String = "Android",
     private val clock: () -> Long = System::currentTimeMillis
 ) {
+    /** Nom affiché aux autres (modifiable dans Réseau ; pris en compte à la prochaine connexion). */
+    @Volatile var alias: String = alias
+
     private val myPrivateKey = CryptoEngine.importPrivateKey(identity.privateKeyPkcs8Hex)
     private val flushMutex = Mutex()
 

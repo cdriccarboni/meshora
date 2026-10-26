@@ -1,5 +1,7 @@
 package org.meshora.app.transport.ble
 
+import org.meshora.app.R
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
@@ -59,7 +61,7 @@ class BleMesh(
     private val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     private val adapter get() = manager?.adapter
 
-    private val _status = MutableStateFlow("Bluetooth MESHORA arrêté.")
+    private val _status = MutableStateFlow(context.getString(R.string.ble_stopped))
     val status: StateFlow<String> = _status.asStateFlow()
     private val _running = MutableStateFlow(false)
     val running: StateFlow<Boolean> = _running.asStateFlow()
@@ -96,12 +98,12 @@ class BleMesh(
     @Synchronized
     fun start(): Boolean {
         if (_running.value) return true
-        if (!isSupported()) return fail("Bluetooth LE indisponible sur cet appareil.")
-        if (!hasPermissions()) return fail("Autorisations Bluetooth refusées : à accorder dans les réglages de l'application.")
-        val bt = adapter ?: return fail("Bluetooth indisponible.")
-        if (!bt.isEnabled) return fail("Bluetooth désactivé : activez-le puis réessayez.")
+        if (!isSupported()) return fail(context.getString(R.string.ble_err_unsupported))
+        if (!hasPermissions()) return fail(context.getString(R.string.ble_err_permissions))
+        val bt = adapter ?: return fail(context.getString(R.string.ble_err_unavailable))
+        if (!bt.isEnabled) return fail(context.getString(R.string.ble_err_disabled))
 
-        if (!openGattServer()) return fail("Impossible d'ouvrir le serveur GATT.")
+        if (!openGattServer()) return fail(context.getString(R.string.ble_err_gatt))
         _running.value = true
         startAdvertising()
         startScan()
@@ -124,7 +126,7 @@ class BleMesh(
         gattServer = null
         connecting.clear()
         refreshLinks()
-        _status.value = "Bluetooth MESHORA arrêté."
+        _status.value = context.getString(R.string.ble_stopped)
     }
 
     private fun fail(message: String): Boolean {
@@ -134,8 +136,8 @@ class BleMesh(
 
     private fun updateStatus() {
         if (!_running.value) return
-        val adv = if (_advertising.value) "annonce active" else "annonce indisponible"
-        _status.value = "Bluetooth MESHORA actif : $adv, recherche en cours, ${_linkCount.value} lien(s) direct(s)."
+        val adv = context.getString(if (_advertising.value) R.string.ble_adv_on else R.string.ble_adv_off)
+        _status.value = context.getString(R.string.ble_active, adv, _linkCount.value)
     }
 
     private fun refreshLinks() {
@@ -293,13 +295,13 @@ class BleMesh(
 
         override fun onStartFailure(errorCode: Int) {
             _advertising.value = false
-            _status.value = "Annonce Bluetooth refusée par le système (code $errorCode) ; la recherche continue."
+            _status.value = context.getString(R.string.ble_adv_refused, errorCode)
         }
     }
 
     private fun startAdvertising() {
         val advertiser = adapter?.bluetoothLeAdvertiser ?: run {
-            _status.value = "Cet appareil ne peut pas annoncer en Bluetooth LE ; la recherche continue."
+            _status.value = context.getString(R.string.ble_adv_unsupported)
             return
         }
         val settings = AdvertiseSettings.Builder()
@@ -314,7 +316,7 @@ class BleMesh(
         try {
             advertiser.startAdvertising(settings, data, advertiseCallback)
         } catch (e: Exception) {
-            _status.value = "Annonce Bluetooth impossible : ${e.javaClass.simpleName}"
+            _status.value = context.getString(R.string.ble_adv_error, e.javaClass.simpleName)
         }
     }
 
@@ -330,7 +332,7 @@ class BleMesh(
         }
 
         override fun onScanFailed(errorCode: Int) {
-            _status.value = "Recherche Bluetooth refusée par le système (code $errorCode)."
+            _status.value = context.getString(R.string.ble_scan_refused, errorCode)
         }
     }
 
@@ -341,7 +343,7 @@ class BleMesh(
         try {
             scanner.startScan(listOf(filter), settings, scanCallback)
         } catch (e: Exception) {
-            _status.value = "Recherche Bluetooth impossible : ${e.javaClass.simpleName}"
+            _status.value = context.getString(R.string.ble_scan_error, e.javaClass.simpleName)
         }
     }
 
