@@ -91,8 +91,8 @@ def layout(meta, body):
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121316" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="/assets/meshora.css?v={VERSION}">
-  <script src="/assets/site.js?v={VERSION}" defer></script>
+  <link rel="stylesheet" href="/assets/meshora.css?v={VERSION}-{COMMIT}">
+  <script src="/assets/site.js?v={VERSION}-{COMMIT}" defer></script>
 </head>
 <body>
 {band}  <div class="wrap">
