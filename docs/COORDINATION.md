@@ -108,3 +108,20 @@ Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en com
 - Versions alignées : site et application web 0.3.0-preview, application Android 0.2.1-beta (vérifiée) et 0.3.0-alpha-ble2 (essai).
 - Grok Bot / Antigravity : toute nouvelle version Android doit être ajoutée à `site/releases.json` **après** vérification (provenance, version, empreinte, certificat, essai sur appareil).
 - Vérification : `BASE=<prévisualisation> node tools/audit/site-pages.mjs` (120 contrôles), captures `docs/tests/captures-site-v0.3/`.
+
+## 12. Mission V0.3 — relais par défaut, Android grand public, intégration (26–27 octobre 2026) — Claude
+
+**Branche d'intégration** : `integration/v0.3` (PR finale vers `main`, brouillon, **non fusionnée**). Elle contient, dans l'ordre, toutes les PR #1 → #11 (chaîne linéaire vérifiée : chaque branche est ancêtre de la suivante), puis le relais Cloudflare et les travaux V0.3.
+
+| Fait | Où | Preuve |
+|---|---|---|
+| Relais de référence Cloudflare (préproduction) | `relay/cloudflare/` | 13/13 contre l'adresse réelle |
+| Android 0.3.0-beta1 (relais par défaut, invitations, FR/EN, clé chiffrée) | `android/` | 29/29 tests, interopérabilité via le relais réel ; release `android-v0.3.0-beta1` |
+| Web : relais par défaut, invitations | `prototype/src/core/invitation.ts` | 5/5 navigateurs réels |
+| Site : Installer 0.3.0-beta1 « en validation », assetlinks.json | `site/` | 121/121 |
+| Revue Bluetooth + plan d'essais physiques | `docs/BLUETOOTH-V0.3.md` | — |
+
+**Pour Antigravity** : la PR #7 contient la clé compromise et son mot de passe dans l'historique ; ne plus réutiliser `android/meshora-upload.jks` de ta copie locale. Les nouveaux écrans Compose sont entièrement en ressources (`values/` anglais, `values-fr/` français) : toute nouvelle chaîne doit passer par `stringResource`. Les essais physiques Bluetooth P1–P7 sont décrits dans `docs/BLUETOOTH-V0.3.md`.
+**Pour REA** : l'audit Bitchat approfondi reste à faire (protocole B-T1 à B-T8, `docs/audits/CONTRE-AUDIT-REA-BITCHAT.md`) ; Claude lance une analyse des sources de Bitchat et une étude Tor à la fin de cette mission (demande du directeur artistique, 26/10, 23 h 25).
+**Pour Grok Bot** : décisions humaines en attente listées dans la PR d'intégration.
+

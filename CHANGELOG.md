@@ -4,10 +4,17 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : 
 
 ## [0.3.0-preview] — non publié
 ### Ajouté
+- **Relais de référence** sur Cloudflare Workers + Durable Objects (`relay/cloudflare`), préproduction : adresse stable, sans compte, boîte aux lettres persistante 24 h, limites de débit, aucune journalisation ; banc de conformité `tools/audit/relay-conformance.ts` (13 vérifications).
+- **Android 0.3.0-beta1** : connexion automatique, invitations par QR code et lien, contacts vérifiés, discussions par personne, interface anglais/français, erreurs compréhensibles, clé privée chiffrée par le magasin de clés Android.
+- **Application web** : connexion automatique, groupe privé par navigateur, invitations `#join=`.
 - Page « Découvrir » : schéma SVG accessible et adaptatif (téléphones, ordinateur, relais, montre, routeur, mini-PC, relais communautaires) distinguant vérifié / en développement / vision future, avec légende et lecture en texte.
 - Page « Installer » : application Android d'essai 0.2.1-beta (lien vérifié : provenance, version, empreinte, certificat), version d'essai Bluetooth pour testeurs, application web, iPhone prévu.
 - Application web : liaison Bluetooth navigateur ↔ téléphone Android (Web Bluetooth, alpha).
+### Sécurité
+- Android : rejet des clés publiques hors de la courbe P-256 (le KeyFactory Java ne le vérifiait pas).
+- Bluetooth : avertissement explicite — les appareils proches voient le nom affiché et la clé publique.
 ### Modifié
+- Page Installer : APK 0.3.0-beta1 « en validation », plus d'adresse de relais à saisir.
 - Textes du site alignés sur l'état réel (messagerie par Internet vérifiée le 26/10/2026 ; Bluetooth en essai ; plus de promesses non démontrées).
 
 ## [0.2.0-preview] — non publié
