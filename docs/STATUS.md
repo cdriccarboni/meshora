@@ -39,9 +39,11 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Prototype V0.2 | Accès aux numéros d'urgence (112) | 🔧 | Chrome mobile et ordinateur (émulés) | Aucun envoi par MESHORA ; liens `tel:` ; bouton accessible (B5). Diffusion d'alertes : ⛔ toujours bloquée |
 | Prototype V0.2 | Signatures, « vérifié », chiffrement | 🔧 | Node + Chrome, un seul Mac | WebCrypto réel ; plus de badge de signature fictif ; clés **non vérifiées hors bande** (pas de QR) |
 | Android V0.2 | Application native Kotlin + Compose (sans WebView) | 🔧 | JVM (Mac) uniquement | Compile (API 36) ; `docs/audits/CONTRE-AUDIT-ANDROID-V0.2.md` |
-| Android V0.2 | Échange chiffré Android ↔ web via relais (accusés signés, Outbox) | 🔧 | Code Kotlin sur JVM ↔ code web sur Node, relais local et tunnel WSS | `LiveRelayInteropTest` 1/1 ; **aucun essai sur téléphone** |
+| Android V0.2 | Échange chiffré Android ↔ web via relais (accusés signés v2, Outbox, reconnexion) | 🔧 | Code Kotlin sur JVM ↔ code web sur Node, relais local et tunnel WSS | `LiveRelayInteropTest` 1/1 ; **aucun essai sur téléphone** ; protocole `docs/tests/PROTOCOLE-SIMPLE-TELEPHONE.md` |
 | Android V0.2 | Bluetooth LE | ⬜ | — | Aucun appel BLE implémenté (affichage corrigé) |
-| Android V0.2 | Bêta fermée Google Play | ⛔ | — | Clé d'importation à régénérer (ancienne publiée), 12 testeurs × 14 jours si compte personnel, textes de fiche à corriger |
+| Android V0.2 | Signature de publication | 🔧 | Mac | Nouvelle clé hors dépôt, mot de passe dans le trousseau ; APK et AAB 0.2.1-beta signés et vérifiés (`CONTRE-AUDIT-ANDROID-V0.2.md` §6) |
+| Android V0.2 | Bêta fermée Google Play | ⛔ | — | Non publiée : accord requis ; 12 testeurs × 14 jours si compte personnel ; textes de fiche à corriger |
+| Mesh natif | Trame, fragmentation, déduplication, relais TTL, limiteur | 🔧 | JVM | `MeshFrameTest` 5/5 (branche `claude/mesh-ble-prep`) ; aucune radio pilotée |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 
