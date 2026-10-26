@@ -73,6 +73,8 @@ class BleMesh(
     private val centralLinks = ConcurrentHashMap<String, CentralLink>()
     private val peripheralLinks = ConcurrentHashMap<String, PeripheralLink>()
     private val serverMtu = ConcurrentHashMap<String, Int>()
+    /** Écritures longues (« prepared writes ») en cours, par appareil : certains centraux (ordinateurs) les utilisent. */
+    private val preparedWrites = ConcurrentHashMap<String, java.io.ByteArrayOutputStream>()
     private val connecting = ConcurrentHashMap<String, Long>()
     private val lastAttempt = ConcurrentHashMap<String, Long>()
 
@@ -210,11 +212,30 @@ class BleMesh(
             device: BluetoothDevice, requestId: Int, characteristic: BluetoothGattCharacteristic,
             preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray?
         ) {
-            val ok = characteristic.uuid == MeshIds.CHAR_RX && !preparedWrite && offset == 0 && value != null
-            if (responseNeeded) {
-                gattServer?.sendResponse(device, requestId, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE, 0, null)
+            if (characteristic.uuid != MeshIds.CHAR_RX || value == null) {
+                if (responseNeeded) gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null)
+                return
             }
-            if (ok) router.onFrameReceived("p:" + device.address, value!!)
+            if (preparedWrite) {
+                val buf = preparedWrites.getOrPut(device.address) { java.io.ByteArrayOutputStream() }
+                val ok = offset == buf.size() && buf.size() + value.size <= MAX_LONG_WRITE
+                if (ok) buf.write(value) else preparedWrites.remove(device.address)
+                if (responseNeeded) {
+                    gattServer?.sendResponse(device, requestId, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_INVALID_OFFSET, offset, value)
+                }
+                return
+            }
+            val ok = offset == 0
+            if (responseNeeded) {
+                gattServer?.sendResponse(device, requestId, if (ok) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_INVALID_OFFSET, 0, null)
+            }
+            if (ok) router.onFrameReceived("p:" + device.address, value)
+        }
+
+        override fun onExecuteWrite(device: BluetoothDevice, requestId: Int, execute: Boolean) {
+            val buf = preparedWrites.remove(device.address)
+            gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+            if (execute && buf != null && buf.size() > 0) router.onFrameReceived("p:" + device.address, buf.toByteArray())
         }
 
         override fun onNotificationSent(device: BluetoothDevice, status: Int) {
@@ -472,5 +493,6 @@ class BleMesh(
         const val MAX_CENTRAL_LINKS = 6
         const val MAX_QUEUE = 512
         const val RETRY_COOLDOWN_MS = 10_000L
+        const val MAX_LONG_WRITE = 512
     }
 }

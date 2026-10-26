@@ -36,8 +36,8 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.0-alpha-ble1"
+        versionCode = 5
+        versionName = "0.3.0-alpha-ble2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
