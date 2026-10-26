@@ -10,6 +10,7 @@ import { ITransportAdapter } from './TransportInterface';
 import { getOrCreateIdentity, ensureCryptographicIdentity } from '../core/identity';
 import { MeshoraCrypto, EncryptedEnvelope, SignedAck } from '../core/crypto';
 import { isAcceptableRelayUrl } from '../core/urlHygiene';
+import { DEFAULT_RELAY_URL, getOrCreateRoom, isVerifiedKey, parseInvitation, setRoom as storeRoom, upsertContact, withRoom } from '../core/invitation';
 
 interface WebSocketPacket {
   type: 'MESHORA_MSG' | 'MESHORA_ENVELOPE' | 'MESHORA_ACK' | 'MESHORA_HELLO' | 'MESHORA_PEERS' | 'MESHORA_CHALLENGE';
@@ -78,8 +79,57 @@ export class WebSocketTransport implements ITransportAdapter {
   private resolveRelayUrl(customUrl?: string): string | null {
     if (customUrl) return customUrl;
     if (typeof window === 'undefined') return null;
+    const fr = (typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('fr'));
 
-    // 1. Paramètre d'URL ?relay= et ?room=
+    // V0.3 — groupe (salon) privé propre à ce navigateur : jamais de salon public par défaut.
+    this.currentRoom = getOrCreateRoom();
+
+    // 0. Invitation reçue par lien : #join=<groupe>&k=<clé>&n=<nom>[&r=<relais>]
+    try {
+      const inv = parseInvitation(window.location.hash || '');
+      if (inv) {
+        try {
+          window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+        } catch {}
+        const name = inv.alias || (fr ? 'Quelqu’un' : 'Someone');
+        const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+        if (
+          isAndroid &&
+          typeof window.confirm === 'function' &&
+          window.confirm(
+            fr
+              ? `Invitation de ${name}.\n\nOuvrir dans l’application Android MESHORA ? (OK)\nAnnuler = continuer dans le navigateur.`
+              : `Invitation from ${name}.\n\nOpen in the MESHORA Android app? (OK)\nCancel = continue in the browser.`
+          )
+        ) {
+          window.location.href = 'meshora://join#' + (
+            'join=' + inv.room + '&k=' + inv.publicKeyHex + (inv.alias ? '&n=' + encodeURIComponent(inv.alias) : '') + (inv.relayUrl ? '&r=' + encodeURIComponent(inv.relayUrl) : '')
+          );
+        } else {
+          const relayNote = inv.relayUrl ? (fr ? `\n\nAttention : autre relais que celui de MESHORA (${inv.relayUrl}).` : `\n\nWarning: relay other than MESHORA's (${inv.relayUrl}).`) : '';
+          const ok =
+            typeof window.confirm === 'function' &&
+            window.confirm(
+              (fr
+                ? `Invitation de ${name}.\nRejoindre son groupe ? Vous quitterez votre groupe actuel ; vos messages sont conservés.`
+                : `Invitation from ${name}.\nJoin their group? You will leave your current group; your messages are kept.`) + relayNote
+            );
+          if (ok) {
+            upsertContact(inv.publicKeyHex, inv.alias, true);
+            storeRoom(inv.room);
+            this.currentRoom = inv.room;
+            const base = inv.relayUrl || DEFAULT_RELAY_URL;
+            const url = withRoom(base, inv.room);
+            try {
+              localStorage.setItem('meshora_relay_url', url);
+            } catch {}
+            return url;
+          }
+        }
+      }
+    } catch {}
+
+    // 1. Paramètre d'URL ?relay= et ?room= (essais)
     try {
       const params = new URLSearchParams(window.location.search);
       const qRoom = params.get('room');
@@ -120,15 +170,61 @@ export class WebSocketTransport implements ITransportAdapter {
     // 2. Préférence enregistrée dans le navigateur
     try {
       const stored = localStorage.getItem('meshora_relay_url');
-      if (stored && isAcceptableRelayUrl(stored)) return stored;
+      if (stored && isAcceptableRelayUrl(stored)) {
+        try {
+          const r = new URL(stored).searchParams.get('room');
+          if (r) this.currentRoom = r;
+        } catch {}
+        return stored;
+      }
     } catch {}
 
-    // 3. Relais local de développement ou démo (port 8787)
+    // 3. Relais local de développement (port 8787)
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return `ws://${window.location.hostname}:8787?room=${encodeURIComponent(this.currentRoom)}`;
     }
 
-    return null;
+    // 4. V0.3 — relais de référence MESHORA, sans saisie
+    return withRoom(DEFAULT_RELAY_URL, this.currentRoom);
+  }
+
+  /** Lien d'invitation vers MON groupe (à partager ou à montrer). */
+  public getInvitationInputs(): { room: string; relayUrl: string | null } {
+    let base: string | null = null;
+    try {
+      if (this.targetUrl) {
+        const u = new URL(this.targetUrl);
+        u.searchParams.delete('room');
+        base = u.toString().replace(/\/$/, '').replace(/\/\?$/, '');
+      }
+    } catch {}
+    const def = DEFAULT_RELAY_URL.replace(/\/$/, '');
+    return { room: this.currentRoom, relayUrl: base && base !== def ? base : null };
+  }
+
+  public isConnected(): boolean {
+    return this.connected;
+  }
+
+  /** Applique une invitation acceptée : contact vérifié, groupe et relais de l'invitant. */
+  public acceptInvitation(inv: { room: string; publicKeyHex: string; alias: string; relayUrl: string | null }): void {
+    upsertContact(inv.publicKeyHex, inv.alias, true);
+    storeRoom(inv.room);
+    this.currentRoom = inv.room;
+    this.setRelayUrl(withRoom(inv.relayUrl || DEFAULT_RELAY_URL, inv.room));
+  }
+
+  /** Change de relais (adresse de base) en gardant le groupe actuel ; null = relais MESHORA par défaut. */
+  public useRelayBase(base: string | null): void {
+    this.setRelayUrl(withRoom(base || DEFAULT_RELAY_URL, this.currentRoom));
+  }
+
+  /** Nouveau groupe vide (les membres devront être réinvités). */
+  public newGroup(room: string): void {
+    storeRoom(room);
+    this.currentRoom = room;
+    const base = this.getInvitationInputs().relayUrl;
+    this.setRelayUrl(withRoom(base || DEFAULT_RELAY_URL, room));
   }
 
   public setRelayUrl(url: string | null): void {
@@ -378,7 +474,9 @@ export class WebSocketTransport implements ITransportAdapter {
           const myId = getOrCreateIdentity();
           for (const p of packet.peers) {
             if (p && p.id !== myId.id && (await WebSocketTransport.idMatchesKey(p.id, (p as MeshPeer & { publicKey?: string }).publicKey))) {
-              this.remotePeers.set(p.id, { ...p, verified: false });
+              // Vérifié = clé reçue hors du relais (invitation) et identique à celle annoncée ici.
+              const pk = (p as MeshPeer & { publicKey?: string }).publicKey || '';
+              this.remotePeers.set(p.id, { ...p, verified: isVerifiedKey(pk) });
             }
           }
           this.emitPeersChanged();

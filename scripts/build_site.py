@@ -220,6 +220,18 @@ def build():
     headers = (SRC / "_headers").read_text()
     if CHANNEL != "production":
         headers = headers.replace("/*\n", "/*\n  X-Robots-Tag: noindex, nofollow\n", 1)
+    # V0.3 — relais de référence autorisé dans la CSP de /app (préproduction hors production).
+    ref_relay = os.environ.get("MESHORA_RELAY_URL") or (
+        "wss://meshora-relay.acousmaticregietools.workers.dev" if CHANNEL == "production"
+        else "wss://meshora-relay-preprod.acousmaticregietools.workers.dev")
+    m = re.fullmatch(r"(wss://[a-z0-9.-]+\.[a-z]{2,}(:\d+)?)/?", ref_relay)
+    if not m:
+        sys.exit(f"REFUS — relais de référence invalide : {ref_relay!r} (wss:// obligatoire)")
+    block = headers.split("/app/*\n", 1)
+    if len(block) != 2 or "connect-src 'self'" not in block[1].split("\n", 1)[0]:
+        sys.exit("REFUS — CSP de /app introuvable dans site/_headers")
+    first, rest = block[1].split("\n", 1)
+    headers = block[0] + "/app/*\n" + first.replace("connect-src 'self'", "connect-src 'self' " + m.group(1), 1) + "\n" + rest
     # Relais de TEST autorisés dans la CSP de /app — prévisualisation uniquement (contre-audit V0.2, essai Mac ↔ téléphone).
     # Exemple : MESHORA_TEST_RELAY_ORIGINS="wss://*.trycloudflare.com"
     test_relays = os.environ.get("MESHORA_TEST_RELAY_ORIGINS", "").split()
