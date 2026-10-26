@@ -218,11 +218,7 @@ export async function runRealTwoClientsTests() {
           bobVerifiedSender = decrypted.verifiedSender;
 
           // Bob émet un accusé de réception signé (Signed ACK)
-          const signedAck = await MeshoraCrypto.createSignedAck(
-            msg.envelope.id,
-            bob.privateKey,
-            bob.publicKeyHex
-          );
+          const signedAck = await MeshoraCrypto.createSignedAck(msg.envelope, bob.privateKey);
 
           clientB.send({
             type: 'MESHORA_ACK',

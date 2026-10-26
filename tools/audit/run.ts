@@ -139,12 +139,33 @@ async function main() {
     }
     const bGot = (await B.call({ cmd: 'received' })).some((m: any) => m.content === secret);
     // L'attaquant renvoie un accusé SIGNÉ avec sa propre clé
-    const ack = await MeshoraCrypto.createSignedAck(id, await MeshoraCrypto.importPrivateKey(mKeys.privateKeyPkcs8Hex), mKeys.publicKeyHex);
+    const alice = await A.call({ cmd: 'identity' });
+    const fakeEnv = { id, senderPublicKeyHex: alice.publicKey, recipientPublicKeyHex: mKeys.publicKeyHex, ephemeralPublicKeyHex: '', ivHex: '', ciphertextHex: '', signatureHex: '00', timestamp: Date.now() };
+    const ack = await MeshoraCrypto.createSignedAck(fakeEnv as any, await MeshoraCrypto.importPrivateKey(mKeys.privateKeyPkcs8Hex));
     M.send({ type: 'MESHORA_ACK', ack: { messageId: id, recipientId: bob.id, recipientAlias: bob.alias, timestamp: ack.timestamp, transport: 'websocket', signature: ack.signatureHex, verified: true, signedAck: ack } });
     await sleep(800);
     const st = await A.call({ cmd: 'status', id });
     record('T4', 'Un tiers se présentant avec l\'identifiant de Bob ne doit pas recevoir les messages destinés à Bob', !mRead && bGot,
       `message déchiffré par l'usurpateur=${mRead} ; reçu par le vrai Bob=${bGot} ; statut chez A=${st}`);
+    A.proc.kill(); B.proc.kill(); M.close(); await sleep(300);
+  }
+
+  // T11 — Préemption d'identifiant : un participant envoie d'abord SA propre enveloppe avec l'identifiant du vrai message
+  {
+    const room = 't11';
+    const A = await appClient(room); const B = await appClient(room); await sleep(800);
+    const bob = await B.call({ cmd: 'identity' });
+    const mKeys = await MeshoraCrypto.generateIdentityKeyPair();
+    const M = await raw(room); await signedHello(M, room, mKeys, 'Participant'); await sleep(500);
+    const id = 'msg_t11_' + crypto.randomBytes(4).toString('hex');
+    const fake = await MeshoraCrypto.encryptEnvelope({ messageId: id, senderPrivateKey: mKeys.privateKey, senderPublicKeyHex: mKeys.publicKeyHex, recipientPublicKeyHex: bob.publicKey, plaintext: 'T11-FAUX' });
+    M.send({ type: 'MESHORA_ENVELOPE', envelope: fake, room }); await sleep(600);
+    const secret = 'T11-VRAI-' + crypto.randomBytes(3).toString('hex');
+    await A.call({ cmd: 'send', id, text: secret }); await sleep(1500);
+    const got = (await B.call({ cmd: 'received' })).map((m: any) => m.content);
+    const st = await A.call({ cmd: 'status', id });
+    record('T11', 'Un tiers réutilisant l\'identifiant d\'un message ne peut pas le faire écarter comme doublon', got.includes(secret) && st === 'delivered',
+      `vrai message reçu par B=${got.includes(secret)} ; faux reçu=${got.includes('T11-FAUX')} ; statut chez A=${st}`);
     A.proc.kill(); B.proc.kill(); M.close(); await sleep(300);
   }
 

@@ -23,6 +23,8 @@ export const MESH_SCAN_INTERVALS = {
 
 const DEDUP_KEY = 'meshora_processed_ids_v02';
 const OUTBOX_RETRY_MS = 15000;
+const OUTBOX_MAX_BACKOFF_MS = 10 * 60 * 1000;
+const MAX_PER_PASS = 20;
 
 export class TransportManager {
   private static instance: TransportManager | null = null;
@@ -62,13 +64,13 @@ export class TransportManager {
     // Listen to network sentinel changes to flush outbox
     NetworkSentinel.subscribe((status) => {
       if (status !== 'offline') {
-        this.flushPendingOutbox();
+        void this.flushPendingOutbox(true);
       }
     });
 
     // Contre-audit V0.2 : renvoi aussi quand un pair (re)devient joignable, et périodiquement tant que l'Outbox n'est pas vide.
     wsAdapter.onPeersChanged(() => {
-      void this.flushPendingOutbox();
+      void this.flushPendingOutbox(true);
     });
     setInterval(() => {
       if (MessageStore.getOutboxMessages().length > 0) void this.flushPendingOutbox();
@@ -170,19 +172,28 @@ export class TransportManager {
   }
 
   private flushing = false;
+  /** Dernier envoi et nombre de tentatives par message (attente progressive). */
+  private retryState: Map<string, { attempts: number; nextAt: number }> = new Map();
 
   /**
-   * Contre-audit V0.2 : renvoi réel de l'Outbox. Un message n'est marqué « envoyé » que si un transport
-   * a effectivement accepté l'envoi (résultat attendu, plus de succès présumé). Les messages « envoyés »
-   * restent dans l'Outbox jusqu'à un ACK vérifié et sont renvoyés (le destinataire déduplique par identifiant).
+   * Contre-audit V0.2 : renvoi réel de l'Outbox, avec attente progressive par message
+   * (15 s, 30 s, 1 min… plafonnée à 10 min) et au plus MAX_PER_PASS envois par passe,
+   * pour ne pas saturer le relais (limite de débit, boîte aux lettres) ni le destinataire.
+   * Un message n'est marqué « envoyé » que si un transport l'a accepté.
+   * @param force renvoie sans attendre (arrivée d'un pair, retour du réseau).
    */
-  public async flushPendingOutbox(): Promise<number> {
+  public async flushPendingOutbox(force = false): Promise<number> {
     if (this.flushing) return 0;
     this.flushing = true;
     let count = 0;
     try {
+      const now = Date.now();
       const realTransports: TransportType[] = ['broadcast', 'websocket'];
-      for (const msg of MessageStore.getOutboxMessages()) {
+      const due = MessageStore.getOutboxMessages().filter((m) => {
+        const st = this.retryState.get(m.id);
+        return force || !st || st.nextAt <= now;
+      });
+      for (const msg of due.slice(0, MAX_PER_PASS)) {
         let ok = false;
         for (const t of realTransports) {
           const adapter = this.adapters.get(t);
@@ -192,11 +203,17 @@ export class TransportManager {
             } catch {}
           }
         }
+        const prev = this.retryState.get(msg.id)?.attempts ?? 0;
+        const attempts = ok ? prev + 1 : prev;
+        this.retryState.set(msg.id, { attempts, nextAt: now + Math.min(OUTBOX_RETRY_MS * 2 ** attempts, OUTBOX_MAX_BACKOFF_MS) });
         if (ok) {
           count++;
           if (msg.status === 'queued') MessageStore.markStatus(msg.id, 'sent');
         }
       }
+      // Nettoyage des messages sortis de l'Outbox
+      const live = new Set(MessageStore.getOutboxMessages().map((m) => m.id));
+      for (const id of this.retryState.keys()) if (!live.has(id)) this.retryState.delete(id);
     } finally {
       this.flushing = false;
     }

@@ -40,7 +40,8 @@ export class WebSocketTransport implements ITransportAdapter {
   private targetUrl: string | null = null;
   private currentRoom = 'public_meshora';
   /** Contre-audit V0.2 : clés publiques auxquelles chaque message a réellement été chiffré (pour valider les ACK). */
-  private sentTo: Map<string, Set<string>> = new Map();
+  /** Pour chaque message émis : empreinte de chaque enveloppe → clé du destinataire (validation des accusés v2). */
+  private sentTo: Map<string, Map<string, string>> = new Map();
   private peersChangedListeners: Set<() => void> = new Set();
 
   public onPeersChanged(callback: () => void): () => void {
@@ -264,12 +265,14 @@ export class WebSocketTransport implements ITransportAdapter {
               const senderPeer = Array.from(this.remotePeers.values()).find(
                 p => p.publicKey === env.senderPublicKeyHex
               );
+              const derivedSenderId =
+                'msh_' + (await MeshoraCrypto.computeFingerprint(env.senderPublicKeyHex)).replace(/:/g, '').substring(0, 12);
 
               const reconstructedMsg: MeshMessage = {
-                id: env.id,
-                senderId:
-                  senderPeer?.id ||
-                  'msh_' + (await MeshoraCrypto.computeFingerprint(env.senderPublicKeyHex)).replace(/:/g, '').substring(0, 12),
+                // Identifiant local = expéditeur + identifiant : un tiers qui réutilise un identifiant
+                // ne peut pas faire écarter le vrai message comme doublon (contre-audit V0.2).
+                id: `${derivedSenderId}:${env.id}`,
+                senderId: senderPeer?.id || derivedSenderId,
                 senderAlias: senderPeer?.alias || 'Pair inconnu (clé non vérifiée)',
                 recipientId: myId.id,
                 channelId: 'general',
@@ -290,11 +293,7 @@ export class WebSocketTransport implements ITransportAdapter {
 
               // Émission d'un accusé de réception signé (Signed ACK)
               const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
-              const signedAck = await MeshoraCrypto.createSignedAck(
-                env.id,
-                privKey,
-                myId.publicKey
-              );
+              const signedAck = await MeshoraCrypto.createSignedAck(env, privKey);
 
               this.sendRaw({
                 type: 'MESHORA_ACK',
@@ -332,7 +331,14 @@ export class WebSocketTransport implements ITransportAdapter {
           ack.verified = false;
           const sa = ack.signedAck;
           const expected = this.sentTo.get(ack.messageId);
-          if (sa && expected && sa.messageId === ack.messageId && expected.has(sa.recipientPublicKeyHex)) {
+          const me = getOrCreateIdentity();
+          if (
+            sa &&
+            expected &&
+            sa.messageId === ack.messageId &&
+            sa.senderPublicKeyHex === me.publicKey &&
+            expected.get(sa.envelopeHash) === sa.recipientPublicKeyHex
+          ) {
             ack.verified = await MeshoraCrypto.verifySignedAck(sa);
           }
           if (!ack.verified) break;
@@ -427,7 +433,7 @@ export class WebSocketTransport implements ITransportAdapter {
     let sentAny = false;
     try {
       const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
-      const recipients = this.sentTo.get(message.id) ?? new Set<string>();
+      const recipients = this.sentTo.get(message.id) ?? new Map<string, string>();
       for (const peer of targets) {
         const envelope = await MeshoraCrypto.encryptEnvelope({
           messageId: message.id,
@@ -437,7 +443,7 @@ export class WebSocketTransport implements ITransportAdapter {
           plaintext: message.content
         });
         if (this.sendRaw({ type: 'MESHORA_ENVELOPE', envelope, room: this.currentRoom })) {
-          recipients.add(peer.publicKey!);
+          recipients.set(await MeshoraCrypto.envelopeHash(envelope), peer.publicKey!);
           sentAny = true;
         }
       }

@@ -26,7 +26,7 @@ val releaseKeyAlias: String? = signingProps.getProperty("keyAlias")
 val releaseStorePassword: String? = System.getenv("MESHORA_KEYSTORE_PASSWORD") ?: signingProps.getProperty("storePassword")
 val releaseKeyPassword: String? = System.getenv("MESHORA_KEY_PASSWORD") ?: signingProps.getProperty("keyPassword") ?: releaseStorePassword
 val hasReleaseSigning = listOf(releaseStoreFile, releaseKeyAlias, releaseStorePassword, releaseKeyPassword)
-    .all { !it.isNullOrBlank() } && File(releaseStoreFile!!).exists()
+    .all { !it.isNullOrBlank() } && File(releaseStoreFile!!).let { it.isAbsolute && it.exists() }
 
 android {
     namespace = "org.meshora.app"

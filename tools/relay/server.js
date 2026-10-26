@@ -417,10 +417,16 @@ function handleClientMessage(client, msg) {
         const box = offlineMailboxes.get(client.room);
         if (mailboxCount(box) >= LIMITS.mailboxPerRoom) return;
         const list = box.get(recipientKey) || [];
-        if (list.length < LIMITS.mailboxPerRecipient) {
+        // Un renvoi du même message (même expéditeur, même identifiant) remplace la copie en attente.
+        const dup = list.findIndex(
+          (e) => e.packet.envelope.id === env.id && e.packet.envelope.senderPublicKeyHex === env.senderPublicKeyHex
+        );
+        if (dup >= 0) {
+          list[dup] = { packet, at: Date.now() };
+        } else if (list.length < LIMITS.mailboxPerRecipient) {
           list.push({ packet, at: Date.now() });
-          box.set(recipientKey, list);
         }
+        box.set(recipientKey, list);
       }
       return;
     }
@@ -428,11 +434,14 @@ function handleClientMessage(client, msg) {
     case 'MESHORA_ACK': {
       const ack = msg.ack;
       if (!ack || typeof ack !== 'object' || !ack.signedAck) return;
-      // L'ACK doit être signé par la clé authentifiée de la connexion émettrice.
+      // L'ACK doit être signé par la clé authentifiée de la connexion émettrice,
+      // et n'est remis qu'à l'expéditeur du message (accusé v2 : senderPublicKeyHex).
       if (ack.signedAck.recipientPublicKeyHex !== client.publicKey) return;
+      const senderKey = ack.signedAck.senderPublicKeyHex;
+      if (typeof senderKey !== 'string' || !HEX_RE.test(senderKey)) return;
       const packet = { type: 'MESHORA_ACK', ack };
       for (const target of clients.values()) {
-        if (target.authenticated && target.room === client.room && target.id !== client.id) sendJson(target, packet);
+        if (target.authenticated && target.room === client.room && target.publicKey === senderKey) sendJson(target, packet);
       }
       return;
     }

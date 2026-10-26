@@ -202,26 +202,41 @@ object CryptoEngine {
         return String(decryptedBytes, StandardCharsets.UTF_8)
     }
 
-    // --- Accusés de Réception Signés (SignedAck) ---
-    fun createSignedAck(
-        messageId: String,
-        recipientPrivateKey: PrivateKey,
-        recipientPublicKeyHex: String
-    ): SignedAck {
+    // --- Accusés de Réception Signés v2 (SignedAck) ---
+    /** Empreinte d'une enveloppe : SHA-256 (hex) de la chaîne UTF-8 de sa signature. */
+    fun envelopeHash(envelope: EncryptedEnvelope): String =
+        bytesToHex(MessageDigest.getInstance("SHA-256").digest(envelope.signatureHex.toByteArray(StandardCharsets.UTF_8)))
+
+    fun createSignedAck(envelope: EncryptedEnvelope, recipientPrivateKey: PrivateKey): SignedAck {
         val timestamp = System.currentTimeMillis()
-        val ackPayload = "ACK|$messageId|$recipientPublicKeyHex|$timestamp"
-        val signatureHex = signData(recipientPrivateKey, ackPayload)
+        val hash = envelopeHash(envelope)
+        val payload = "ACK2|${envelope.id}|${envelope.senderPublicKeyHex}|${envelope.recipientPublicKeyHex}|$hash|$timestamp"
         return SignedAck(
-            messageId = messageId,
-            recipientPublicKeyHex = recipientPublicKeyHex,
+            messageId = envelope.id,
+            senderPublicKeyHex = envelope.senderPublicKeyHex,
+            recipientPublicKeyHex = envelope.recipientPublicKeyHex,
+            envelopeHash = hash,
             timestamp = timestamp,
-            signatureHex = signatureHex
+            signatureHex = signData(recipientPrivateKey, payload)
         )
     }
 
+    /** Vérifie la signature ; la correspondance avec un envoi réel est vérifiée par l'appelant. */
     fun verifySignedAck(ack: SignedAck): Boolean {
-        val ackPayload = "ACK|${ack.messageId}|${ack.recipientPublicKeyHex}|${ack.timestamp}"
-        return verifySignature(ack.recipientPublicKeyHex, ack.signatureHex, ackPayload)
+        val payload = "ACK2|${ack.messageId}|${ack.senderPublicKeyHex}|${ack.recipientPublicKeyHex}|${ack.envelopeHash}|${ack.timestamp}"
+        return verifySignature(ack.recipientPublicKeyHex, ack.signatureHex, payload)
+    }
+
+    /** Clé publique SPKI hex normalisée (minuscules) et importable, sinon null. */
+    fun normalizePublicKeyHex(input: String): String? {
+        val hex = input.trim().lowercase()
+        if (!Regex("^[0-9a-f]{120,400}$").matches(hex) || hex.length % 2 != 0) return null
+        return try {
+            importPublicKey(hex)
+            hex
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // --- Convertisseurs DER <-> IEEE P1363 (Interopérabilité WebCrypto / Node.js) ---
