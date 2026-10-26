@@ -121,7 +121,8 @@ ol.steps { padding-left: 1.2em; } ol.steps li { margin: 6px 0; }
 .md .n-dev circle { stroke: var(--accent); stroke-dasharray: 8 5; }
 .md .n-fut circle { stroke: var(--text-2); stroke-dasharray: 1 6; stroke-linecap: round; }
 .md .ico { fill: none; stroke: var(--text); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.md text { font-family: inherit; fill: var(--text); }
+.md text { font-family: inherit; fill: var(--text); paint-order: stroke; stroke: var(--bg-2); stroke-width: 6px; stroke-linejoin: round; }
+.md .elabel text { stroke: none; }
 .md .nl { font-size: 16px; font-weight: 600; }
 .md .nc { font-size: 13px; fill: var(--text-2); }
 .md .elabel rect { fill: var(--bg); stroke: var(--line); }
