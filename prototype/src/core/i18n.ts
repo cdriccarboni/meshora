@@ -11,7 +11,7 @@ export const i18nData = {
     brand: {
       name: 'MESHORA',
       tagline: 'Un réseau qui relie les autres.',
-      version: 'V.0.2'
+      version: 'V.0.3'
     },
     nav: {
       home: 'Accueil',
@@ -238,7 +238,7 @@ export const i18nData = {
     brand: {
       name: 'MESHORA',
       tagline: 'A network that links the others.',
-      version: 'V.0.2'
+      version: 'V.0.3'
     },
     nav: {
       home: 'Home',

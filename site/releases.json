@@ -1,3 +1,28 @@
 {
-  "_comment": "Versions natives réellement publiées. Ajouter une entrée uniquement après publication effective et test sur appareil (docs/PUBLICATION.md §3). Format : {\"published\": true, \"url\": \"...\", \"label\": \"...\", \"version\": \"...\"}"
+  "_comment": "Versions natives réellement publiées. Ajouter une entrée uniquement après publication effective, vérification de provenance, de version et de signature, et test sur appareil (docs/PUBLICATION.md §3). planned=true : prévu, sans lien.",
+  "android": {
+    "published": true,
+    "url": "https://github.com/cdriccarboni/meshora/releases/download/android-v0.2.1-beta-test1/MESHORA-0.2.1-beta-test.apk",
+    "label": "APK d'essai",
+    "label_en": "Test APK",
+    "version": "0.2.1-beta",
+    "sha256": "dd56b3da19933fbfcb12c7b06d70a7fe2c6d3af68b8d8dd83ec55861f726e887",
+    "certificate_sha256": "5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2",
+    "verified_on": "2026-10-26, Google Pixel 9 ↔ Mac M4 (relais Internet)"
+  },
+  "ios": {
+    "planned": true
+  },
+  "macos": {
+    "web": true
+  },
+  "windows": {
+    "web": true
+  },
+  "linux": {
+    "web": true
+  },
+  "raspberry-pi": {
+    "future": true
+  }
 }

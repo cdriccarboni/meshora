@@ -1,5 +1,5 @@
-// MESHORA Service Worker v0.2.0 (Portée : /app/)
-const CACHE_NAME = 'meshora-app-v0.2.0';
+// MESHORA Service Worker v0.3.0 (Portée : /app/)
+const CACHE_NAME = 'meshora-app-v0.3.0';
 const PRECACHE_ASSETS = [
   '/app/',
   '/app/index.html',

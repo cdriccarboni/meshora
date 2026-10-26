@@ -1,60 +1,245 @@
-<!--{"lang": "fr", "path": "/fr/decouvrir/", "alt": "/en/discover/", "title": "Découvrir", "description": "MESHORA : communiquer simplement, avec ou sans Internet. Quatre piliers, continuité, confidentialité, réseaux ouverts.", "nav": "discover"}-->
+<!--{"lang": "fr", "path": "/fr/decouvrir/", "alt": "/en/discover/", "title": "Découvrir", "description": "MESHORA : une messagerie chiffrée qui cherche tous les chemins possibles, Internet puis appareils proches. Ce qui est vérifié, en essai et prévu.", "nav": "discover"}-->
       <div class="hero">
         <p class="kicker">Un réseau qui relie les autres.</p>
-        <h1>Vos messages continuent de circuler, même sans Internet.</h1>
-        <p>MESHORA relie vos appareils entre eux et à vos réseaux préférés. Simple au quotidien, discret quand la connexion faiblit. Libre et ouvert.</p>
+        <h1>Vos messages, par tous les chemins disponibles.</h1>
+        <p>MESHORA relie vos appareils entre eux et à Internet, pour que vos messages trouvent un chemin : le réseau quand il est là, les appareils proches quand il manque. Libre, chiffré, sans compte central.</p>
       </div>
+
+      <section>
+        <h2>Comment les appareils se relient</h2>
+        <p>Chaque appareil peut transmettre les messages des autres, sans pouvoir les lire. Le schéma distingue ce qui fonctionne déjà de ce qui est en cours ou prévu.</p>
+        <figure class="mesh-diagram">
+<svg class="md md-wide" viewBox="0 0 960 625" role="img" aria-labelledby="md-wide-t md-wide-d" xmlns="http://www.w3.org/2000/svg">
+<title id="md-wide-t">Schéma du réseau MESHORA : ce qui est vérifié, en développement et prévu</title>
+<desc id="md-wide-d">Un téléphone Android et un ordinateur échangent des messages chiffrés par un relais Internet de test : liaison vérifiée sur appareils. Liaisons Bluetooth entre téléphones, entre téléphone et ordinateur, et avec l&#x27;iPhone : en développement ou en attente de tests physiques. Montre, routeur Wi-Fi, mini-PC passerelle et relais communautaires bénévoles : vision future.</desc>
+<line class="edge e-ok" x1="269" y1="194" x2="441" y2="99"/>
+<g class="elabel"><rect x="312" y="134" width="86" height="22" rx="11"/><text x="355" y="150" text-anchor="middle">Internet</text></g>
+<line class="edge e-ok" x1="691" y1="194" x2="519" y2="99"/>
+<g class="elabel"><rect x="562" y="134" width="86" height="22" rx="11"/><text x="605" y="150" text-anchor="middle">Internet</text></g>
+<line class="edge e-dev" x1="274" y1="215" x2="686" y2="215"/>
+<g class="elabel"><rect x="432" y="203" width="95" height="22" rx="11"/><text x="480" y="219" text-anchor="middle">Bluetooth</text></g>
+<line class="edge e-dev" x1="252" y1="253" x2="308" y2="347"/>
+<g class="elabel"><rect x="232" y="288" width="95" height="22" rx="11"/><text x="280" y="304" text-anchor="middle">Bluetooth</text></g>
+<line class="edge e-dev" x1="374" y1="385" x2="586" y2="385"/>
+<line class="edge e-fut" x1="195" y1="242" x2="113" y2="303"/>
+<line class="edge e-fut" x1="293" y1="409" x2="187" y2="481"/>
+<line class="edge e-fut" x1="194" y1="506" x2="436" y2="514"/>
+<line class="edge e-fut" x1="513" y1="486" x2="597" y2="414"/>
+<line class="edge e-fut" x1="671" y1="401" x2="809" y2="454"/>
+<line class="edge e-fut" x1="831" y1="430" x2="749" y2="255"/>
+<g class="node n-ok">
+<circle cx="480" cy="78" r="38"/>
+<g class="ico" transform="translate(462 60) scale(1.5)"><rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M7.5 6.5h.01M7.5 17.5h.01M11 6.5h6M11 17.5h6"/></g>
+<text class="nl" x="480" y="138" text-anchor="middle">Relais Internet</text>
+<text class="nl" x="480" y="157" text-anchor="middle">de test</text>
+<text class="nc" x="480" y="176" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-ok">
+<circle cx="230" cy="215" r="38"/>
+<g class="ico" transform="translate(212 197) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="230" y="275" text-anchor="middle">Téléphone</text>
+<text class="nl" x="230" y="294" text-anchor="middle">Android</text>
+<text class="nc" x="230" y="313" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-ok">
+<circle cx="730" cy="215" r="38"/>
+<g class="ico" transform="translate(712 197) scale(1.5)"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></g>
+<text class="nl" x="730" y="275" text-anchor="middle">Ordinateur</text>
+<text class="nl" x="730" y="294" text-anchor="middle">(navigateur)</text>
+<text class="nc" x="730" y="313" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-dev">
+<circle cx="330" cy="385" r="38"/>
+<g class="ico" transform="translate(312 367) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="330" y="445" text-anchor="middle">Autre téléphone</text>
+<text class="nl" x="330" y="464" text-anchor="middle">Android</text>
+<text class="nc" x="330" y="483" text-anchor="middle">en essai</text>
+</g>
+<g class="node n-dev">
+<circle cx="630" cy="385" r="38"/>
+<g class="ico" transform="translate(612 367) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="630" y="445" text-anchor="middle">iPhone</text>
+<text class="nc" x="630" y="464" text-anchor="middle">en essai</text>
+</g>
+<g class="node n-fut">
+<circle cx="78" cy="330" r="38"/>
+<g class="ico" transform="translate(60 312) scale(1.5)"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-4h4l1 4M9 18l1 4h4l1-4M12 10v2.5l1.5 1"/></g>
+<text class="nl" x="78" y="390" text-anchor="middle">Montre</text>
+<text class="nc" x="78" y="409" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="150" cy="505" r="38"/>
+<g class="ico" transform="translate(132 487) scale(1.5)"><rect x="3" y="12" width="18" height="7" rx="2"/><path d="M7 12V6M17 12V6M7 15.5h.01M10 15.5h.01"/></g>
+<text class="nl" x="150" y="565" text-anchor="middle">Routeur</text>
+<text class="nl" x="150" y="584" text-anchor="middle">Wi-Fi</text>
+<text class="nc" x="150" y="603" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="480" cy="515" r="38"/>
+<g class="ico" transform="translate(462 497) scale(1.5)"><rect x="4" y="8" width="16" height="10" rx="2"/><path d="M8 13h4"/><circle cx="16" cy="13" r="1"/></g>
+<text class="nl" x="480" y="575" text-anchor="middle">Mini-PC</text>
+<text class="nl" x="480" y="594" text-anchor="middle">passerelle</text>
+<text class="nc" x="480" y="613" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="850" cy="470" r="38"/>
+<g class="ico" transform="translate(832 452) scale(1.5)"><path d="M12 10v11M8 21h8M8.5 5.5a5 5 0 0 0 0 7M15.5 5.5a5 5 0 0 1 0 7M5.6 3a9 9 0 0 0 0 12M18.4 3a9 9 0 0 1 0 12"/><circle cx="12" cy="9" r="1.5"/></g>
+<text class="nl" x="850" y="530" text-anchor="middle">Relais</text>
+<text class="nl" x="850" y="549" text-anchor="middle">communautaire</text>
+<text class="nl" x="850" y="568" text-anchor="middle">bénévole</text>
+<text class="nc" x="850" y="587" text-anchor="middle">futur</text>
+</g>
+</svg>
+<svg class="md md-tall" viewBox="0 0 420 930" role="img" aria-labelledby="md-tall-t md-tall-d" xmlns="http://www.w3.org/2000/svg">
+<title id="md-tall-t">Schéma du réseau MESHORA : ce qui est vérifié, en développement et prévu</title>
+<desc id="md-tall-d">Un téléphone Android et un ordinateur échangent des messages chiffrés par un relais Internet de test : liaison vérifiée sur appareils. Liaisons Bluetooth entre téléphones, entre téléphone et ordinateur, et avec l&#x27;iPhone : en développement ou en attente de tests physiques. Montre, routeur Wi-Fi, mini-PC passerelle et relais communautaires bénévoles : vision future.</desc>
+<line class="edge e-ok" x1="116" y1="199" x2="184" y2="106"/>
+<g class="elabel"><rect x="107" y="140" width="86" height="22" rx="11"/><text x="150" y="156" text-anchor="middle">Internet</text></g>
+<line class="edge e-ok" x1="304" y1="199" x2="236" y2="106"/>
+<g class="elabel"><rect x="227" y="140" width="86" height="22" rx="11"/><text x="270" y="156" text-anchor="middle">Internet</text></g>
+<line class="edge e-dev" x1="134" y1="235" x2="286" y2="235"/>
+<g class="elabel"><rect x="162" y="223" width="95" height="22" rx="11"/><text x="210" y="239" text-anchor="middle">Bluetooth</text></g>
+<line class="edge e-dev" x1="91" y1="279" x2="94" y2="381"/>
+<g class="elabel"><rect x="45" y="318" width="95" height="22" rx="11"/><text x="92" y="334" text-anchor="middle">Bluetooth</text></g>
+<line class="edge e-dev" x1="139" y1="425" x2="281" y2="425"/>
+<line class="edge e-fut" x1="88" y1="279" x2="72" y2="566"/>
+<line class="edge e-fut" x1="116" y1="464" x2="189" y2="601"/>
+<line class="edge e-fut" x1="210" y1="684" x2="210" y2="776"/>
+<line class="edge e-fut" x1="222" y1="778" x2="313" y2="467"/>
+<line class="edge e-fut" x1="331" y1="469" x2="344" y2="566"/>
+<line class="edge e-fut" x1="348" y1="566" x2="332" y2="279"/>
+<g class="node n-ok">
+<circle cx="210" cy="70" r="38"/>
+<g class="ico" transform="translate(192 52) scale(1.5)"><rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M7.5 6.5h.01M7.5 17.5h.01M11 6.5h6M11 17.5h6"/></g>
+<text class="nl" x="210" y="130" text-anchor="middle">Relais Internet</text>
+<text class="nl" x="210" y="149" text-anchor="middle">de test</text>
+<text class="nc" x="210" y="168" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-ok">
+<circle cx="90" cy="235" r="38"/>
+<g class="ico" transform="translate(72 217) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="90" y="295" text-anchor="middle">Téléphone</text>
+<text class="nl" x="90" y="314" text-anchor="middle">Android</text>
+<text class="nc" x="90" y="333" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-ok">
+<circle cx="330" cy="235" r="38"/>
+<g class="ico" transform="translate(312 217) scale(1.5)"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></g>
+<text class="nl" x="330" y="295" text-anchor="middle">Ordinateur</text>
+<text class="nl" x="330" y="314" text-anchor="middle">(navigateur)</text>
+<text class="nc" x="330" y="333" text-anchor="middle">vérifié</text>
+</g>
+<g class="node n-dev">
+<circle cx="95" cy="425" r="38"/>
+<g class="ico" transform="translate(77 407) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="95" y="485" text-anchor="middle">Autre téléphone</text>
+<text class="nl" x="95" y="504" text-anchor="middle">Android</text>
+<text class="nc" x="95" y="523" text-anchor="middle">en essai</text>
+</g>
+<g class="node n-dev">
+<circle cx="325" cy="425" r="38"/>
+<g class="ico" transform="translate(307 407) scale(1.5)"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></g>
+<text class="nl" x="325" y="485" text-anchor="middle">iPhone</text>
+<text class="nc" x="325" y="504" text-anchor="middle">en essai</text>
+</g>
+<g class="node n-fut">
+<circle cx="70" cy="610" r="38"/>
+<g class="ico" transform="translate(52 592) scale(1.5)"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-4h4l1 4M9 18l1 4h4l1-4M12 10v2.5l1.5 1"/></g>
+<text class="nl" x="70" y="670" text-anchor="middle">Montre</text>
+<text class="nc" x="70" y="689" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="210" cy="640" r="38"/>
+<g class="ico" transform="translate(192 622) scale(1.5)"><rect x="3" y="12" width="18" height="7" rx="2"/><path d="M7 12V6M17 12V6M7 15.5h.01M10 15.5h.01"/></g>
+<text class="nl" x="210" y="700" text-anchor="middle">Routeur</text>
+<text class="nl" x="210" y="719" text-anchor="middle">Wi-Fi</text>
+<text class="nc" x="210" y="738" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="210" cy="820" r="38"/>
+<g class="ico" transform="translate(192 802) scale(1.5)"><rect x="4" y="8" width="16" height="10" rx="2"/><path d="M8 13h4"/><circle cx="16" cy="13" r="1"/></g>
+<text class="nl" x="210" y="880" text-anchor="middle">Mini-PC</text>
+<text class="nl" x="210" y="899" text-anchor="middle">passerelle</text>
+<text class="nc" x="210" y="918" text-anchor="middle">futur</text>
+</g>
+<g class="node n-fut">
+<circle cx="350" cy="610" r="38"/>
+<g class="ico" transform="translate(332 592) scale(1.5)"><path d="M12 10v11M8 21h8M8.5 5.5a5 5 0 0 0 0 7M15.5 5.5a5 5 0 0 1 0 7M5.6 3a9 9 0 0 0 0 12M18.4 3a9 9 0 0 1 0 12"/><circle cx="12" cy="9" r="1.5"/></g>
+<text class="nl" x="350" y="670" text-anchor="middle">Relais</text>
+<text class="nl" x="350" y="689" text-anchor="middle">communautaire</text>
+<text class="nl" x="350" y="708" text-anchor="middle">bénévole</text>
+<text class="nc" x="350" y="727" text-anchor="middle">futur</text>
+</g>
+</svg>
+
+        </figure>
+        <ul class="legend" aria-label="Légende du schéma">
+          <li><svg class="lg" viewBox="0 0 48 12" aria-hidden="true"><line class="edge e-ok" x1="2" y1="6" x2="46" y2="6"/></svg><span class="badge b-ok">Disponible et vérifié</span> <span class="muted">testé sur de vrais appareils</span></li>
+          <li><svg class="lg" viewBox="0 0 48 12" aria-hidden="true"><line class="edge e-dev" x1="2" y1="6" x2="46" y2="6"/></svg><span class="badge b-dev">En développement</span> <span class="muted">ou en attente de tests physiques</span></li>
+          <li><svg class="lg" viewBox="0 0 48 12" aria-hidden="true"><line class="edge e-fut" x1="2" y1="6" x2="46" y2="6"/></svg><span class="badge b-fut">Vision future</span> <span class="muted">objets connectés et relais communautaires volontaires</span></li>
+        </ul>
+        <details class="reading">
+          <summary>Lire le schéma en texte</summary>
+          <ul>
+            <li><span class="badge b-ok">Disponible et vérifié</span> Un téléphone Android et un ordinateur échangent des messages chiffrés de bout en bout par un relais Internet de test, en Wi-Fi comme en 5G, avec accusé de réception et envoi différé après une coupure (essai du 26 octobre 2026).</li>
+            <li><span class="badge b-dev">En développement</span> Bluetooth entre téléphones Android et relais de téléphone en téléphone ; liaison Bluetooth entre un ordinateur (Chrome ou Edge) et un téléphone Android ; application iPhone. Ces liaisons n'ont pas encore été testées sur de vrais appareils.</li>
+            <li><span class="badge b-fut">Vision future</span> Montres et objets connectés relayés par le téléphone ; routeur Wi-Fi et mini-PC servant de passerelle à la maison ; relais communautaires installés par des volontaires.</li>
+          </ul>
+        </details>
+      </section>
 
       <div class="grid" aria-label="Trois actions">
         <div class="card">
           <h2>Se connecter</h2>
-          <p>Voir d'un coup d'œil comment vous êtes relié : Internet, appareils proches, votre passerelle.</p>
+          <p>Voir d'un coup d'œil par où passent vos messages : Internet, relais, appareils proches.</p>
         </div>
         <div class="card">
           <h2>Communiquer</h2>
-          <p>Écrire à vos proches et à vos groupes, en privé, et partager des fichiers.</p>
+          <p>Écrire en privé, chiffré de bout en bout. Les groupes et l'envoi de fichiers viendront ensuite.</p>
         </div>
         <div class="card">
           <h2>Découvrir</h2>
-          <p>Ce qui est disponible autour de vous : cartes, documents, annonces de la communauté.</p>
+          <p>Ce qui est disponible autour de vous. Les cartes et annonces de l'application sont encore des démonstrations.</p>
         </div>
       </div>
 
       <section>
         <h2>Quatre piliers</h2>
         <div class="grid four">
-          <div class="card"><h3>MESHORA Mesh</h3><p>Échanger avec les appareils proches, par Bluetooth ou réseau local, sans Internet.</p></div>
-          <div class="card"><h3>MESHORA Connect</h3><p>Utiliser les connexions Internet et les passerelles réellement disponibles.</p></div>
-          <div class="card"><h3>MESHORA Shield</h3><p>Protéger sa vie privée : chiffrement, et VPN facultatif vers sa propre passerelle.</p></div>
-          <div class="card"><h3>MESHORA Resilience</h3><p>Garder le fil : messages conservés hors connexion, puis synchronisés.</p></div>
+          <div class="card"><h3>MESHORA Mesh</h3><p>Échanger avec les appareils proches par Bluetooth, sans Internet.</p><p class="pill"><span class="badge b-dev">En développement</span></p></div>
+          <div class="card"><h3>MESHORA Connect</h3><p>Passer par Internet via un relais qui ne peut pas lire les messages.</p><p class="pill"><span class="badge b-ok">Relais : vérifié</span> <span class="badge b-fut">Passerelles : futur</span></p></div>
+          <div class="card"><h3>MESHORA Shield</h3><p>Chiffrement de bout en bout, et plus tard un VPN facultatif vers votre propre passerelle.</p><p class="pill"><span class="badge b-ok">Chiffrement : vérifié</span> <span class="badge b-fut">VPN : futur</span></p></div>
+          <div class="card"><h3>MESHORA Resilience</h3><p>Les messages non remis restent en attente et repartent seuls quand un chemin revient.</p><p class="pill"><span class="badge b-ok">Vérifié par Internet</span></p></div>
         </div>
-        <p class="muted">Aucune passerelle ni aucun VPN ne crée de connexion qui n'existe pas : MESHORA utilise au mieux celles qui sont là.</p>
+        <p class="muted">Aucune passerelle ni aucun relais ne crée de connexion qui n'existe pas : MESHORA utilise au mieux celles qui sont là.</p>
       </section>
 
       <section>
         <h2>Continuité</h2>
-        <p>Quand Internet ralentit ou disparaît, MESHORA fait passer vos messages par les appareils proches, puis les synchronise dès que la connexion revient. Vous n'avez rien à activer, et rien n'est perdu sans que vous le sachiez.</p>
+        <p>Si le destinataire n'est pas joignable, le message reste sur votre appareil, marqué « En attente », puis repart tout seul dès qu'un chemin existe. Il n'est marqué « Délivré » que lorsque le destinataire en a accusé réception avec sa clé. Le passage par les appareils proches, sans Internet, est en cours d'essai.</p>
       </section>
 
       <section>
         <h2>Privé, sans compte central</h2>
-        <p>Vos conversations privées sont chiffrées de bout en bout. Pas de compte à créer sur un serveur, pas de publicité, pas de journal de navigation. Vous pouvez vérifier vos contacts en scannant leur code.</p>
+        <p>Vos conversations privées sont chiffrées de bout en bout : le relais transmet des messages qu'il ne peut pas lire. Pas de compte à créer, pas de publicité, pas de traceur. La vérification des contacts par code QR est prévue.</p>
       </section>
 
       <section>
         <h2>Ouvert aux réseaux que vous utilisez déjà</h2>
-        <p>MESHORA ne remplace pas vos réseaux : il les relie. Il est conçu pour fonctionner avec Nostr, et, plus tard, publier vers Mastodon et Bluesky ou passer par des radios longue portée Meshtastic et MeshCore.</p>
+        <p>MESHORA ne remplace pas vos réseaux : il les relie. Sont étudiés pour la suite : Nostr, la publication vers Mastodon et Bluesky, et les radios longue portée Meshtastic et MeshCore via un boîtier externe.</p>
       </section>
 
       <section>
         <h2>Ce qu'il faut savoir</h2>
         <div class="notice">
-          <p>Sur iPhone, MESHORA relaie les messages de façon fiable quand l'application est ouverte, et de façon plus limitée en arrière-plan. C'est une règle d'Apple, que nous respectons et que nous préférons vous dire clairement.</p>
+          <p>MESHORA est en phase d'essai. Ne l'utilisez pas pour une urgence : appelez le 112.</p>
+          <p>Sur iPhone, Apple limite fortement le Bluetooth en arrière-plan. L'application iPhone est prévue ; elle relaiera de façon fiable application ouverte, plus limitée en arrière-plan. Nous préférons vous le dire clairement.</p>
+          <p>Aucune portée ni aucune résistance aux coupures n'est promise avant d'avoir été mesurée sur le terrain.</p>
         </div>
       </section>
 
       <section>
         <h2>Où en est le projet</h2>
-        <p class="status"><span class="dot note" aria-hidden="true"></span>En conception — aucune version publique pour l'instant.</p>
-        <p>L'état réel de chaque fonction est publié dans le <a href="/fr/etat/">suivi d'avancement</a>.</p>
+        <p class="status"><span class="dot note" aria-hidden="true"></span>Version d'essai : messagerie chiffrée par Internet vérifiée entre un téléphone Android et un ordinateur. Bluetooth en cours d'essai.</p>
+        <p>L'état réel de chaque fonction est publié dans le <a href="/fr/etat/">suivi d'avancement</a>. Pour essayer : <a href="/fr/installer/">Installer</a>.</p>
       </section>
