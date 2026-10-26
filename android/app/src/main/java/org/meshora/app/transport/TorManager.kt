@@ -16,7 +16,7 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 
 /**
- * Tor intégré (bibliothèque Guardian Project « tor-android », Tor 0.4.9, licence BSD).
+ * Tor intégré (bibliothèque Guardian Project « tor-android » 0.4.9.6, Tor 0.4.9, licence BSD).
  *
  * Mode Tor : la connexion au relais passe par un circuit Tor ; le relais (et Cloudflare) voient
  * l'adresse d'un nœud de sortie Tor au lieu de celle du téléphone. **Fermé par défaut en cas d'échec** :

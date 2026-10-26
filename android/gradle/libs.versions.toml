@@ -13,7 +13,7 @@ okhttp = "4.12.0"
 kotlinxSerialization = "1.7.3"
 coroutines = "1.9.0"
 zxing = "3.5.3"
-torAndroid = "0.4.9.12"
+torAndroid = "0.4.9.6"  # dernière version compatible compileSdk 36 ; 0.4.9.11+ exige compileSdk 37 (mise à niveau AGP à prévoir)
 jtorctl = "0.4.5.7"
 
 [libraries]
