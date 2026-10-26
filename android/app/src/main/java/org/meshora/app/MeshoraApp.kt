@@ -20,6 +20,8 @@ class MeshoraApp : Application() {
         private set
     lateinit var transportManager: TransportManager
         private set
+    lateinit var bleMesh: org.meshora.app.transport.ble.BleMesh
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +35,11 @@ class MeshoraApp : Application() {
             identity = identityStorage.getOrCreateIdentity(),
             outboxRepository = outboxRepository,
             bleManager = bleManager
+        )
+        bleMesh = org.meshora.app.transport.ble.BleMesh(
+            context = this,
+            router = transportManager.meshRouter,
+            onLinksChanged = { transportManager.onMeshLinksChanged() }
         )
     }
 
