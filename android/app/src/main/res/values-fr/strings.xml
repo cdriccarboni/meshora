@@ -94,7 +94,7 @@
     <string name="relay_url_invalid">Adresse refusée : utilisez wss://…</string>
 
     <string name="ble_title">Bluetooth direct (expérimental)</string>
-    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Application ouverte et écran allumé. Portée non mesurée.</string>
+    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Application ouverte et écran allumé. Portée non mesurée. Les appareils proches peuvent voir votre nom affiché et votre clé publique.</string>
     <string name="ble_links">Liens Bluetooth directs : %1$d</string>
     <string name="ble_start">Activer le Bluetooth (expérimental)</string>
     <string name="ble_stop">Arrêter le Bluetooth</string>

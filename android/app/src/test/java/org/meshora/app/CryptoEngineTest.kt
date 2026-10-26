@@ -110,4 +110,14 @@ class CryptoEngineTest {
         val forgedValid = CryptoEngine.verifySignedAck(forgedAck)
         assertFalse("Un accusé usurpé doit être rejeté", forgedValid)
     }
+
+    @Test
+    fun rejectsPublicKeyOffTheCurve() {
+        val good = CryptoEngine.generateIdentityKeyPair().publicKeyHex
+        assertNotNull(CryptoEngine.normalizePublicKeyHex(good))
+        // Dernier octet de Y modifié : le point n'est (presque sûrement) plus sur P-256.
+        val bad = good.dropLast(2) + (if (good.endsWith("00")) "01" else "00")
+        assertNull("point hors courbe accepté", CryptoEngine.normalizePublicKeyHex(bad))
+        assertThrows(Exception::class.java) { CryptoEngine.importPublicKey(bad) }
+    }
 }

@@ -63,11 +63,29 @@ object CryptoEngine {
         )
     }
 
+    /** Paramètres P-256 (secp256r1), FIPS 186-4 D.1.2.3. */
+    private val P256_P = BigInteger("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", 16)
+    private val P256_B = BigInteger("5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b", 16)
+    private val P256_A = P256_P.subtract(BigInteger.valueOf(3))
+
+    /**
+     * Importe une clé publique SPKI et vérifie qu'il s'agit d'un point VALIDE de P-256.
+     * Le KeyFactory Java n'effectue pas ce contrôle : sans lui, un point hors courbe serait accepté
+     * (attaque par courbe invalide sur l'ECDH). WebCrypto et le relais rejettent déjà ces clés.
+     */
     fun importPublicKey(publicKeyHex: String): PublicKey {
         val bytes = hexToBytes(publicKeyHex)
-        val spec = X509EncodedKeySpec(bytes)
-        val factory = KeyFactory.getInstance(EC_ALGO)
-        return factory.generatePublic(spec)
+        val key = KeyFactory.getInstance(EC_ALGO).generatePublic(X509EncodedKeySpec(bytes))
+        val ec = key as? java.security.interfaces.ECPublicKey ?: throw InvalidKeyException("not EC")
+        val field = ec.params.curve.field as? java.security.spec.ECFieldFp ?: throw InvalidKeyException("not prime field")
+        if (field.p != P256_P || ec.params.curve.a != P256_A || ec.params.curve.b != P256_B) throw InvalidKeyException("not P-256")
+        val x = ec.w.affineX ?: throw InvalidKeyException("infinity")
+        val y = ec.w.affineY ?: throw InvalidKeyException("infinity")
+        if (x.signum() < 0 || y.signum() < 0 || x >= P256_P || y >= P256_P) throw InvalidKeyException("out of range")
+        val lhs = y.modPow(BigInteger.valueOf(2), P256_P)
+        val rhs = x.modPow(BigInteger.valueOf(3), P256_P).add(P256_A.multiply(x)).add(P256_B).mod(P256_P)
+        if (lhs != rhs) throw InvalidKeyException("point not on curve")
+        return key
     }
 
     fun importPrivateKey(privateKeyPkcs8Hex: String): PrivateKey {
