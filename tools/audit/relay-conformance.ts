@@ -237,6 +237,19 @@ async function main() {
     record('C10', 'Connexion non authentifiée : trame de fermeture 1008 après le délai (≈ 10 s)', r.code === 1008 && r.dt >= 9 && r.dt <= 15, `code=${r.code} après ${r.dt.toFixed(1)} s`);
   }
 
+  // C13 — saturation d'un salon par des connexions jamais authentifiées : refus au-delà de 64, puis libération
+  {
+    const rm = room('c13');
+    const socks: Raw[] = [];
+    for (let i = 0; i < 64; i++) { try { socks.push(await raw(rm)); } catch { break; } }
+    const full = await upgradeStatus(`?room=${rm}`);
+    await sleep(11500);
+    const after = await upgradeStatus(`?room=${rm}`);
+    record('C13', 'Salon saturé par 64 connexions anonymes : refus (503), puis place libérée après le délai d\'authentification', socks.length === 64 && full === 503 && after === 101,
+      `connexions ouvertes=${socks.length} ; 65ᵉ=${full} ; après 11,5 s=${after}`);
+    socks.forEach((x) => { try { x.ws.close(); } catch {} });
+  }
+
   // C11 — bout en bout avec le VRAI code web : réception, accusé signé, réception différée, préemption d'identifiant
   {
     const rm = room('c11');
