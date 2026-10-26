@@ -326,6 +326,12 @@ def check(urls):
                     break
     releases = json.loads((SRC / "releases.json").read_text())
     published = {r.get("url") for r in releases.values() if isinstance(r, dict) and r.get("published")}
+    # Version candidate : provenance, version et signature vérifiées, essai sur appareil en cours.
+    # Son lien est admis dans les pages (affiché « en validation ») mais n'entre pas dans le tableau des versions vérifiées.
+    for r in releases.values():
+        c = r.get("candidate") if isinstance(r, dict) else None
+        if isinstance(c, dict) and c.get("url") and c.get("sha256") and c.get("certificate_sha256"):
+            published.add(c["url"])
     for f in DIST.rglob("*"):
         if not f.is_file() or f.suffix in {".png", ".ico", ".woff2", ".jpg"}: continue
         text = f.read_text(errors="ignore")

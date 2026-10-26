@@ -1,5 +1,5 @@
 {
-  "_comment": "Versions natives réellement publiées. Ajouter une entrée uniquement après publication effective, vérification de provenance, de version et de signature, et test sur appareil (docs/PUBLICATION.md §3). planned=true : prévu, sans lien.",
+  "_comment": "Versions natives réellement publiées. Ajouter une entrée uniquement après publication effective, vérification de provenance, de version et de signature, et test sur appareil (docs/PUBLICATION.md §3). planned=true : prévu, sans lien. candidate : version dont la provenance, la version et la signature sont vérifiées mais pas encore l'essai sur appareil ; affichée « en validation », hors tableau.",
   "android": {
     "published": true,
     "url": "https://github.com/cdriccarboni/meshora/releases/download/android-v0.2.1-beta-test1/MESHORA-0.2.1-beta-test.apk",
@@ -8,7 +8,14 @@
     "version": "0.2.1-beta",
     "sha256": "dd56b3da19933fbfcb12c7b06d70a7fe2c6d3af68b8d8dd83ec55861f726e887",
     "certificate_sha256": "5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2",
-    "verified_on": "2026-10-26, Google Pixel 9 ↔ Mac M4 (relais Internet)"
+    "verified_on": "2026-10-26, Google Pixel 9 ↔ Mac M4 (relais Internet)",
+    "candidate": {
+      "url": "https://github.com/cdriccarboni/meshora/releases/download/android-v0.3.0-beta1/MESHORA-0.3.0-beta1.apk",
+      "version": "0.3.0-beta1",
+      "sha256": "b465d980763a0c8907175b84bc163110cd27323bf0c548ef40f39e2e7b1f92aa",
+      "certificate_sha256": "5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2",
+      "status": "Provenance, version et signature vérifiées le 2026-10-26 ; essai sur téléphone en cours"
+    }
   },
   "ios": {
     "planned": true
