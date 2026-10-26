@@ -6,3 +6,12 @@ target/
 .env.*
 dist/
 .wrangler/
+
+# Clés de signature : jamais dans le dépôt
+*.jks
+*.keystore
+signing.properties
+android/local.properties
+android/app/build/
+android/build/
+android/.gradle/

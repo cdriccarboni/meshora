@@ -30,7 +30,7 @@ class MeshoraApp : Application() {
         bleManager = MeshoraBleManager(this)
         transportManager = TransportManager(
             scope = applicationScope,
-            identityStorage = identityStorage,
+            identity = identityStorage.getOrCreateIdentity(),
             outboxRepository = outboxRepository,
             bleManager = bleManager
         )

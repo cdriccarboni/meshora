@@ -26,7 +26,7 @@ fun TransportsScreen() {
     val isAdvertising by bleManager.isAdvertising.collectAsState()
     val bleStatus by bleManager.statusMessage.collectAsState()
 
-    var relayUrlInput by remember { mutableStateOf("ws://10.0.2.2:8999") }
+    var relayUrlInput by remember { mutableStateOf("ws://10.0.2.2:8787") }
     var roomInput by remember { mutableStateOf("general") }
 
     Column(
@@ -66,7 +66,8 @@ fun TransportsScreen() {
                     )
 
                     val (badgeText, badgeColor) = when (connectionState) {
-                        ConnectionState.CONNECTED -> "CONNECTÉ" to MeshoraSuccess
+                        ConnectionState.AUTHENTICATED -> "CONNECTÉ (identité prouvée)" to MeshoraSuccess
+                        ConnectionState.CONNECTED -> "AUTHENTIFICATION..." to MeshoraWarning
                         ConnectionState.CONNECTING -> "CONNEXION..." to MeshoraWarning
                         ConnectionState.DISCONNECTED -> "DÉCONNECTÉ" to MeshoraTextSecondary
                     }
@@ -108,7 +109,7 @@ fun TransportsScreen() {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    if (connectionState == ConnectionState.CONNECTED) {
+                    if (connectionState == ConnectionState.CONNECTED || connectionState == ConnectionState.AUTHENTICATED) {
                         Button(
                             onClick = { transportManager.disconnectWebSocket() },
                             colors = ButtonDefaults.buttonColors(containerColor = MeshoraError),
