@@ -1,6 +1,6 @@
 # Protocole MESHORA V0.2 — format commun web, Android et relais
 
-> Spécification **descriptive** de ce qui est implémenté et testé (web `prototype/src`, Android `android/app`, relais `tools/relay/server.js`). Toute modification doit garder les trois implémentations alignées et passer `tools/audit/interop-android.sh`.
+> Spécification **descriptive** de ce qui est implémenté et testé (web `prototype/src`, Android `android/app`, relais `tools/relay/server.js` et relais de référence `relay/cloudflare`, conformité vérifiée par `tools/audit/relay-conformance.ts`). Toute modification doit garder les trois implémentations alignées et passer `tools/audit/interop-android.sh`.
 
 ## 1. Identité
 
@@ -47,11 +47,20 @@ Refusé : `MESHORA_MSG` (texte en clair), trames non masquées, fragmentées ou 
 
 `QUEUED`/`queued` (dans l'Outbox, non émis) → `SENT`/`sent` (au moins une enveloppe acceptée par un transport) → `DELIVERED`/`delivered` (accusé signé valide, §3). Les messages `QUEUED` et `SENT` restent dans l'Outbox. Renvoi avec attente progressive par message (15 s, 30 s, 1 min… plafonnée à 10 min), au plus 20 messages par passe ; renvoi immédiat quand le destinataire (re)devient présent. Le destinataire déduplique par (expéditeur, `id`).
 
+## 5 bis. Invitations et groupes (V0.3)
+
+- **Groupe** = salon du relais. Chaque appareil crée au premier lancement un code aléatoire `g` + 12 caractères (alphabet sans 0/o/1/l, 60 bits) ; plus de salon public par défaut.
+- **Lien d'invitation** : `https://<site>/app/#join=<groupe>&k=<clé publique SPKI hex>&n=<nom>[&r=<relais wss>]` ou `meshora://join#…` (application Android). Paramètres dans le **fragment** : jamais transmis au serveur du site. `r` n'apparaît que si l'invitant n'utilise pas le relais de référence ; seul `wss://` est accepté (ou `ws://` local d'essai).
+- **Acceptation** : confirmation explicite ; l'invitant devient un contact **vérifié** (sa clé a voyagé hors du relais). Un pair annoncé par le relais n'est « vérifié » que si sa clé est identique à une clé reçue par invitation : un relais malveillant ne peut pas substituer la clé d'un contact vérifié, il ne peut qu'ajouter un pair non vérifié.
+- **Relais de référence** : Android et web s'y connectent sans saisie (`BuildConfig.DEFAULT_RELAY_URL`, `DEFAULT_RELAY_URL` côté web) ; un autre relais peut être choisi dans les réglages avancés.
+- **Clés publiques** : tout point hors de la courbe P-256 est rejeté (WebCrypto, relais, et Android depuis la V0.3).
+
 ## 6. Limites connues (à traiter avant tout usage réel)
 
 1. Pas de KDF (HKDF) sur le secret ECDH ; même paire de clés pour ECDSA et ECDH.
-2. Pas de vérification hors bande des clés (QR, épinglage) : un relais malveillant peut substituer une clé.
+2. Vérification hors bande **seulement par invitation** (V0.3) : pour un pair rencontré dans le groupe sans invitation, un relais malveillant peut substituer la clé.
 3. Identifiant de 48 bits.
 4. Pas de confidentialité persistante côté expéditeur, pas de rembourrage des tailles.
 5. Le relais voit adresses IP, horaires, tailles, clés publiques et salons.
-6. Transports Bluetooth et Wi-Fi Direct : **non implémentés** ; ce protocole ne couvre que le relais Internet.
+6. Bluetooth LE : implémenté à titre **expérimental**, non testé entre téléphones (docs/MESH-NATIF-V0.3.md, docs/BLUETOOTH-V0.3.md) ; Wi-Fi Direct non implémenté.
+7. Un groupe = un salon : un appareil n'est que dans un groupe à la fois (V0.3).
