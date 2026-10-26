@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.meshora.app",
+      "sha256_cert_fingerprints": [
+        "5F:18:1E:DB:A7:93:98:21:EF:69:01:57:5B:51:BF:3A:87:23:7E:A0:13:6A:E8:96:70:26:7A:92:3C:2D:F2:F2"
+      ]
+    }
+  }
+]

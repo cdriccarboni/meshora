@@ -177,6 +177,10 @@ def build():
     DIST.mkdir()
     shutil.copytree(SRC / "assets", DIST / "assets")
     shutil.copy(SRC / "manifest.webmanifest", DIST / "manifest.webmanifest")
+    # Liens d'application Android (invitations https://…/app/#join=…) : clé d'importation NOUVELLE uniquement.
+    # Note : si Google Play signe l'application (Play App Signing), ajouter aussi le certificat de Play.
+    (DIST / ".well-known").mkdir(exist_ok=True)
+    shutil.copy(SRC / "well-known" / "assetlinks.json", DIST / ".well-known" / "assetlinks.json")
     pages = []
     for p in sorted((SRC / "pages").glob("*.html")):
         meta, body = parse_page(p)

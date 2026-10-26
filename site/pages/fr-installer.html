@@ -7,31 +7,32 @@
       <section aria-labelledby="android">
         <h2 id="android">Android</h2>
         <div class="card release">
-          <h3>Version d'essai 0.2.1-beta <span class="badge b-ok">Vérifiée par Internet</span></h3>
-          <p>Messagerie chiffrée de bout en bout par un relais Internet de test, accusés de réception, envoi différé après une coupure. Testée le 26 octobre 2026 sur un Google Pixel 9 avec un ordinateur, en Wi-Fi et en 5G.</p>
+          <h3>Version d'essai 0.3.0-beta1 <span class="badge b-dev">En validation sur téléphone</span></h3>
+          <p>Connexion automatique au relais MESHORA : plus aucune adresse à saisir. Invitation d'un proche par QR code ou par lien, discussions par personne, interface en français et en anglais. Messagerie chiffrée de bout en bout, accusés de réception signés, envoi différé.</p>
+          <p class="muted">Vérifiée automatiquement le 26 octobre 2026 contre le relais réel (échanges Android ↔ web, accusés, réception différée). L'essai sur téléphone est en cours ; la version 0.2.1-beta, elle, a été vérifiée sur un Google Pixel 9.</p>
           <div class="actions">
-            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.2.1-beta-test1/MESHORA-0.2.1-beta-test.apk" rel="noopener">Télécharger l'APK (11 Mo)</a>
-            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.2.1-beta-test1" rel="noopener">Page de la version</a>
+            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.3.0-beta1/MESHORA-0.3.0-beta1.apk" rel="noopener">Télécharger l'APK (12 Mo)</a>
+            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-beta1" rel="noopener">Page de la version</a>
           </div>
           <details class="verify">
             <summary>Vérifier l'application avant de l'installer</summary>
             <dl>
-              <dt>Empreinte SHA-256 du fichier</dt><dd><code>dd56b3da19933fbfcb12c7b06d70a7fe2c6d3af68b8d8dd83ec55861f726e887</code></dd>
+              <dt>Empreinte SHA-256 du fichier</dt><dd><code>b465d980763a0c8907175b84bc163110cd27323bf0c548ef40f39e2e7b1f92aa</code></dd>
               <dt>Certificat de signature (SHA-256)</dt><dd><code>5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2</code></dd>
-              <dt>Nom du paquet</dt><dd><code>org.meshora.app</code>, version 0.2.1-beta (code 3), Android 8.0 ou plus récent</dd>
+              <dt>Nom du paquet</dt><dd><code>org.meshora.app</code>, version 0.3.0-beta1 (code 6), Android 8.0 ou plus récent</dd>
             </dl>
-            <p class="muted">Sur ordinateur : <code>shasum -a 256 MESHORA-0.2.1-beta-test.apk</code>. Le certificat se lit avec <code>apksigner verify --print-certs</code>.</p>
+            <p class="muted">Sur ordinateur : <code>shasum -a 256 MESHORA-0.3.0-beta1.apk</code>. Le certificat se lit avec <code>apksigner verify --print-certs</code>. Même certificat que la 0.2.1-beta : l'installation la met à jour.</p>
           </details>
         </div>
         <h3>Installer en 3 étapes</h3>
         <ol class="steps">
           <li>Sur le téléphone, touchez « Télécharger l'APK », puis ouvrez le fichier téléchargé.</li>
           <li>Si Android le demande, autorisez l'installation depuis votre navigateur, puis touchez « Installer ».</li>
-          <li>Ouvrez MESHORA. Pour échanger, onglet <strong>Réseau</strong> : saisissez l'adresse du relais et le salon que la personne qui vous invite vous a donnés.</li>
+          <li>Ouvrez MESHORA : il se connecte tout seul. Pour écrire à quelqu'un, onglet <strong>Contacts</strong> → <strong>Inviter un proche</strong> : la personne scanne le QR code ou ouvre le lien.</li>
         </ol>
         <div class="notice">
           <p>Cette version n'est pas encore sur Google Play. Android ou Play Protect peut afficher un avertissement : n'installez MESHORA que depuis cette page ou la page GitHub du projet, et comparez l'empreinte ci-dessus.</p>
-          <p>Le relais de test est temporaire et peut être indisponible. Ne l'utilisez pas pour une urgence : appelez le 112.</p>
+          <p>Le relais MESHORA est en préproduction, sans garantie de disponibilité. Il ne voit jamais le texte de vos messages. Ne comptez pas sur MESHORA pour une urgence : appelez le 112.</p>
         </div>
         <div class="card">
           <h3>Bluetooth sans Internet <span class="badge b-dev">En développement</span></h3>
@@ -44,7 +45,7 @@
         <h2 id="web">Application web</h2>
         <p>Elle s'ouvre dans le navigateur, sur ordinateur comme sur téléphone, et peut être ajoutée à l'écran d'accueil.</p>
         <!--@app-status-->
-        <p>Pour échanger avec un autre appareil pendant la phase d'essai, ouvrez le <strong>lien d'invitation</strong> qu'on vous a envoyé : il contient l'adresse du relais de test, que l'application vous demande d'accepter.</p>
+        <p>Elle se connecte automatiquement au relais MESHORA. Pour échanger avec quelqu'un, ouvrez le <strong>lien d'invitation</strong> qu'il vous a envoyé, ou envoyez-lui le vôtre depuis <strong>Réglages → Inviter un proche</strong>.</p>
       </section>
 
       <section aria-labelledby="iphone">
@@ -62,7 +63,7 @@
         <h2>Ce dont vous aurez besoin</h2>
         <div class="grid">
           <div class="card"><h3>Un téléphone ou un ordinateur</h3><p>Aucun compte à créer : l'application génère votre identité sur votre appareil.</p></div>
-          <div class="card"><h3>Un lien d'invitation</h3><p>Pendant les essais, il donne l'adresse du relais Internet et le salon à rejoindre.</p></div>
+          <div class="card"><h3>Un lien d'invitation</h3><p>Pour rejoindre le groupe d'un proche : QR code ou lien, à ouvrir sur votre appareil.</p></div>
           <div class="card"><h3>Le Bluetooth activé</h3><p>Seulement pour la version d'essai Bluetooth, téléphone Android ou ordinateur avec Chrome ou Edge.</p></div>
         </div>
       </section>
