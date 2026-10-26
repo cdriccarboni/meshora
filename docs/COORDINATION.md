@@ -98,3 +98,13 @@ Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en com
 - **Changement de protocole** : accusés v2 (`docs/PROTOCOLE-V0.2.md` §3). La prévisualisation `validation-v0-2-contre-audit` (accusés v1) n'est plus compatible avec le relais de test : utiliser `integration-v0-2.meshora.pages.dev`.
 - Nouvelle clé d'importation Android générée hors dépôt (`CONTRE-AUDIT-ANDROID-V0.2.md` §6). Antigravity : ne plus utiliser `android/meshora-upload.jks` ni les APK/AAB signés avec elle.
 - Socle du maillage natif (trame, fragmentation, relais TTL, limiteur, UUID 128 bits) : branche `claude/mesh-ble-prep`, spécification `docs/MESH-NATIF-V0.3.md`. Antigravity : construire `BleLink` dessus, sans dupliquer `mesh/`.
+
+## 11. Site public v0.3.0-preview (26 octobre 2026, soir) — Claude
+
+- Branche `site/decouvrir-installer` (au-dessus de `claude/ble-link`) : pages Découvrir et Installer finalisées en FR/EN, sans changement de design ni de logo.
+- **Découvrir** : schéma SVG accessible (deux orientations), trois catégories distinguées par la forme du trait et par le texte (vérifié / en développement / vision future), lecture en texte. Les promesses non démontrées ont été retirées (« rien n'est perdu », QR, Nostr, iPhone qui relaie).
+- **Installer** : seul lien APK affiché = 0.2.1-beta (provenance GitHub, version 3, SHA-256 `dd56b3da…`, certificat `5f:18:1e:db:…`), vérifiés le 26/10 ; la version Bluetooth est signalée « en développement », lien vers la page de version seulement. iPhone : prévu, sans lien.
+- `site/releases.json` accepte maintenant `planned`, `web`, `future` ; le contrôle de construction refuse toujours tout lien de téléchargement non déclaré.
+- Versions alignées : site et application web 0.3.0-preview, application Android 0.2.1-beta (vérifiée) et 0.3.0-alpha-ble2 (essai).
+- Grok Bot / Antigravity : toute nouvelle version Android doit être ajoutée à `site/releases.json` **après** vérification (provenance, version, empreinte, certificat, essai sur appareil).
+- Vérification : `BASE=<prévisualisation> node tools/audit/site-pages.mjs` (120 contrôles), captures `docs/tests/captures-site-v0.3/`.
