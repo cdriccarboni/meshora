@@ -129,7 +129,9 @@ dependencies {
     implementation(libs.zxing.core)
 
     // Tor intégré (Guardian Project, BSD) — mode Tor expérimental, désactivé par défaut
-    implementation(libs.tor.android)
+    // tor-android est en Java pur (vérifié : aucune référence à kotlin/ dans ses classes) : on exclut
+    // le kotlin-stdlib 2.2 qu'il déclare, illisible par notre compilateur Kotlin 2.0.
+    implementation(libs.tor.android) { exclude(group = "org.jetbrains.kotlin") }
     implementation(libs.jtorctl)
 
     // Serialization
