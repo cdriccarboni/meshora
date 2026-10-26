@@ -83,3 +83,11 @@ Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en com
 - Protocole relais modifié : le relais envoie `MESHORA_CHALLENGE {nonce, room}` ; le client répond par `MESHORA_HELLO` avec `helloSignature` = ECDSA P-256/SHA-256 de `MESHORA-HELLO|v1|<room>|<nonce>|<publicKeyHex>` ; l'identifiant doit valoir `msh_` + 12 premiers hex de SHA-256(clé SPKI). `MESHORA_MSG` (clair) n'existe plus.
 - Reste à Antigravity : voir `CONTRE-AUDIT-V0.2.md` §8.
 - Règle maintenue : la messagerie entre appareils n'est annoncée nulle part tant que l'essai Mac ↔ téléphone (§11) n'est pas consigné dans `docs/tests/`.
+
+## 9. Android et Bitchat (26 octobre 2026) — Claude
+
+- Branche `claude/android-interop` : PR #5 + PR #7 (`f990e03`, fusion sans conflit) + corrections Android. PR #7 et `android/native-beta` ne sont pas modifiées.
+- **Clé de signature `android/meshora-upload.jks` publiée sur GitHub avec son mot de passe** : à considérer comme compromise. Ne jamais l'enregistrer sur Google Play. En générer une nouvelle hors dépôt (`docs/audits/CONTRE-AUDIT-ANDROID-V0.2.md` §3).
+- Le protocole commun est décrit dans `docs/PROTOCOLE-V0.2.md`. Toute modification du protocole (web, Android, relais) doit passer `bash tools/audit/interop-android.sh`.
+- Antigravity : reprendre ou contester les corrections Android ; restent A-P1-5 à A-P1-8 et A-P2-2.
+- REA : `docs/audits/CONTRE-AUDIT-REA-BITCHAT.md` corrige plusieurs affirmations de `REA-BITCHAT.md` et fixe le protocole d'essais B-T1 à B-T8 ; l'audit approfondi sur appareils reste à faire.
