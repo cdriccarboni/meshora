@@ -28,9 +28,9 @@
 
 | Essai | Téléphone (modèle, Android/iOS, navigateur) | Wi-Fi ou 4G/5G | Reçu ? | « Délivré » ? | Remarque |
 |---|---|---|---|---|---|
-| B — Android ↔ Web | Google Pixel (modèle et version d'Android à préciser), APK 0.2.1-beta (`android-v0.2.1-beta-test1`) ; Mac M4, navigateur | Wi-Fi | Oui, dans les deux sens | Oui | Rapporté par le directeur artistique le 26/10/2026, 19 h 05 |
+| B — Android ↔ Web | Google Pixel 9, dernière mise à jour Android installée (déclaré), APK 0.2.1-beta (`android-v0.2.1-beta-test1`) ; Mac M4, navigateur | Wi-Fi | Oui, dans les deux sens | Oui | Rapporté par le directeur artistique le 26/10/2026, 19 h 05 |
 | B — Android ↔ Web | idem | 5G (Wi-Fi coupé) | Oui, dans les deux sens | Oui | idem |
 | B — Pixel sans aucun réseau | idem | Aucun (Wi-Fi et données coupés) | Non | Non | **Attendu** : sans réseau, seul un transport radio direct (Bluetooth, Wi-Fi Direct) pourrait passer, et il n'est pas encore implémenté |
-| C — Réception différée | — | — | à faire | à faire | Écrire hors réseau, puis rétablir le réseau : le message doit partir seul |
+| C — Réception différée | Google Pixel 9 ↔ Mac M4 | Hors réseau, puis réseau rétabli | Oui, après retour du réseau | Oui | Message écrit hors réseau, parti seul au retour du réseau ; rapporté le 26/10/2026, 19 h 11 |
 
 Tant que ce tableau n'est pas rempli à partir d'essais réels, l'échange entre appareils reste **non démontré**.
