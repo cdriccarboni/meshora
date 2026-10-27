@@ -76,7 +76,8 @@ jobs:
         run: |
           for f in rapport-*.log; do
             [ -f "$f" ] || continue
-            grep -hE "RÉSULTAT|Total:|❌|FAIL" "$f" | head -20 | while IFS= read -r l; do echo "::notice title=$f::$l"; done
+            echo "::notice title=$f::$(grep -hE 'RÉSULTAT|Total:' "$f" | tr '\n' ' ' | cut -c1-900)"
+            grep -hE "❌|FAIL" "$f" | head -8 | while IFS= read -r l; do echo "::error title=$f::$l"; done || true
           done
       - uses: actions/upload-artifact@v4
         if: always()
@@ -113,13 +114,18 @@ jobs:
       - name: Résumé lisible par l'API (annotations)
         if: always()
         run: |
+          # Une seule annotation par ligne de synthèse (GitHub limite à 10 annotations par type et par étape).
+          tot=0; fail=0; skip=0; list=""
           for f in android/app/build/test-results/testDebugUnitTest/*.xml; do
             [ -f "$f" ] || continue
-            l=$(grep -o '<testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f" | sed 's/<testsuite //')
-            echo "::notice title=Android::$l"
+            n=$(grep -o '<testsuite name="[^"]*"' "$f" | sed 's/.*\.//; s/"//')
+            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc 0-9); x=$(grep -o 'failures="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
+            e=$(grep -o 'errors="[0-9]*"' "$f" | head -1 | tr -dc 0-9); k=$(grep -o 'skipped="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
+            tot=$((tot+t)); fail=$((fail+x+e)); skip=$((skip+k)); list="$list $n=$t"
           done
-          grep -hE "INTEROPÉRABILITÉ|ÉCHEC" rapport-android.log 2>/dev/null | while IFS= read -r l; do echo "::notice title=interop::$l"; done
-          grep -h -A3 "<failure" android/app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | head -30 | tr -d '\r' | while IFS= read -r l; do echo "::error title=échec Android::$l"; done
+          echo "::notice title=Android::$tot tests, $fail échec(s), $skip ignoré(s) :$list"
+          grep -hE "INTEROPÉRABILITÉ|ÉCHEC" rapport-android.log 2>/dev/null | head -3 | while IFS= read -r l; do echo "::notice title=interop::$l"; done || true
+          grep -h -A2 "<failure" android/app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | head -9 | tr -d '\r' | while IFS= read -r l; do echo "::error title=échec Android::$l"; done || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
