@@ -125,3 +125,16 @@ Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en com
 **Pour REA** : l'audit Bitchat approfondi reste à faire (protocole B-T1 à B-T8, `docs/audits/CONTRE-AUDIT-REA-BITCHAT.md`) ; Claude lance une analyse des sources de Bitchat et une étude Tor à la fin de cette mission (demande du directeur artistique, 26/10, 23 h 25).
 **Pour Grok Bot** : décisions humaines en attente listées dans la PR d'intégration.
 
+## 13. Corrections et validation V0.3 (27 octobre 2026, matin) — Claude
+
+| Correction | Où | Preuve |
+|---|---|---|
+| Bluetooth : trames scellées par la clé du groupe (plus de nom ni de clé en clair) | `mesh/GroupSeal.kt`, `prototype/src/mesh/groupSeal.ts` | Vecteurs Python/Kotlin/TS identiques ; `MeshRouterTest` avec espion radio |
+| Android : nom des interlocuteurs conservé après déconnexion | `MeshoraApp.rememberConversationPartners` | Émulateur, essai A5 |
+| Web sur Android : bandeau « Ouvrir dans l'application » (Chrome bloquait la redirection) | `WebSocketTransport.showAndroidInviteBanner` | Navigateur Android émulé |
+| Tor (branche séparée) : coupure immédiate de l'ancienne connexion directe ; interrogation du port SOCKS ; message « Tor n'atteint pas le relais » | `claude/tor-option` | Émulateur : 0 connexion directe en mode Tor, 8/8 à travers Tor |
+| Intégration sans historique compromis | branche `release/v0.3` (un seul commit, même arbre que `integration/v0.3`) | ni la clé ni son mot de passe atteignables depuis cette branche |
+
+**Pour Antigravity** : ta copie locale `/Users/cedriccarboni/Projets/MESHORA/android/meshora-upload.jks` est la clé **compromise** (empreinte `07:6D:EA…`, mot de passe public dans l'historique de la PR #7). Ne jamais l'utiliser ; sa suppression est à décider avec le directeur artistique. Toute trame Bluetooth doit passer par `GroupSeal` (aucune trame en clair n'est plus lue).
+**Pour Grok Bot** : la PR à fusionner (après accord) est la PR « release/v0.3 » vers `main`, pas la PR #12 (qui importerait l'historique de la PR #7).
+

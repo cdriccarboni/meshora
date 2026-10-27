@@ -7,21 +7,21 @@
       <section aria-labelledby="android">
         <h2 id="android">Android</h2>
         <div class="card release">
-          <h3>Test version 0.3.0-beta1 <span class="badge b-dev">Being validated on a phone</span></h3>
+          <h3>Test version 0.3.0-beta2 <span class="badge b-dev">Being validated on a phone</span></h3>
           <p>Automatic connection to the MESHORA relay: no address to type any more. Invite someone with a QR code or a link, per-person chats, English and French interface. End-to-end encrypted messaging, signed delivery receipts, deferred sending.</p>
-          <p class="muted">Automatically verified on 26 October 2026 against the live relay (Android ↔ web exchanges, receipts, deferred delivery). The phone test is under way; version 0.2.1-beta was verified on a Google Pixel 9.</p>
+          <p class="muted">Verified on 27 October 2026 on an Android 16 emulator against the live relay: automatic connection, QR code invitation, messages both ways with signed receipts, upgrade from 0.2.1 without losing the identity. The test on a real phone is under way; version 0.2.1-beta was verified on a Google Pixel 9.</p>
           <div class="actions">
-            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.3.0-beta1/MESHORA-0.3.0-beta1.apk" rel="noopener">Download the APK (12 MB)</a>
-            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-beta1" rel="noopener">Release page</a>
+            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.3.0-beta2/MESHORA-0.3.0-beta2.apk" rel="noopener">Download the APK (12 MB)</a>
+            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-beta2" rel="noopener">Release page</a>
           </div>
           <details class="verify">
             <summary>Verify the app before installing it</summary>
             <dl>
-              <dt>File SHA-256</dt><dd><code>b465d980763a0c8907175b84bc163110cd27323bf0c548ef40f39e2e7b1f92aa</code></dd>
+              <dt>File SHA-256</dt><dd><code>5d4aae5c9b78378e47803bbd066bd18e17b9c7a83a4799df547ca2316b6426d1</code></dd>
               <dt>Signing certificate (SHA-256)</dt><dd><code>5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2</code></dd>
-              <dt>Package</dt><dd><code>org.meshora.app</code>, version 0.3.0-beta1 (code 6), Android 8.0 or newer</dd>
+              <dt>Package</dt><dd><code>org.meshora.app</code>, version 0.3.0-beta2 (code 8), Android 8.0 or newer</dd>
             </dl>
-            <p class="muted">On a computer: <code>shasum -a 256 MESHORA-0.3.0-beta1.apk</code>. Read the certificate with <code>apksigner verify --print-certs</code>. Same certificate as 0.2.1-beta: installing updates it.</p>
+            <p class="muted">On a computer: <code>shasum -a 256 MESHORA-0.3.0-beta2.apk</code>. Read the certificate with <code>apksigner verify --print-certs</code>. Same certificate as previous versions: installing updates them.</p>
           </details>
         </div>
         <h3>Install in 3 steps</h3>
@@ -36,8 +36,8 @@
         </div>
         <div class="card">
           <h3>Bluetooth without the internet <span class="badge b-dev">In development</span></h3>
-          <p>A test version for testers (0.3.0-alpha) links phones over Bluetooth, without the internet. It has not yet been verified on real devices: it is meant for people who want to help us test it.</p>
-          <p><a href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-alpha-ble2" rel="noopener">See the Bluetooth test version and its instructions</a></p>
+          <p>Version 0.3.0-beta2 includes an experimental Bluetooth link between phones, <strong>off by default</strong> (Network tab). It has not yet been verified between two real phones: it is for people who want to help us test it.</p>
+          <p>Outside your group, other devices only see encrypted data: neither your name nor your key.</p>
         </div>
       </section>
 
