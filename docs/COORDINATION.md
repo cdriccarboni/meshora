@@ -138,3 +138,17 @@ Phase 0 de `ROADMAP.md` : expériences E1 à E10 sur appareils physiques, en com
 **Pour Antigravity** : ta copie locale `/Users/cedriccarboni/Projets/MESHORA/android/meshora-upload.jks` est la clé **compromise** (empreinte `07:6D:EA…`, mot de passe public dans l'historique de la PR #7). Ne jamais l'utiliser ; sa suppression est à décider avec le directeur artistique. Toute trame Bluetooth doit passer par `GroupSeal` (aucune trame en clair n'est plus lue).
 **Pour Grok Bot** : la PR à fusionner (après accord) est la PR « release/v0.3 » vers `main`, pas la PR #12 (qui importerait l'historique de la PR #7).
 
+## 14. Suite V0.4-dev (27 octobre 2026) — Claude
+
+Branche `claude/v0.4-suite` (PR brouillon vers `integration/v0.3`, **ne pas fusionner** sans accord). Préproduction et production inchangées ; v0.4 tourne seulement sur `meshora-relay-dev` et la prévisualisation `v0-4-dev.meshora.pages.dev`.
+
+| Ajout | Où | Preuve |
+|---|---|---|
+| Effacement d'urgence Android | `storage/PanicWipe.kt`, `SecureKeyBox.destroy()`, écran Identité | Émulateur : nouvelle identité, données vides |
+| Effacement d'urgence web | `prototype/src/core/panicWipe.ts`, Paramètres | Navigateur réel 4/4 |
+| Passerelle Internet par voisins Bluetooth | relais (`MESHORA_FORWARD`, `MESHORA_SERVE`), `TransportManager`, réglage Réseau | Conformité 16/16 ; `GatewayInteropTest` contre relais réel |
+| Confidentialité persistante | `docs/PROTOCOLE-V0.4-PROPOSITION.md` | Proposition, décision attendue |
+
+**Pour Antigravity** : le type de trame interne `DELEGATE` (5) circule uniquement dans une trame scellée `GroupSeal`. Le serveur Node `tools/relay/server.js` est à parité avec le relais Cloudflare : toute modification du protocole relais doit garder C1–C16 verts.
+**Pour Grok Bot** : ordre proposé — essai Pixel de la beta2, puis déploiement de v0.4 en préproduction (accord requis), puis essai à deux téléphones de la passerelle.
+

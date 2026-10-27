@@ -5,6 +5,8 @@
 
 Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
+**V0.4-dev — 27 octobre 2026 (branche `claude/v0.4-suite`, non intégrée) : effacement d'urgence vérifié sur émulateur et en navigateur réel ; passerelle Internet par voisins Bluetooth vérifiée contre un relais réel (JVM), jamais entre deux téléphones. Préproduction inchangée.**
+
 **V0.3 — mise à jour du 27 octobre 2026 : Android 0.3.0-beta2 vérifiée sur émulateur Android 16 (APK signé ↔ client web réel via le relais, 8/8) ; Bluetooth scellé par la clé du groupe ; relais résilient (redémarrage, absence 3 min, 4/4). Essai sur vrai téléphone toujours à faire.**
 
 **V0.3 (26 octobre 2026, nuit) : relais de référence Cloudflare en préproduction, connexion automatique et invitations — vérifiés automatiquement contre l'adresse réelle, essai sur téléphone à faire. Détail : `docs/tests/v0.3/`.**
@@ -54,6 +56,10 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Web V0.3 | Connexion automatique, groupe privé, invitation `#join=`, contact vérifié, bandeau « Ouvrir dans l'application » sur Android | 🔧 | Chrome × 2 (Mac) contre la prévisualisation `v0-3.meshora.pages.dev` | 5/5 en navigateurs réels (`docs/tests/v0.3/web-invite-e2e.log`) |
 | Mesh natif | Trame, fragmentation, déduplication, relais TTL, limiteur | 🔧 | JVM | `MeshFrameTest` 5/5 (branche `claude/mesh-ble-prep`) ; aucune radio pilotée |
 | Site | Pages Découvrir et Installer (FR/EN), schéma vérifié / en développement / futur | 🔧 | Chrome ordinateur 1280 px et mobile 390 px, thèmes clair et sombre | Prévisualisation `v0-3.meshora.pages.dev` : 121/121 (`docs/tests/v0.3/site-audit-v0-3.log`) ; avant : 120/120 vérifications (accessibilité axe WCAG 2.1 AA, liens, débordement, versions) ; non publié en production |
+| Android V0.4-dev | Effacement d'urgence (clé d'identité détruite, données effacées) | 🔧 | Émulateur Android 16 (APK signé 0.4.0-dev1) | Identité changée après effacement, discussions et contacts vides (`docs/tests/v0.4/android-effacement-urgence-emulateur.log`) ; **essai sur Pixel à faire** |
+| Web V0.4-dev | Effacement d'urgence | 🔧 | Chrome (Mac) contre `v0-4-dev.meshora.pages.dev` | 4/4 (`docs/tests/v0.4/web-effacement-urgence.log`) |
+| Android V0.4-dev | Passerelle Internet par voisins Bluetooth (désactivée par défaut) | 🔧 | JVM (liens Bluetooth simulés) + relais de développement réel | Messages et accusés dans les deux sens, la passerelle ne lit rien (`docs/tests/v0.4/android-tests-passerelle-dev.log`) ; **jamais testée entre deux téléphones** |
+| Relais V0.4-dev | Transmission vérifiée (`MESHORA_FORWARD`) et délégation (`MESHORA_SERVE`) | 🔧 | Node local, `wrangler dev`, `meshora-relay-dev` | 16/16 (`docs/tests/v0.4/relay-conformance-dev.log`) ; préproduction non mise à jour |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 
