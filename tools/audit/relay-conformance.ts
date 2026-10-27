@@ -241,7 +241,10 @@ async function main() {
   {
     const rm = room('c13');
     const socks: Raw[] = [];
-    for (let i = 0; i < 64; i++) { try { socks.push(await raw(rm)); } catch { break; } }
+    // Ouvertes EN PARALLÈLE : en série, l'ouverture de 64 connexions dépasse parfois le délai d'authentification
+    // (10 s) à travers Internet, et le relais libère alors légitimement les premières.
+    const opened = await Promise.allSettled(Array.from({ length: 64 }, () => raw(rm)));
+    for (const o of opened) if (o.status === 'fulfilled') socks.push(o.value);
     const full = await upgradeStatus(`?room=${rm}`);
     await sleep(11500);
     const after = await upgradeStatus(`?room=${rm}`);
