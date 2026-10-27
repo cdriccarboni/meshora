@@ -8,7 +8,11 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : 
 - **Passerelle Internet par les voisins Bluetooth** (expérimental, désactivée par défaut) : un téléphone sans Internet délègue sa réception à un voisin connecté (délégation signée, 10 min, liée au groupe et à la passerelle) ; le relais vérifie lui-même les signatures des enveloppes et accusés transmis (`MESHORA_FORWARD`, `MESHORA_SERVE`). La passerelle ne lit rien.
 - Banc de conformité du relais : 16 vérifications (C14 à C16 pour la passerelle) ; relais de développement séparé `meshora-relay-dev`.
 - **Confidentialité persistante, étape A** (branche `claude/v0.4-prekeys`) : prékeys de réception signées, tournant chaque semaine, effacées 7 jours après leur échéance ; enveloppe v3 (ECDH vers la prékey + HKDF-SHA256 + AES-256-GCM) sur web, Android et relais ; repli v2 automatique vers les anciens clients. Spécification : `docs/PROTOCOLE-V0.4-PROPOSITION.md` §6. Étapes B (double cliquet) et C (MLS) : propositions.
+- **Vérification automatique** de chaque pull request (GitHub Actions, sans secret ni déploiement) : tests web, vecteurs, conformité des relais Node et Cloudflare (`wrangler dev` local), tests unitaires et interopérabilité Android ↔ web, lint Android.
 ### Corrigé
+- Android : messages, identifiants vus et contacts **chiffrés au repos** (clé de données scellée par le magasin de clés ; migration automatique de l'ancien stockage en clair) — A-P1-6 du contre-audit Android V0.2.
+- Android : réglages (code du groupe), prékeys et coffre exclus des sauvegardes Google et des transferts d'appareil.
+- Android : derniers UUID Bluetooth 16 bits 0xFE60–62 retirés du code hérité (A-P1-7).
 - Les rapports d'essai `docs/tests/**/*.log` cités comme preuves étaient exclus par `.gitignore` et n'avaient jamais été publiés ; ils sont désormais versionnés (ceux produits sur le Mac restent à ajouter).
 
 ## [0.3.0] — 2026-10-29 (site public)
