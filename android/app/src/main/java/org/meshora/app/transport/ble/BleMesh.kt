@@ -90,6 +90,11 @@ class BleMesh(
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
+    /** Autorisations demandées à l'activation : Bluetooth + notifications (Android 13+, pour la notification du service). */
+    fun requestedPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) requiredPermissions() + Manifest.permission.POST_NOTIFICATIONS
+        else requiredPermissions()
+
     fun hasPermissions(): Boolean = requiredPermissions().all {
         ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
@@ -108,6 +113,8 @@ class BleMesh(
         startAdvertising()
         startScan()
         updateStatus()
+        // Décision du 27/10/2026 : le maillage continue écran éteint (service de premier plan, batterie sacrifiée).
+        MeshoraBleService.start(context)
         return true
     }
 
@@ -127,6 +134,7 @@ class BleMesh(
         connecting.clear()
         refreshLinks()
         _status.value = context.getString(R.string.ble_stopped)
+        MeshoraBleService.stop(context)
     }
 
     private fun fail(message: String): Boolean {

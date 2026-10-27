@@ -12,6 +12,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : 
 ### Corrigé
 - Android : messages, identifiants vus et contacts **chiffrés au repos** (clé de données scellée par le magasin de clés ; migration automatique de l'ancien stockage en clair) — A-P1-6 du contre-audit Android V0.2.
 - Android : réglages (code du groupe), prékeys et coffre exclus des sauvegardes Google et des transferts d'appareil.
+- Android : le maillage Bluetooth **continue écran éteint** tant qu'il est activé (service de premier plan, verrou de veille, notification avec bouton Arrêter) — décision du 27/10/2026 : la communication passe avant la batterie (A-P1-8).
 - Android : derniers UUID Bluetooth 16 bits 0xFE60–62 retirés du code hérité (A-P1-7).
 - Les rapports d'essai `docs/tests/**/*.log` cités comme preuves étaient exclus par `.gitignore` et n'avaient jamais été publiés ; ils sont désormais versionnés (ceux produits sur le Mac restent à ajouter).
 
