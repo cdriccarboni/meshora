@@ -79,6 +79,7 @@ fun TransportsScreen() {
                             RelayProblem.ROOM_FULL -> R.string.problem_full
                             RelayProblem.BAD_ADDRESS -> R.string.problem_bad_address
                             RelayProblem.WAITING_FOR_TOR -> R.string.problem_waiting_tor
+                            RelayProblem.TOR_UNREACHABLE -> R.string.problem_tor_unreachable
                             else -> R.string.problem_unreachable
                         }),
                         style = MaterialTheme.typography.bodySmall

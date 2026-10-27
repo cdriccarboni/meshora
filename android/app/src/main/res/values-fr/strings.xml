@@ -96,6 +96,7 @@
     <string name="gateway_title">Servir de passerelle Internet (expérimental)</string>
     <string name="gateway_explain">Quand ce téléphone a Internet, il achemine par Bluetooth les messages des membres de votre groupe qui n\'en ont plus. Il ne peut pas les lire (chiffrés pour eux). Consomme données et batterie.</string>
     <string name="problem_waiting_tor">Mode Tor : en attente du circuit Tor. Aucune connexion directe n\'est tentée.</string>
+    <string name="problem_tor_unreachable">Mode Tor : Tor n\'atteint pas le relais pour le moment (réseau Tor bloqué ou lent). Nouvelle tentative automatique ; aucune connexion directe.</string>
     <string name="tor_title">Passer par Tor (expérimental)</string>
     <string name="tor_off">Désactivé</string>
     <string name="tor_starting">Démarrage de Tor… (jusqu\'à une minute)</string>

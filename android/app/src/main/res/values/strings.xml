@@ -96,6 +96,7 @@
     <string name="gateway_title">Act as an Internet gateway (experimental)</string>
     <string name="gateway_explain">When this phone has Internet, it carries over Bluetooth the messages of group members who have none. It cannot read them (encrypted for them). Uses data and battery.</string>
     <string name="problem_waiting_tor">Tor mode: waiting for the Tor circuit. No direct connection is attempted.</string>
+    <string name="problem_tor_unreachable">Tor mode: Tor cannot reach the relay right now (Tor network blocked or slow). Retrying automatically; no direct connection.</string>
     <string name="tor_title">Route through Tor (experimental)</string>
     <string name="tor_off">Off</string>
     <string name="tor_starting">Starting Tor… (up to a minute)</string>
