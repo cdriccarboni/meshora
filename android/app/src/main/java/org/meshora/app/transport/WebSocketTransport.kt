@@ -39,7 +39,9 @@ enum class RelayProblem {
     /** Adresse de relais invalide. */
     BAD_ADDRESS,
     /** Mode Tor : en attente du circuit Tor (aucune connexion directe tentée). */
-    WAITING_FOR_TOR
+    WAITING_FOR_TOR,
+    /** Mode Tor : Tor est démarré mais n'atteint pas le relais (réseau Tor bloqué ou lent). */
+    TOR_UNREACHABLE
 }
 
 enum class ConnectionState {
@@ -177,6 +179,7 @@ class WebSocketTransport(
                     !networkAvailable -> RelayProblem.NO_NETWORK
                     response?.code == 429 -> RelayProblem.RATE_LIMITED
                     response?.code == 503 -> RelayProblem.ROOM_FULL
+                    requireProxy -> RelayProblem.TOR_UNREACHABLE
                     else -> RelayProblem.UNREACHABLE
                 }
                 lost()

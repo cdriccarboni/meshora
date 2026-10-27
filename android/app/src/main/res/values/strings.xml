@@ -94,6 +94,7 @@
     <string name="relay_url_invalid">Address refused: use wss://…</string>
 
     <string name="problem_waiting_tor">Tor mode: waiting for the Tor circuit. No direct connection is attempted.</string>
+    <string name="problem_tor_unreachable">Tor mode: Tor cannot reach the relay right now (Tor network blocked or slow). Retrying automatically; no direct connection.</string>
     <string name="tor_title">Route through Tor (experimental)</string>
     <string name="tor_off">Off</string>
     <string name="tor_starting">Starting Tor… (up to a minute)</string>
