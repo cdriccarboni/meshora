@@ -27,7 +27,9 @@ data class MeshFrame(
     enum class Type(val code: Int) {
         ENVELOPE(1), ACK(2), ANNOUNCE(3),
         /** V0.3 : charge utile scellée par la clé du groupe ([GroupSeal]) ; le vrai type est chiffré à l'intérieur. */
-        SEALED(4);
+        SEALED(4),
+        /** V0.4 (toujours à l'intérieur d'une trame scellée) : délégation d'un membre sans Internet à une passerelle. */
+        DELEGATE(5);
         companion object {
             fun of(code: Int): Type? = entries.firstOrNull { it.code == code }
         }

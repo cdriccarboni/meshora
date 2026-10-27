@@ -23,6 +23,20 @@
     "MESHORA_ALLOWED_ORIGINS": "https://meshora.pages.dev,https://*.meshora.pages.dev,http://localhost:*,http://127.0.0.1:*"
   },
   "env": {
+    // Développement (V0.4) : relais séparé pour ne pas perturber les essais en cours sur la préproduction.
+    "dev": {
+      "name": "meshora-relay-dev",
+      "vars": {
+        "MESHORA_CHANNEL": "dev",
+        "MESHORA_ALLOWED_ORIGINS": "https://meshora.pages.dev,https://*.meshora.pages.dev,http://localhost:*,http://127.0.0.1:*"
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "ROOMS", "class_name": "MeshoraRoom" }]
+      },
+      "ratelimits": [
+        { "name": "CONNECT_LIMITER", "namespace_id": "4203", "simple": { "limit": 120, "period": 60 } }
+      ]
+    },
     "production": {
       "name": "meshora-relay",
       "vars": {

@@ -241,13 +241,75 @@ async function main() {
   {
     const rm = room('c13');
     const socks: Raw[] = [];
-    for (let i = 0; i < 64; i++) { try { socks.push(await raw(rm)); } catch { break; } }
+    // Ouvertes EN PARALLÈLE : en série, l'ouverture de 64 connexions dépasse parfois le délai d'authentification
+    // (10 s) à travers Internet, et le relais libère alors légitimement les premières.
+    const opened = await Promise.allSettled(Array.from({ length: 64 }, () => raw(rm)));
+    for (const o of opened) if (o.status === 'fulfilled') socks.push(o.value);
     const full = await upgradeStatus(`?room=${rm}`);
     await sleep(11500);
     const after = await upgradeStatus(`?room=${rm}`);
     record('C13', 'Salon saturé par 64 connexions anonymes : refus (503), puis place libérée après le délai d\'authentification', socks.length === 64 && full === 503 && after === 101,
       `connexions ouvertes=${socks.length} ; 65ᵉ=${full} ; après 11,5 s=${after}`);
     socks.forEach((x) => { try { x.ws.close(); } catch {} });
+  }
+
+  // C14 — V0.4 passerelle : enveloppe PORTÉE par un tiers (signature de l'auteur vérifiée par le relais)
+  {
+    const rm = room('c14');
+    const A = await MeshoraCrypto.generateIdentityKeyPair();   // auteur, sans Internet (pas de connexion)
+    const B = await authed(rm, 'Bob'); const G = await authed(rm, 'Passerelle');
+    const env = await MeshoraCrypto.encryptEnvelope({ messageId: 'fwd1', senderPrivateKey: A.privateKey, senderPublicKeyHex: A.publicKeyHex, recipientPublicKeyHex: B.k.publicKeyHex, plaintext: 'C14' });
+    G.r.send({ type: 'MESHORA_FORWARD', envelope: env });
+    const forged = { ...env, id: 'fwd2', ciphertextHex: env.ciphertextHex.slice(0, -2) + (env.ciphertextHex.endsWith('00') ? '01' : '00') };
+    G.r.send({ type: 'MESHORA_FORWARD', envelope: forged });
+    const old = { ...env, id: 'fwd3', timestamp: Date.now() - 72 * 3600_000 };
+    const sOld = await MeshoraCrypto.signData(A.privateKey, `${old.id}|${old.senderPublicKeyHex}|${old.recipientPublicKeyHex}|${old.ephemeralPublicKeyHex}|${old.ivHex}|${old.ciphertextHex}|${old.timestamp}`);
+    G.r.send({ type: 'MESHORA_FORWARD', envelope: { ...old, signatureHex: sOld } });
+    await waitFor(() => B.r.inbox.some((p) => p.envelope?.id === 'fwd1'));
+    await sleep(1200);
+    const ids = B.r.inbox.filter((p) => p.type === 'MESHORA_ENVELOPE').map((p) => p.envelope.id);
+    record('C14', 'Passerelle : enveloppe d\'un tiers remise si sa signature est valide ; altérée ou trop ancienne refusée', ids.includes('fwd1') && !ids.includes('fwd2') && !ids.includes('fwd3'),
+      `reçues par Bob=${JSON.stringify(ids)}`);
+    // C15 — accusé porté par un tiers
+    const ack = await MeshoraCrypto.createSignedAck(env as any, await MeshoraCrypto.importPrivateKey(B.k.privateKeyPkcs8Hex));
+    const A2 = await raw(rm); await hello(A2, rm, A, 'Alice');
+    await waitFor(() => A2.inbox.some((p) => p.type === 'MESHORA_PEERS'));
+    G.r.send({ type: 'MESHORA_FORWARD', signedAck: { ...ack, signatureHex: '00'.repeat(64) } });
+    await sleep(800);
+    const forgedAck = A2.inbox.some((p) => p.type === 'MESHORA_ACK');
+    G.r.send({ type: 'MESHORA_FORWARD', signedAck: ack });
+    const okAck = await waitFor(() => A2.inbox.some((p) => p.type === 'MESHORA_ACK' && p.ack?.signedAck?.signatureHex === ack.signatureHex));
+    record('C15', 'Passerelle : accusé d\'un tiers remis à l\'expéditeur si signé par le destinataire ; faux accusé refusé', okAck && !forgedAck,
+      `faux accusé remis=${forgedAck} ; vrai accusé remis=${okAck}`);
+    [B, G].forEach((c) => c.r.close()); A2.close();
+  }
+
+  // C16 — V0.4 délégation : la passerelle reçoit le courrier (chiffré) d'un membre sans Internet
+  {
+    const rm = room('c16');
+    const A = await MeshoraCrypto.generateIdentityKeyPair();   // sans Internet
+    const B = await authed(rm, 'Bob');
+    // Courrier pour A AVANT la délégation → boîte aux lettres
+    const e1 = await MeshoraCrypto.encryptEnvelope({ messageId: 'srv1', senderPrivateKey: B.k.privateKey, senderPublicKeyHex: B.k.publicKeyHex, recipientPublicKeyHex: A.publicKeyHex, plaintext: 'avant' });
+    B.r.send({ type: 'MESHORA_ENVELOPE', envelope: e1, room: rm }); await sleep(600);
+    const G = await authed(rm, 'Passerelle'); const X = await authed(rm, 'Autre');
+    const ts = Date.now();
+    const sigFor = (gw: string, r: string) => MeshoraCrypto.signData(A.privateKey, `MESHORA-DELEGATE|v1|${r}|${A.publicKeyHex}|${gw}|${ts}`);
+    // Délégations invalides : au profit d'une autre passerelle, pour un autre salon, signature d'une autre clé
+    X.r.send({ type: 'MESHORA_SERVE', delegation: { publicKey: A.publicKeyHex, gateway: G.k.publicKeyHex, timestamp: ts, signature: await sigFor(G.k.publicKeyHex, rm) } });
+    G.r.send({ type: 'MESHORA_SERVE', delegation: { publicKey: A.publicKeyHex, gateway: G.k.publicKeyHex, timestamp: ts, signature: await sigFor(G.k.publicKeyHex, 'autre-salon') } });
+    await sleep(800);
+    const leaked = [X, G].some((c) => c.r.inbox.some((p) => p.envelope?.id === 'srv1'));
+    G.r.send({ type: 'MESHORA_SERVE', delegation: { publicKey: A.publicKeyHex, gateway: G.k.publicKeyHex, alias: 'Alice', timestamp: ts, signature: await sigFor(G.k.publicKeyHex, rm) } });
+    const drained = await waitFor(() => G.r.inbox.some((p) => p.envelope?.id === 'srv1'));
+    const listed = await waitFor(() => (B.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers || []).some((p: any) => p.publicKey === A.publicKeyHex && p.viaGateway));
+    const e2 = await MeshoraCrypto.encryptEnvelope({ messageId: 'srv2', senderPrivateKey: B.k.privateKey, senderPublicKeyHex: B.k.publicKeyHex, recipientPublicKeyHex: A.publicKeyHex, plaintext: 'après' });
+    B.r.send({ type: 'MESHORA_ENVELOPE', envelope: e2, room: rm });
+    const live = await waitFor(() => G.r.inbox.some((p) => p.envelope?.id === 'srv2'));
+    const xGot = X.r.inbox.some((p) => p.envelope?.id === 'srv2');
+    record('C16', 'Délégation : refusée si mal signée, pour une autre passerelle ou un autre salon ; sinon courrier en attente et nouveau courrier remis à la passerelle seule, membre annoncé « via passerelle »',
+      !leaked && drained && listed && live && !xGot, `fuite avant délégation valide=${leaked} ; boîte vidée vers la passerelle=${drained} ; annoncé=${listed} ; courrier direct=${live} ; reçu par un tiers=${xGot}`);
+    [B, G, X].forEach((c) => c.r.close());
   }
 
   // C11 — bout en bout avec le VRAI code web : réception, accusé signé, réception différée, préemption d'identifiant

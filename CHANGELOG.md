@@ -2,6 +2,13 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : [SemVer](https://semver.org/lang/fr/).
 
+## [0.4.0-dev] — non publié (branche `claude/v0.4-suite`)
+### Ajouté
+- **Effacement d'urgence** : Android (écran Identité, confirmation obligatoire ; destruction de la clé d'emballage du magasin de clés Android, des préférences, du cache, puis `clearApplicationUserData`) et web (Paramètres ; stockage local, IndexedDB, caches, service worker). Nouvelle identité au redémarrage.
+- **Passerelle Internet par les voisins Bluetooth** (expérimental, désactivée par défaut) : un téléphone sans Internet délègue sa réception à un voisin connecté (délégation signée, 10 min, liée au groupe et à la passerelle) ; le relais vérifie lui-même les signatures des enveloppes et accusés transmis (`MESHORA_FORWARD`, `MESHORA_SERVE`). La passerelle ne lit rien.
+- Banc de conformité du relais : 16 vérifications (C14 à C16 pour la passerelle) ; relais de développement séparé `meshora-relay-dev`.
+- `docs/PROTOCOLE-V0.4-PROPOSITION.md` : confidentialité persistante en trois étapes (proposition, non implémentée).
+
 ## [0.3.0-preview] — non publié
 ### Ajouté
 - **Relais de référence** sur Cloudflare Workers + Durable Objects (`relay/cloudflare`), préproduction : adresse stable, sans compte, boîte aux lettres persistante 24 h, limites de débit, aucune journalisation ; banc de conformité `tools/audit/relay-conformance.ts` (13 vérifications).

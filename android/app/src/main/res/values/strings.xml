@@ -93,6 +93,8 @@
     <string name="new_group_confirm">You will leave the current group; its members will need a new invitation.</string>
     <string name="relay_url_invalid">Address refused: use wss://…</string>
 
+    <string name="gateway_title">Act as an Internet gateway (experimental)</string>
+    <string name="gateway_explain">When this phone has Internet, it carries over Bluetooth the messages of group members who have none. It cannot read them (encrypted for them). Uses data and battery.</string>
     <string name="ble_title">Direct Bluetooth (experimental)</string>
     <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
     <string name="ble_links">Direct Bluetooth links: %1$d</string>
@@ -125,6 +127,12 @@
     <string name="limits_title">Known limits (test version)</string>
     <string name="limits_body">• No independent security audit yet\n• No forward secrecy yet (if your private key were stolen, previously captured messages could be decrypted)\n• The relay sees who talks to whom within a group\n• Bluetooth is experimental, not tested between phones</string>
 
+    <string name="wipe_title">Emergency wipe</string>
+    <string name="wipe_body">Erases your identity, messages, contacts and settings from this phone. Irreversible. Messages already received by others stay on their devices.</string>
+    <string name="wipe_button">Erase everything</string>
+    <string name="wipe_confirm_title">Erase everything now?</string>
+    <string name="wipe_confirm_body">Your MESHORA identity will be destroyed: your contacts will need to invite you again. The app will close.</string>
+    <string name="wipe_confirm_button">Erase permanently</string>
     <string name="emerg_title">Emergency</string>
     <string name="emerg_sub">Direct call to official emergency services.</string>
     <string name="emerg_warning_title">Important</string>

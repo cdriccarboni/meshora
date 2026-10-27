@@ -47,6 +47,15 @@ Refusé : `MESHORA_MSG` (texte en clair), trames non masquées, fragmentées ou 
 
 `QUEUED`/`queued` (dans l'Outbox, non émis) → `SENT`/`sent` (au moins une enveloppe acceptée par un transport) → `DELIVERED`/`delivered` (accusé signé valide, §3). Les messages `QUEUED` et `SENT` restent dans l'Outbox. Renvoi avec attente progressive par message (15 s, 30 s, 1 min… plafonnée à 10 min), au plus 20 messages par passe ; renvoi immédiat quand le destinataire (re)devient présent. Le destinataire déduplique par (expéditeur, `id`).
 
+## 4 bis. Passerelle par les voisins (V0.4, relais `meshora-relay-dev` uniquement)
+
+| Sens | Paquet | Contenu |
+|---|---|---|
+| client → relais | `MESHORA_FORWARD` | `{envelope}` ou `{signedAck}` d'un **tiers** (voisin Bluetooth sans Internet). Le relais vérifie lui-même la signature de l'auteur (chaîne §2) ou du destinataire (chaîne §3) ; enveloppe acceptée si horodatée entre −48 h et +10 min ; puis même acheminement que `MESHORA_ENVELOPE` / `MESHORA_ACK` |
+| client → relais | `MESHORA_SERVE` | `{delegation:{publicKey, gateway, alias, timestamp, signature}}` : le détenteur de `publicKey` autorise la connexion `gateway` (= clé authentifiée de l'émetteur) à recevoir son courrier dans ce salon. Signature de `MESHORA-DELEGATE|v1|<salon>|<publicKey>|<gateway>|<timestamp>`, âge ≤ 10 min, validité 15 min renouvelable, 16 clés servies au plus par connexion. La boîte aux lettres de `publicKey` est remise à la passerelle ; le membre est annoncé dans `MESHORA_PEERS` avec `viaGateway` |
+
+Bluetooth : annonce signée `MESHORA-ANNOUNCE|v1g|…` pour une passerelle active ; délégation dans une trame scellée de type intérieur `DELEGATE` (5). Le courrier reste chiffré pour le destinataire : la passerelle ne le lit pas.
+
 ## 5 bis. Invitations et groupes (V0.3)
 
 - **Groupe** = salon du relais. Chaque appareil crée au premier lancement un code aléatoire `g` + 12 caractères (alphabet sans 0/o/1/l, 60 bits) ; plus de salon public par défaut.

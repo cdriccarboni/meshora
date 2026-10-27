@@ -162,5 +162,32 @@ fun IdentityScreen() {
                 Text(stringResource(R.string.limits_body), style = MaterialTheme.typography.bodySmall, color = MeshoraTextSecondary)
             }
         }
+    
+        Spacer(modifier = Modifier.height(16.dp))
+        var confirmWipe by remember { mutableStateOf(false) }
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MeshoraError.copy(alpha = 0.12f))) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.wipe_title), fontWeight = FontWeight.Bold, color = MeshoraError)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(stringResource(R.string.wipe_body), style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(onClick = { confirmWipe = true }, colors = ButtonDefaults.buttonColors(containerColor = MeshoraError), modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.wipe_button))
+                }
+            }
+        }
+        if (confirmWipe) {
+            AlertDialog(
+                onDismissRequest = { confirmWipe = false },
+                title = { Text(stringResource(R.string.wipe_confirm_title)) },
+                text = { Text(stringResource(R.string.wipe_confirm_body)) },
+                confirmButton = {
+                    TextButton(onClick = { org.meshora.app.storage.PanicWipe.wipe(context) }) {
+                        Text(stringResource(R.string.wipe_confirm_button), color = MeshoraError, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = { TextButton(onClick = { confirmWipe = false }) { Text(stringResource(R.string.cancel)) } }
+            )
+        }
     }
 }
