@@ -64,6 +64,21 @@ function watch(page, log) {
   rec(!bInfo.url.includes('#') && bInfo.url.indexOf(info.pub) < 0, 'B : invitation retirée de la barre d\'adresse après lecture', `adresse=${bInfo.url}`);
   rec(!!bInfo.contacts && bInfo.contacts.includes(info.pub) && bInfo.contacts.includes('"verified":true'), 'B : A enregistré comme contact vérifié', `contacts=${(bInfo.contacts || '').slice(0, 80)}…`);
 
+  // C — téléphone Android (navigateur émulé) : bandeau « Ouvrir dans l'application » (lien meshora://) ou « Continuer dans le navigateur »
+  const C = await (await browser.newContext({ locale: 'fr-FR', userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36', viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true })).newPage();
+  const sC = watch(C, []);
+  await C.goto(link);
+  const banner = C.getByRole('dialog', { name: /Invitation MESHORA/ });
+  await banner.waitFor({ timeout: 15000 }).catch(() => {});
+  const appHref = await banner.getByRole('link').getAttribute('href').catch(() => null);
+  rec(!!appHref && appHref.startsWith('meshora://join#join=' + info.room + '&k=' + info.pub), 'Android : bandeau avec lien vers l\'application (meshora://), sans navigation automatique',
+    `lien=${(appHref || '').slice(0, 60)}… ; adresse=${C.url()}`);
+  await banner.getByRole('button', { name: /Continuer dans le navigateur/ }).click().catch(() => {});
+  for (let i = 0; i < 60 && !sC.peers.includes(info.pub); i++) await sleep(500);
+  const cRoom = await C.evaluate(() => localStorage.getItem('meshora_room'));
+  rec(sC.peers.includes(info.pub) && cRoom === info.room && (await banner.count()) === 0, 'Android : « Continuer dans le navigateur » rejoint le groupe de A',
+    `C voit A=${sC.peers.includes(info.pub)} ; groupe C=${cRoom}`);
+
   await browser.close();
   const fails = results.filter((x) => !x).length;
   console.log(`\nRÉSULTAT : ${results.length - fails}/${results.length} vérifications réussies (${BASE})`);

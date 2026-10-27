@@ -19,7 +19,9 @@ export const MAX_FRAGMENTS = 256;
 export enum FrameType {
   ENVELOPE = 1,
   ACK = 2,
-  ANNOUNCE = 3
+  ANNOUNCE = 3,
+  /** V0.3 : charge utile scellée par la clé du groupe (groupSeal.ts) ; le vrai type est chiffré à l'intérieur. */
+  SEALED = 4
 }
 
 export interface MeshFrame {
@@ -53,7 +55,7 @@ export function decodeFrame(bytes: Uint8Array): MeshFrame | null {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (bytes[0] !== FRAME_VERSION) return null;
   const type = bytes[1];
-  if (type !== FrameType.ENVELOPE && type !== FrameType.ACK && type !== FrameType.ANNOUNCE) return null;
+  if (type !== FrameType.ENVELOPE && type !== FrameType.ACK && type !== FrameType.ANNOUNCE && type !== FrameType.SEALED) return null;
   const ttl = bytes[2];
   const flags = bytes[3];
   const fragIndex = v.getUint16(20);

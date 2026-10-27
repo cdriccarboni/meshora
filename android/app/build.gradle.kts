@@ -36,8 +36,8 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.3.0-beta2-tor"
+        versionCode = 9
+        versionName = "0.3.0-beta2-tor2"
 
         // Bibliothèques natives (Tor) : téléphones ARM 64/32 bits et émulateur x86_64
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }

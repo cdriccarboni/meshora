@@ -7,6 +7,7 @@ import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.meshora.app.storage.ContactStore
 import org.meshora.app.storage.IdentityStorage
 import org.meshora.app.storage.OutboxRepository
@@ -50,6 +51,7 @@ class MeshoraApp : Application() {
             bleManager = bleManager,
             alias = displayAlias()
         )
+        transportManager.groupRoom = settings.current.room
         bleMesh = org.meshora.app.transport.ble.BleMesh(
             context = this,
             router = transportManager.meshRouter,
@@ -61,6 +63,7 @@ class MeshoraApp : Application() {
         transportManager.webSocketTransport.proxyProvider = { tor.proxy() }
         applyTorSetting()
 
+        rememberConversationPartners()
         watchNetwork()
         // V0.3 : connexion automatique au relais de référence (ou au relais choisi dans Réseau → Avancé).
         if (settings.current.autoConnect) connectRelay()
@@ -73,6 +76,7 @@ class MeshoraApp : Application() {
     fun connectRelay(): Boolean {
         transportManager.alias = displayAlias()
         val s = settings.current
+        transportManager.groupRoom = s.room // clé de scellement des trames Bluetooth
         return transportManager.connectWebSocket(s.relayUrl, s.room)
     }
 
@@ -81,6 +85,25 @@ class MeshoraApp : Application() {
         val on = settings.current.torEnabled
         transportManager.webSocketTransport.requireProxy = on
         if (on) tor.start() else tor.stop()
+    }
+
+    /**
+     * Toute personne avec qui un message a été échangé, vue connectée dans le groupe, est enregistrée comme
+     * contact (NON vérifié, sauf si elle l'était déjà par invitation) : son nom reste affiché quand elle se déconnecte.
+     */
+    private fun rememberConversationPartners() {
+        applicationScope.launch {
+            kotlinx.coroutines.flow.combine(outboxRepository.messagesFlow, outboxRepository.peersFlow) { msgs, peers -> msgs to peers }
+                .collect { (msgs, peers) ->
+                    val myFp = transportManager.identity.fingerprint
+                    val partners = msgs.mapTo(HashSet()) { if (it.senderFingerprint == myFp) it.recipientPublicKeyHex else it.senderPublicKeyHex }
+                    for (p in peers) {
+                        if (p.publicKeyHex in partners && contacts.get(p.publicKeyHex) == null) {
+                            contacts.upsert(p.publicKeyHex, p.displayName.substringBeforeLast(" · "), verified = false)
+                        }
+                    }
+                }
+        }
     }
 
     private fun watchNetwork() {

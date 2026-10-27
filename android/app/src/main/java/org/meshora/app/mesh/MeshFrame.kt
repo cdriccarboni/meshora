@@ -25,7 +25,9 @@ data class MeshFrame(
     val payload: ByteArray
 ) {
     enum class Type(val code: Int) {
-        ENVELOPE(1), ACK(2), ANNOUNCE(3);
+        ENVELOPE(1), ACK(2), ANNOUNCE(3),
+        /** V0.3 : charge utile scellée par la clé du groupe ([GroupSeal]) ; le vrai type est chiffré à l'intérieur. */
+        SEALED(4);
         companion object {
             fun of(code: Int): Type? = entries.firstOrNull { it.code == code }
         }
