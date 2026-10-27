@@ -8,12 +8,15 @@
 import { MeshMessage, MeshPeer, MessageAck } from '../types';
 import { ITransportAdapter } from './TransportInterface';
 import { getOrCreateIdentity, ensureCryptographicIdentity } from '../core/identity';
-import { MeshoraCrypto, EncryptedEnvelope, SignedAck } from '../core/crypto';
+import { MeshoraCrypto, EncryptedEnvelope, SignedAck, SignedPrekey } from '../core/crypto';
+import { prekeys } from '../core/prekeys';
 import { isAcceptableRelayUrl } from '../core/urlHygiene';
 import { DEFAULT_RELAY_URL, getOrCreateRoom, isVerifiedKey, parseInvitation, setRoom as storeRoom, upsertContact, withRoom } from '../core/invitation';
 
 interface WebSocketPacket {
-  type: 'MESHORA_MSG' | 'MESHORA_ENVELOPE' | 'MESHORA_ACK' | 'MESHORA_HELLO' | 'MESHORA_PEERS' | 'MESHORA_CHALLENGE';
+  type: 'MESHORA_MSG' | 'MESHORA_ENVELOPE' | 'MESHORA_ACK' | 'MESHORA_HELLO' | 'MESHORA_PEERS' | 'MESHORA_CHALLENGE' | 'MESHORA_PREKEY';
+  /** V0.4 étape A : prékey de réception signée (HELLO, MESHORA_PREKEY, et chaque pair de MESHORA_PEERS). */
+  prekey?: SignedPrekey;
   nonce?: string;
   helloSignature?: string;
   channelId?: string;
@@ -44,6 +47,20 @@ export class WebSocketTransport implements ITransportAdapter {
   /** Pour chaque message émis : empreinte de chaque enveloppe → clé du destinataire (validation des accusés v2). */
   private sentTo: Map<string, Map<string, string>> = new Map();
   private peersChangedListeners: Set<() => void> = new Set();
+  /** V0.4 étape A : prékey annoncée sur la connexion en cours (rotation sans reconnexion). */
+  private announcedPrekeyId: string | null = null;
+  private prekeyTimer: ReturnType<typeof setInterval> | null = null;
+
+  /** Annonce une nouvelle prékey au relais si la rotation hebdomadaire a eu lieu pendant la connexion. */
+  private async refreshPrekey(): Promise<void> {
+    if (!this.isAvailable() || !this.announcedPrekeyId) return;
+    try {
+      const myId = await ensureCryptographicIdentity();
+      if (!myId.privateKeyPkcs8Hex) return;
+      const prekey = await prekeys.current(await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex), myId.publicKey);
+      if (prekey.id !== this.announcedPrekeyId && this.sendRaw({ type: 'MESHORA_PREKEY', prekey })) this.announcedPrekeyId = prekey.id;
+    } catch {}
+  }
 
   public onPeersChanged(callback: () => void): () => void {
     this.peersChangedListeners.add(callback);
@@ -306,6 +323,10 @@ export class WebSocketTransport implements ITransportAdapter {
 
       this.ws.onopen = () => {
         this.connected = true;
+        this.announcedPrekeyId = null;
+        if (!this.prekeyTimer && typeof setInterval === 'function') {
+          this.prekeyTimer = setInterval(() => void this.refreshPrekey(), 3600_000);
+        }
         // Contre-audit V0.2 : l'annonce d'identité (HELLO) est envoyée en réponse au défi du relais,
         // signée avec la clé d'identité (preuve de possession de la clé privée).
       };
@@ -353,13 +374,19 @@ export class WebSocketTransport implements ITransportAdapter {
           privKey,
           `MESHORA-HELLO|v1|${typeof packet.room === 'string' ? packet.room : this.currentRoom}|${packet.nonce}|${myId.publicKey}`
         );
+        let prekey: SignedPrekey | undefined;
+        try {
+          prekey = await prekeys.current(privKey, myId.publicKey);
+          this.announcedPrekeyId = prekey.id;
+        } catch {}
         this.sendRaw({
           type: 'MESHORA_HELLO',
           senderId: myId.id,
           senderAlias: myId.alias,
           publicKey: myId.publicKey,
           helloSignature,
-          room: this.currentRoom
+          room: this.currentRoom,
+          prekey
         });
         break;
       }
@@ -380,7 +407,8 @@ export class WebSocketTransport implements ITransportAdapter {
               // Déchiffrement AES-GCM + Vérification signature de l'expéditeur
               const dec = await MeshoraCrypto.decryptEnvelope({
                 envelope: env,
-                recipientPrivateKeyPkcs8Hex: myId.privateKeyPkcs8Hex
+                recipientPrivateKeyPkcs8Hex: myId.privateKeyPkcs8Hex,
+                prekeyLookup: (id) => prekeys.privateFor(id)
               });
 
               // Trouver l'alias de l'expéditeur dans les pairs connus
@@ -476,6 +504,7 @@ export class WebSocketTransport implements ITransportAdapter {
 
       case 'MESHORA_HELLO': {
         if (packet.senderId && (await WebSocketTransport.idMatchesKey(packet.senderId, packet.publicKey))) {
+          if (packet.prekey && packet.publicKey) await prekeys.rememberPeer(packet.publicKey, packet.prekey);
           this.remotePeers.set(packet.senderId, {
             id: packet.senderId,
             alias: packet.senderAlias || 'Pair Distant (Relais)',
@@ -502,6 +531,8 @@ export class WebSocketTransport implements ITransportAdapter {
             if (p && p.id !== myId.id && (await WebSocketTransport.idMatchesKey(p.id, (p as MeshPeer & { publicKey?: string }).publicKey))) {
               // Vérifié = clé reçue hors du relais (invitation) et identique à celle annoncée ici.
               const pk = (p as MeshPeer & { publicKey?: string }).publicKey || '';
+              const pp = (p as MeshPeer & { prekey?: unknown }).prekey;
+              if (pp && pk) await prekeys.rememberPeer(pk, pp);
               this.remotePeers.set(p.id, { ...p, verified: isVerifiedKey(pk) });
             }
           }
@@ -559,13 +590,24 @@ export class WebSocketTransport implements ITransportAdapter {
       const privKey = await MeshoraCrypto.importPrivateKey(myId.privateKeyPkcs8Hex);
       const recipients = this.sentTo.get(message.id) ?? new Map<string, string>();
       for (const peer of targets) {
-        const envelope = await MeshoraCrypto.encryptEnvelope({
-          messageId: message.id,
-          senderPrivateKey: privKey,
-          senderPublicKeyHex: myId.publicKey,
-          recipientPublicKeyHex: peer.publicKey!,
-          plaintext: message.content
-        });
+        // V0.4 étape A : prékey vérifiée connue → enveloppe v3 (confidentialité persistante) ; sinon v2.
+        const pk = prekeys.peer(peer.publicKey!);
+        const envelope = pk
+          ? await MeshoraCrypto.encryptEnvelopeV3({
+              messageId: message.id,
+              senderPrivateKey: privKey,
+              senderPublicKeyHex: myId.publicKey,
+              recipientPublicKeyHex: peer.publicKey!,
+              prekey: pk,
+              plaintext: message.content
+            })
+          : await MeshoraCrypto.encryptEnvelope({
+              messageId: message.id,
+              senderPrivateKey: privKey,
+              senderPublicKeyHex: myId.publicKey,
+              recipientPublicKeyHex: peer.publicKey!,
+              plaintext: message.content
+            });
         if (this.sendRaw({ type: 'MESHORA_ENVELOPE', envelope, room: this.currentRoom })) {
           recipients.set(await MeshoraCrypto.envelopeHash(envelope), peer.publicKey!);
           sentAny = true;

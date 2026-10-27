@@ -50,7 +50,7 @@ export const LIMITS = {
 
 const ROOM_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HEX_RE = /^[0-9a-f]+$/i;
-const VERSION = '0.4.0-dev';
+const VERSION = '0.4.0-dev2';
 
 const DEFAULT_ORIGINS = [
   'https://meshora.pages.dev',
@@ -103,14 +103,38 @@ export async function verifyEcdsa(publicKeyHex, signatureHex, text) {
 }
 
 /** Chaîne signée par l'expéditeur d'une enveloppe (docs/PROTOCOLE-V0.2.md §2). */
-const envelopeString = (e) => `${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`;
+const envelopeString = (e) =>
+  e.v === 3
+    ? `ENV3|${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.prekeyId}|${e.ephemeralPublicKeyHex}|${e.saltHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`
+    : `${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`;
 /** Chaîne signée par le destinataire d'un accusé v2 (§3). */
 const ackString = (k) => `ACK2|${k.messageId}|${k.senderPublicKeyHex}|${k.recipientPublicKeyHex}|${k.envelopeHash}|${k.timestamp}`;
 const isKey = (k) => typeof k === 'string' && HEX_RE.test(k) && k.length <= LIMITS.maxKeyHexChars;
 function validEnvelopeShape(e) {
   return e && typeof e === 'object' && typeof e.id === 'string' && e.id.length <= 128 && isKey(e.senderPublicKeyHex) && isKey(e.recipientPublicKeyHex) &&
-    ['ephemeralPublicKeyHex', 'ivHex', 'ciphertextHex', 'signatureHex'].every((f) => typeof e[f] === 'string' && HEX_RE.test(e[f])) && Number.isFinite(e.timestamp);
+    ['ephemeralPublicKeyHex', 'ivHex', 'ciphertextHex', 'signatureHex'].every((f) => typeof e[f] === 'string' && HEX_RE.test(e[f])) && Number.isFinite(e.timestamp) &&
+    (e.v === undefined || (e.v === 3 && typeof e.prekeyId === 'string' && /^[0-9a-f]{16}$/.test(e.prekeyId) && typeof e.saltHex === 'string' && /^[0-9a-f]{64}$/i.test(e.saltHex)));
 }
+
+/**
+ * V0.4 étape A — prékey de réception annoncée par le détenteur d'une identité. Vérifiée (forme : SPKI P-256 de
+ * 91 octets, identifiant = empreinte, signature de l'identité, échéance ≤ 30 j) avant d'être redistribuée ;
+ * invalide → ignorée (le client reste joignable en v2).
+ */
+const PREKEY_MAX_LIFETIME_MS = 30 * 24 * 3600 * 1000;
+async function validPrekey(identityKey, p) {
+  if (!p || typeof p !== 'object') return null;
+  const now = Date.now();
+  if (typeof p.publicKeyHex !== 'string' || !/^[0-9a-f]{182}$/i.test(p.publicKeyHex) || p.publicKeyHex === identityKey) return null;
+  if (typeof p.id !== 'string' || !/^[0-9a-f]{16}$/.test(p.id)) return null;
+  if (typeof p.signatureHex !== 'string' || !/^[0-9a-f]{128}$/i.test(p.signatureHex)) return null;
+  if (!Number.isFinite(p.expiresAt) || p.expiresAt <= now || p.expiresAt > now + PREKEY_MAX_LIFETIME_MS) return null;
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', hexToBytes(p.publicKeyHex)));
+  if (Array.from(digest.slice(0, 8), (b) => b.toString(16).padStart(2, '0')).join('') !== p.id) return null;
+  if (!(await verifyEcdsa(identityKey, p.signatureHex, `PREKEY|v1|${identityKey}|${p.publicKeyHex}|${p.id}|${p.expiresAt}`))) return null;
+  return { publicKeyHex: p.publicKeyHex, id: p.id, expiresAt: p.expiresAt, signatureHex: p.signatureHex };
+}
+const livePrekey = (p, now) => (p && p.expiresAt > now ? { prekey: p } : {});
 
 function json(obj, status = 200, extra = {}) {
   return new Response(JSON.stringify(obj), {
@@ -234,7 +258,17 @@ export class MeshoraRoom extends DurableObject {
     if (msg.type === 'MESHORA_ACK') return this.onAck(ws, a, msg);
     if (msg.type === 'MESHORA_FORWARD') return this.onForward(ws, a, msg);
     if (msg.type === 'MESHORA_SERVE') return this.onServe(ws, a, msg);
+    if (msg.type === 'MESHORA_PREKEY') return this.onPrekey(ws, a, msg);
     // MESHORA_MSG (texte en clair) et types inconnus : ignorés.
+  }
+
+  /** V0.4 étape A — rotation de la prékey sans reconnexion. */
+  async onPrekey(ws, a, msg) {
+    const p = await validPrekey(a.pub, msg.prekey);
+    if (!p || (a.prekey && (a.prekey.id === p.id || a.prekey.expiresAt > p.expiresAt))) return;
+    a.prekey = p;
+    this.setAtt(ws, a);
+    this.broadcastPeers();
   }
 
   async onHello(ws, a, msg) {
@@ -250,6 +284,7 @@ export class MeshoraRoom extends DurableObject {
     a.pub = pub;
     a.id = id;
     a.alias = typeof msg.senderAlias === 'string' ? msg.senderAlias.slice(0, LIMITS.maxAliasChars) : null;
+    a.prekey = await validPrekey(pub, msg.prekey);
     this.setAtt(ws, a);
     this.broadcastPeers();
 
@@ -369,6 +404,12 @@ export class MeshoraRoom extends DurableObject {
     const isNew = !a.served[d.publicKey];
     const alias = typeof d.alias === 'string' ? d.alias.slice(0, LIMITS.maxAliasChars) : null;
     a.served[d.publicKey] = { exp: now + LIMITS.servedTtlMs, id: await deriveId(d.publicKey), alias };
+    // Prékey du déléguant (facultative) : gardée seulement si la pièce jointe reste sous la limite de 16 Kio.
+    const pk = await validPrekey(d.publicKey, msg.prekey);
+    if (pk) {
+      a.served[d.publicKey].prekey = pk;
+      if (JSON.stringify(a).length > 15000) delete a.served[d.publicKey].prekey;
+    }
     this.setAtt(ws, a);
     if (isNew) this.broadcastPeers();
     // Courrier en attente pour la clé servie : remis à la passerelle (toujours chiffré pour le déléguant).
@@ -388,7 +429,7 @@ export class MeshoraRoom extends DurableObject {
     const now = Date.now();
     const peers = list.map((w) => {
       const x = this.att(w);
-      return { id: x.id, alias: x.alias || 'Pair-Meshora', publicKey: x.pub, transport: 'websocket', hops: 1, lastSeen: now, isGateway: false, verified: false };
+      return { id: x.id, alias: x.alias || 'Pair-Meshora', publicKey: x.pub, transport: 'websocket', hops: 1, lastSeen: now, isGateway: false, verified: false, ...livePrekey(x.prekey, now) };
     });
     // Membres joignables par une passerelle (délégation valide) : annoncés comme pairs « via passerelle ».
     const known = new Set(peers.map((p) => p.publicKey));
@@ -397,7 +438,7 @@ export class MeshoraRoom extends DurableObject {
       for (const [k, v] of Object.entries(x.served || {})) {
         if (v.exp > now && !known.has(k)) {
           known.add(k);
-          peers.push({ id: v.id, alias: v.alias || 'Pair-Meshora', publicKey: k, transport: 'gateway', hops: 2, lastSeen: now, isGateway: false, viaGateway: x.id, verified: false });
+          peers.push({ id: v.id, alias: v.alias || 'Pair-Meshora', publicKey: k, transport: 'gateway', hops: 2, lastSeen: now, isGateway: false, viaGateway: x.id, verified: false, ...livePrekey(v.prekey, now) });
         }
       }
     }

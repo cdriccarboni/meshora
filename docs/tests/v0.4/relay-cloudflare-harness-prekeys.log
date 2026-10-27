@@ -1,0 +1,13 @@
+✅ HELLO accepté par le vrai code du Durable Object
+✅ prékey de Bob redistribuée dans MESHORA_PEERS
+✅ prékey signée par une autre identité ignorée
+✅ client sans prékey : annoncé sans prékey (repli v2)
+✅ rotation (MESHORA_PREKEY) rediffusée
+✅ pas de retour à une prékey plus ancienne
+✅ prékey échue refusée
+✅ enveloppe v3 transmise par passerelle (signature ENV3 vérifiée par le relais) et lisible par Bob
+✅ enveloppe v3 altérée refusée
+✅ membre servi par la passerelle annoncé avec sa prékey
+✅ 16 clés servies avec prékeys : pièce jointe max 11800 octets (≤ 16 384)
+
+RÉSULTAT : toutes les vérifications réussies (code Cloudflare exécuté hors wrangler)

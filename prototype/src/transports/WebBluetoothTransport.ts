@@ -16,6 +16,7 @@ import { MeshMessage, MeshPeer, MessageAck } from '../types';
 import { ITransportAdapter } from './TransportInterface';
 import { ensureCryptographicIdentity } from '../core/identity';
 import { MeshoraCrypto, EncryptedEnvelope, SignedAck } from '../core/crypto';
+import { prekeys } from '../core/prekeys';
 import {
   MESH_SERVICE_UUID, MESH_CHAR_RX_UUID, MESH_CHAR_TX_UUID, FrameType, MAX_TTL, ID_SIZE,
   Reassembler, decodeFrame, encodeFrame, splitFrames, idHex
@@ -191,13 +192,11 @@ export class WebBluetoothTransport implements ITransportAdapter {
     const recipients = this.sentTo.get(message.id) ?? new Map<string, string>();
     let sentAny = false;
     for (const peer of targets) {
-      const envelope = await MeshoraCrypto.encryptEnvelope({
-        messageId: message.id,
-        senderPrivateKey: priv,
-        senderPublicKeyHex: me.publicKey,
-        recipientPublicKeyHex: peer.publicKey,
-        plaintext: message.content
-      });
+      // V0.4 étape A : v3 seulement si ce pair a annoncé une prékey vérifiée (il sait donc la lire).
+      const pk = prekeys.peer(peer.publicKey);
+      const envelope = pk
+        ? await MeshoraCrypto.encryptEnvelopeV3({ messageId: message.id, senderPrivateKey: priv, senderPublicKeyHex: me.publicKey, recipientPublicKeyHex: peer.publicKey, prekey: pk, plaintext: message.content })
+        : await MeshoraCrypto.encryptEnvelope({ messageId: message.id, senderPrivateKey: priv, senderPublicKeyHex: me.publicKey, recipientPublicKeyHex: peer.publicKey, plaintext: message.content });
       const hash = await MeshoraCrypto.envelopeHash(envelope);
       recipients.set(hash, peer.publicKey);
       const ok = await this.sendSealed(FrameType.ENVELOPE, utf8.encode(JSON.stringify(envelope)), MAX_TTL, 'env|' + hash);
@@ -307,7 +306,7 @@ export class WebBluetoothTransport implements ITransportAdapter {
   private async onEnvelope(env: EncryptedEnvelope): Promise<void> {
     const me = await ensureCryptographicIdentity();
     if (!env || env.recipientPublicKeyHex !== me.publicKey || !me.privateKeyPkcs8Hex) return;
-    const dec = await MeshoraCrypto.decryptEnvelope({ envelope: env, recipientPrivateKeyPkcs8Hex: me.privateKeyPkcs8Hex });
+    const dec = await MeshoraCrypto.decryptEnvelope({ envelope: env, recipientPrivateKeyPkcs8Hex: me.privateKeyPkcs8Hex, prekeyLookup: (id) => prekeys.privateFor(id) });
     const senderId = 'msh_' + (await MeshoraCrypto.computeFingerprint(env.senderPublicKeyHex)).replace(/:/g, '').substring(0, 12);
     const peer = this.peers.get(env.senderPublicKeyHex);
     const msg: MeshMessage = {
