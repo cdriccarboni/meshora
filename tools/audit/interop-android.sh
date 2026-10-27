@@ -25,7 +25,7 @@ READY=0; for _ in $(seq 1 60); do grep -q '"ready":true' /tmp/meshora-interop-bo
 [ "$READY" = 1 ] || { echo "ÉCHEC : robot web non prêt"; cat /tmp/meshora-interop-bot.log; exit 1; }
 echo "Robot web : $(head -1 /tmp/meshora-interop-bot.log | cut -c1-80)…"
 cd android
-MESHORA_INTEROP_RELAY="$RELAY_URL" MESHORA_INTEROP_ROOM="$ROOM" ./gradlew --offline -q testDebugUnitTest --rerun-tasks
+MESHORA_INTEROP_RELAY="$RELAY_URL" MESHORA_INTEROP_ROOM="$ROOM" ./gradlew ${GRADLE_FLAGS:---offline} -q testDebugUnitTest --rerun-tasks
 for f in app/build/test-results/testDebugUnitTest/*.xml; do grep -o '<testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f"; done
 grep -q 'skipped="0"' app/build/test-results/testDebugUnitTest/TEST-org.meshora.app.LiveRelayInteropTest.xml || { echo "ÉCHEC : essai d'interopérabilité ignoré"; exit 1; }
 echo "INTEROPÉRABILITÉ : OK"
