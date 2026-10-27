@@ -93,18 +93,10 @@ export class WebSocketTransport implements ITransportAdapter {
         } catch {}
         const name = inv.alias || (fr ? 'Quelqu’un' : 'Someone');
         const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
-        if (
-          isAndroid &&
-          typeof window.confirm === 'function' &&
-          window.confirm(
-            fr
-              ? `Invitation de ${name}.\n\nOuvrir dans l’application Android MESHORA ? (OK)\nAnnuler = continuer dans le navigateur.`
-              : `Invitation from ${name}.\n\nOpen in the MESHORA Android app? (OK)\nCancel = continue in the browser.`
-          )
-        ) {
-          window.location.href = 'meshora://join#' + (
-            'join=' + inv.room + '&k=' + inv.publicKeyHex + (inv.alias ? '&n=' + encodeURIComponent(inv.alias) : '') + (inv.relayUrl ? '&r=' + encodeURIComponent(inv.relayUrl) : '')
-          );
+        if (isAndroid && typeof document !== 'undefined') {
+          // Ouvrir l'application exige un vrai geste de l'utilisateur (Chrome bloque la navigation automatique
+          // vers meshora://) : bandeau avec deux boutons, aucune décision prise à sa place.
+          this.showAndroidInviteBanner(inv, name, fr);
         } else {
           const relayNote = inv.relayUrl ? (fr ? `\n\nAttention : autre relais que celui de MESHORA (${inv.relayUrl}).` : `\n\nWarning: relay other than MESHORA's (${inv.relayUrl}).`) : '';
           const ok =
@@ -186,6 +178,40 @@ export class WebSocketTransport implements ITransportAdapter {
 
     // 4. V0.3 — relais de référence MESHORA, sans saisie
     return withRoom(DEFAULT_RELAY_URL, this.currentRoom);
+  }
+
+  /** Bandeau Android : « Ouvrir dans l'application » (lien meshora://) ou « Continuer dans le navigateur ». */
+  private showAndroidInviteBanner(inv: { room: string; publicKeyHex: string; alias: string; relayUrl: string | null }, name: string, fr: boolean): void {
+    const render = () => {
+      const box = document.createElement('div');
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-label', fr ? 'Invitation MESHORA' : 'MESHORA invitation');
+      box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#1E293B;color:#F8FAFC;border-radius:14px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.4);font:15px/1.4 system-ui,sans-serif';
+      const p = document.createElement('p');
+      p.style.margin = '0 0 12px';
+      p.textContent = (fr ? 'Invitation de ' : 'Invitation from ') + name + (inv.relayUrl ? (fr ? ' (autre relais : ' : ' (other relay: ') + inv.relayUrl + ')' : '');
+      const app = document.createElement('a');
+      app.href = 'meshora://join#join=' + inv.room + '&k=' + inv.publicKeyHex + (inv.alias ? '&n=' + encodeURIComponent(inv.alias) : '') + (inv.relayUrl ? '&r=' + encodeURIComponent(inv.relayUrl) : '');
+      app.textContent = fr ? 'Ouvrir dans l’application Android' : 'Open in the Android app';
+      app.style.cssText = 'display:block;text-align:center;background:#0D9488;color:#fff;padding:12px;border-radius:10px;text-decoration:none;font-weight:600;margin-bottom:8px';
+      const web = document.createElement('button');
+      web.type = 'button';
+      web.textContent = fr ? 'Continuer dans le navigateur' : 'Continue in the browser';
+      web.style.cssText = 'display:block;width:100%;background:transparent;color:#F8FAFC;border:1px solid #475569;padding:11px;border-radius:10px;font:inherit';
+      web.onclick = () => {
+        box.remove();
+        this.acceptInvitation(inv);
+      };
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.textContent = fr ? 'Ignorer' : 'Dismiss';
+      close.style.cssText = 'display:block;width:100%;background:transparent;color:#94A3B8;border:0;padding:8px;margin-top:4px;font:inherit';
+      close.onclick = () => box.remove();
+      box.append(p, app, web, close);
+      document.body.appendChild(box);
+    };
+    if (document.body) render();
+    else window.addEventListener('DOMContentLoaded', render, { once: true });
   }
 
   /** Lien d'invitation vers MON groupe (à partager ou à montrer). */
