@@ -125,6 +125,12 @@
     <string name="limits_title">Limites connues (version d\'essai)</string>
     <string name="limits_body">• Pas d\'audit de sécurité indépendant\n• Pas encore de confidentialité persistante (si votre clé privée était volée, d\'anciens messages captés pourraient être déchiffrés)\n• Le relais voit qui échange avec qui dans un groupe\n• Bluetooth expérimental, non testé entre téléphones</string>
 
+    <string name="wipe_title">Effacement d\'urgence</string>
+    <string name="wipe_body">Efface de ce téléphone votre identité, vos messages, vos contacts et vos réglages. Irréversible. Les messages déjà reçus par d\'autres restent chez eux.</string>
+    <string name="wipe_button">Tout effacer</string>
+    <string name="wipe_confirm_title">Tout effacer maintenant ?</string>
+    <string name="wipe_confirm_body">Votre identité MESHORA sera détruite : vos contacts devront vous réinviter. L\'application se fermera.</string>
+    <string name="wipe_confirm_button">Effacer définitivement</string>
     <string name="emerg_title">Secours</string>
     <string name="emerg_sub">Appel direct des services d\'urgence officiels.</string>
     <string name="emerg_warning_title">Important</string>

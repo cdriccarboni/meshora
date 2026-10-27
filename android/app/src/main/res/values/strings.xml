@@ -125,6 +125,12 @@
     <string name="limits_title">Known limits (test version)</string>
     <string name="limits_body">• No independent security audit yet\n• No forward secrecy yet (if your private key were stolen, previously captured messages could be decrypted)\n• The relay sees who talks to whom within a group\n• Bluetooth is experimental, not tested between phones</string>
 
+    <string name="wipe_title">Emergency wipe</string>
+    <string name="wipe_body">Erases your identity, messages, contacts and settings from this phone. Irreversible. Messages already received by others stay on their devices.</string>
+    <string name="wipe_button">Erase everything</string>
+    <string name="wipe_confirm_title">Erase everything now?</string>
+    <string name="wipe_confirm_body">Your MESHORA identity will be destroyed: your contacts will need to invite you again. The app will close.</string>
+    <string name="wipe_confirm_button">Erase permanently</string>
     <string name="emerg_title">Emergency</string>
     <string name="emerg_sub">Direct call to official emergency services.</string>
     <string name="emerg_warning_title">Important</string>
