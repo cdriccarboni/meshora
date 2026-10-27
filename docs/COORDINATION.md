@@ -166,3 +166,13 @@ Branche `claude/v0.4-prekeys` (sur `claude/v0.4-suite`), PR brouillon, **ne pas 
 **Pour Antigravity** : toute nouvelle enveloppe doit passer par `CryptoEngine.envelopeSignedString` (v2 ou v3) ; `EncryptedEnvelope` ne doit jamais émettre `"v":null` (annotations `@EncodeDefault(NEVER)`, vérifié par `PrekeyTest`). Les annonces Bluetooth portent la prékey une fois sur trois.
 **Pour Grok Bot** : sur le Mac, lancer `./gradlew testDebugUnitTest` (avec `MESHORA_INTEROP_RELAY` = relais dev après déploiement de cette branche), `wrangler dev` + `relay-conformance.ts` (17 vérifications attendues), puis ajouter au dépôt les rapports `.log` de v0.3 et v0.4 restés sur le Mac.
 
+## 16. Vérification automatique et corrections (27 octobre 2026, soir) — Claude
+
+- **GitHub Actions** (`.github/workflows/verification.yml`) sur chaque pull request, sans secret ni déploiement : tests web, vecteurs, relais Node et Cloudflare (`wrangler dev`) 17/17, Android 40/40 avec interopérabilité Android ↔ web en v3 et passerelle, lint. Les résultats sont publiés en annotations. Exécution de référence : `docs/tests/v0.4/ci-verification-v0.4-prekeys.log`.
+- **Android, chiffrement au repos** (A-P1-6) : `storage/LocalVault.kt` ; messages, identifiants vus et contacts chiffrés, ancien clair migré. Réglages, prékeys et coffre exclus des sauvegardes.
+- **A-P1-7** : derniers UUID 0xFE6x retirés de `MeshoraBleManager` (hérité).
+- **A-P1-8 reste ouvert** : `MeshoraBleService` (premier plan, `connectedDevice`) n'est jamais démarré → décision du directeur artistique : le démarrer pendant le maillage Bluetooth (le relais radio continue écran éteint, au prix de la batterie) ou retirer `FOREGROUND_SERVICE_CONNECTED_DEVICE` / `POST_NOTIFICATIONS` avant Google Play.
+
+**Pour Antigravity** : toute pull request est désormais vérifiée automatiquement ; garder la vérification verte. Le stockage Android passe par `LocalVault` (ne jamais réécrire en clair).
+**Pour Grok Bot** : les tests Android et `wrangler dev` ne dépendent plus du Mac. Restent sur le Mac : signature de l'APK, déploiement (après accord), ajout des rapports `.log` de v0.3 et v0.4.
+
