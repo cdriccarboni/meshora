@@ -15,11 +15,13 @@
 import { MeshMessage, MeshPeer, MessageAck } from '../types';
 import { ITransportAdapter } from './TransportInterface';
 import { ensureCryptographicIdentity } from '../core/identity';
-import { MeshoraCrypto, EncryptedEnvelope, SignedAck, hexToBytes } from '../core/crypto';
+import { MeshoraCrypto, EncryptedEnvelope, SignedAck } from '../core/crypto';
 import {
   MESH_SERVICE_UUID, MESH_CHAR_RX_UUID, MESH_CHAR_TX_UUID, FrameType, MAX_TTL, ID_SIZE,
   Reassembler, decodeFrame, encodeFrame, splitFrames, idHex
 } from '../mesh/meshFrame';
+import { seal, open as openSealed, frameId, dayOf } from '../mesh/groupSeal';
+import { getOrCreateRoom } from '../core/invitation';
 
 /** Taille de trame prudente pour les écritures (tient dans une MTU négociée ≥ 185). */
 const FRAME_SIZE = 180;
@@ -37,6 +39,7 @@ interface AnnouncePayload {
 const utf8 = new TextEncoder();
 const fromUtf8 = new TextDecoder();
 const announceString = (pub: string, alias: string, ts: number) => `MESHORA-ANNOUNCE|v1|${pub}|${alias}|${ts}`;
+const toHex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
 
 async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as unknown as BufferSource));
@@ -197,7 +200,7 @@ export class WebBluetoothTransport implements ITransportAdapter {
       });
       const hash = await MeshoraCrypto.envelopeHash(envelope);
       recipients.set(hash, peer.publicKey);
-      const ok = await this.sendPayload(FrameType.ENVELOPE, utf8.encode(JSON.stringify(envelope)), MAX_TTL, hexToBytes(hash).slice(0, ID_SIZE));
+      const ok = await this.sendSealed(FrameType.ENVELOPE, utf8.encode(JSON.stringify(envelope)), MAX_TTL, 'env|' + hash);
       sentAny = sentAny || ok;
     }
     this.sentTo.set(message.id, recipients);
@@ -206,6 +209,18 @@ export class WebBluetoothTransport implements ITransportAdapter {
   }
 
   // ------------------------------------------------------------------ émission
+
+  /**
+   * V0.3 : toute charge utile part SCELLÉE par la clé du groupe (groupSeal.ts) : ni nom, ni clé publique,
+   * ni type en clair sur l'air ; identifiant de trame illisible hors du groupe.
+   */
+  private async sendSealed(inner: FrameType, data: Uint8Array, ttl: number, idLabel: string | null): Promise<boolean> {
+    const room = getOrCreateRoom();
+    const day = dayOf(Date.now());
+    const sealed = await seal(room, day, inner, data);
+    const id = idLabel ? await frameId(room, day, idLabel) : crypto.getRandomValues(new Uint8Array(ID_SIZE));
+    return this.sendPayload(FrameType.SEALED, sealed, ttl, id);
+  }
 
   private async sendPayload(type: FrameType, payload: Uint8Array, ttl: number, messageId: Uint8Array): Promise<boolean> {
     if (!this.rx) return false;
@@ -232,8 +247,7 @@ export class WebBluetoothTransport implements ITransportAdapter {
     const alias = me.alias.slice(0, 64);
     const signature = await MeshoraCrypto.signData(await MeshoraCrypto.importPrivateKey(me.privateKeyPkcs8Hex), announceString(me.publicKey, alias, ts));
     const body: AnnouncePayload = { publicKey: me.publicKey, alias, timestamp: ts, signature };
-    const id = crypto.getRandomValues(new Uint8Array(ID_SIZE));
-    await this.sendPayload(FrameType.ANNOUNCE, utf8.encode(JSON.stringify(body)), 2, id);
+    await this.sendSealed(FrameType.ANNOUNCE, utf8.encode(JSON.stringify(body)), 2, null);
   }
 
   // ------------------------------------------------------------------ réception
@@ -248,16 +262,20 @@ export class WebBluetoothTransport implements ITransportAdapter {
     for (const [k, at] of this.seen) if (now - at > 6 * 3600 * 1000) this.seen.delete(k);
     if (this.seen.has(key)) return;
     this.seen.set(key, now);
+    // V0.3 : seules les trames scellées par NOTRE groupe sont lues.
+    if (frame.type !== FrameType.SEALED) return;
+    const opened = await openSealed(getOrCreateRoom(), payload);
+    if (!opened) return;
     let data: any;
     try {
-      data = JSON.parse(fromUtf8.decode(payload));
+      data = JSON.parse(fromUtf8.decode(opened.data));
     } catch {
       return;
     }
     try {
-      if (frame.type === FrameType.ANNOUNCE) await this.onAnnounce(data as AnnouncePayload);
-      else if (frame.type === FrameType.ENVELOPE) await this.onEnvelope(data as EncryptedEnvelope);
-      else if (frame.type === FrameType.ACK) await this.onSignedAck(data as SignedAck);
+      if (opened.type === FrameType.ANNOUNCE) await this.onAnnounce(data as AnnouncePayload);
+      else if (opened.type === FrameType.ENVELOPE) await this.onEnvelope(data as EncryptedEnvelope);
+      else if (opened.type === FrameType.ACK) await this.onSignedAck(data as SignedAck);
     } catch {
       // charge utile invalide : ignorée
     }
@@ -309,8 +327,8 @@ export class WebBluetoothTransport implements ITransportAdapter {
     this.messageListeners.forEach((l) => { try { l(msg); } catch {} });
     // Accusé signé v2, renvoyé par Bluetooth
     const ack = await MeshoraCrypto.createSignedAck(env, await MeshoraCrypto.importPrivateKey(me.privateKeyPkcs8Hex));
-    const ackId = (await sha256(utf8.encode(ack.signatureHex))).slice(0, ID_SIZE);
-    await this.sendPayload(FrameType.ACK, utf8.encode(JSON.stringify(ack)), MAX_TTL, ackId);
+    const digest = toHex(await sha256(utf8.encode(ack.signatureHex)));
+    await this.sendSealed(FrameType.ACK, utf8.encode(JSON.stringify(ack)), MAX_TTL, 'ack|' + digest);
   }
 
   private async onSignedAck(sa: SignedAck): Promise<void> {

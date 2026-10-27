@@ -48,6 +48,7 @@ class MeshoraApp : Application() {
             bleManager = bleManager,
             alias = displayAlias()
         )
+        transportManager.groupRoom = settings.current.room
         bleMesh = org.meshora.app.transport.ble.BleMesh(
             context = this,
             router = transportManager.meshRouter,
@@ -66,6 +67,7 @@ class MeshoraApp : Application() {
     fun connectRelay(): Boolean {
         transportManager.alias = displayAlias()
         val s = settings.current
+        transportManager.groupRoom = s.room // clé de scellement des trames Bluetooth
         return transportManager.connectWebSocket(s.relayUrl, s.room)
     }
 

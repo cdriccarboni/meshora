@@ -87,6 +87,15 @@ class MeshRouterTest {
         val tmA = TransportManager(scope, alice, repoA, null, alias = "Alice")
         val tmB = TransportManager(scope, bob, repoB, null, alias = "Bob")
         val tmR = TransportManager(scope, relay, repoR, null, alias = "Relais")
+        // V0.3 : Alice et Bob sont dans le même groupe ; le relais appartient à UN AUTRE groupe
+        // (il relaie sans pouvoir lire les trames scellées).
+        tmA.groupRoom = "gfamille234567"; tmB.groupRoom = "gfamille234567"; tmR.groupRoom = "gautregroupe23"
+        // Espion radio branché sur le relais : capture toutes les trames émises par le relais.
+        val sniffed = CopyOnWriteArrayList<ByteArray>()
+        tmR.meshRouter.addLink(object : MeshLink {
+            override val id = "espion"; override val maxFrameSize = 182
+            override fun send(frame: ByteArray): Boolean { sniffed.add(frame); return true }
+        })
         // Alice ↔ Relais ↔ Bob : Alice et Bob ne sont pas en liaison directe
         connect(tmA.meshRouter, "A", tmR.meshRouter, "R")
         connect(tmR.meshRouter, "R", tmB.meshRouter, "B")
@@ -98,5 +107,17 @@ class MeshRouterTest {
         assertTrue("le relais ne lit rien", repoR.messagesFlow.value.none { it.content == "bonjour sans Internet" })
         assertTrue("« Délivré » chez Alice via l'accusé signé relayé", waitUntil { repoA.messagesFlow.value.first { it.id == id }.status == MessageStatus.DELIVERED })
         assertTrue(repoA.messagesFlow.value.first { it.id == id }.transportUsed.contains("Bluetooth"))
+
+        // Vie privée radio : le relais d'un autre groupe ne voit ni Alice ni Bob comme pairs,
+        // et rien de ce qui passe sur l'air ne contient une clé publique, un nom ou un type lisible.
+        assertTrue("le relais ne découvre pas Alice", repoR.peersFlow.value.none { it.publicKeyHex == alice.publicKeyHex })
+        val air = sniffed.toList()
+        assertTrue("trames observées", air.isNotEmpty())
+        assertTrue("toutes les trames sont scellées", air.all { MeshFrame.decode(it)?.type == MeshFrame.Type.SEALED })
+        val allBytes = air.fold(ByteArray(0)) { acc, f -> acc + (MeshFrame.decode(f)?.payload ?: ByteArray(0)) }
+        val hex = CryptoEngine.bytesToHex(allBytes)
+        assertTrue("clé publique d'Alice absente", !hex.contains(alice.publicKeyHex.takeLast(64)))
+        assertTrue("clé publique de Bob absente", !hex.contains(bob.publicKeyHex.takeLast(64)))
+        assertTrue("nom absent", !String(allBytes, Charsets.ISO_8859_1).contains("Alice"))
     }
 }

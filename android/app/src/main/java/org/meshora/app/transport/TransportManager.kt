@@ -15,6 +15,7 @@ import org.meshora.app.model.MessageStatus
 import org.meshora.app.model.Peer
 import org.meshora.app.storage.OutboxRepository
 import org.meshora.app.transport.ble.MeshoraBleManager
+import org.meshora.app.mesh.GroupSeal
 import org.meshora.app.mesh.MeshFrame
 import org.meshora.app.mesh.MeshRouter
 import kotlinx.serialization.Serializable
@@ -121,14 +122,33 @@ class TransportManager(
 
     private fun announcePayload(pub: String, al: String, ts: Long) = "MESHORA-ANNOUNCE|v1|$pub|$al|$ts"
 
+    /**
+     * Code du groupe (salon) : sert de secret pour sceller les trames Bluetooth ([GroupSeal]).
+     * Sans groupe, rien n'est émis par Bluetooth (jamais de nom ni de clé publique en clair).
+     */
+    @Volatile var groupRoom: String? = null
+
+    /** Émet une charge utile scellée pour le groupe. @return nombre de liens qui l'ont acceptée. */
+    private fun broadcastSealed(inner: MeshFrame.Type, bytes: ByteArray, ttl: Int, idLabel: String?): Int {
+        val room = groupRoom ?: return 0
+        val day = GroupSeal.dayOf(clock())
+        val sealed = GroupSeal.seal(room, day, inner, bytes)
+        val id = idLabel?.let { GroupSeal.frameId(room, day, it) } ?: MeshFrame.newMessageId()
+        return meshRouter.broadcast(MeshFrame.Type.SEALED, sealed, ttl = ttl, messageId = id)
+    }
+
     fun announceOnMesh() {
         val ts = clock()
         val sig = CryptoEngine.signData(myPrivateKey, announcePayload(identity.publicKeyHex, alias, ts))
         val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig)).toByteArray(StandardCharsets.UTF_8)
-        meshRouter.broadcast(MeshFrame.Type.ANNOUNCE, bytes, ttl = ANNOUNCE_TTL)
+        broadcastSealed(MeshFrame.Type.ANNOUNCE, bytes, ANNOUNCE_TTL, idLabel = null)
     }
 
-    private fun handleMeshMessage(type: MeshFrame.Type, payload: ByteArray) {
+    private fun handleMeshMessage(outerType: MeshFrame.Type, sealedPayload: ByteArray) {
+        // V0.3 : seules les trames scellées par NOTRE groupe sont lues ; les autres sont seulement relayées (par le routeur).
+        if (outerType != MeshFrame.Type.SEALED) return
+        val room = groupRoom ?: return
+        val (type, payload) = GroupSeal.open(room, sealedPayload, clock()) ?: return
         val text = String(payload, StandardCharsets.UTF_8)
         try {
             when (type) {
@@ -147,21 +167,19 @@ class TransportManager(
                     publishPeers()
                     if (isNew) flushOutbox(force = true)
                 }
+                MeshFrame.Type.SEALED -> Unit
             }
         } catch (_: Exception) {
             // charge utile invalide : ignorée
         }
     }
 
-    /** Identifiant de trame radio dérivé de l'empreinte (enveloppe ou accusé) : stable pour la déduplication. */
-    private fun meshId(hashHex: String): ByteArray = CryptoEngine.hexToBytes(hashHex).copyOf(MeshFrame.ID_SIZE)
-
     private fun sendAckEverywhere(ack: SignedAck) {
         webSocketTransport.sendAck(ack)
         if (meshAvailable()) {
             val bytes = json.encodeToString(ack).toByteArray(StandardCharsets.UTF_8)
-            val id = java.security.MessageDigest.getInstance("SHA-256").digest(ack.signatureHex.toByteArray(StandardCharsets.UTF_8))
-            meshRouter.broadcast(MeshFrame.Type.ACK, bytes, ttl = MeshFrame.MAX_TTL, messageId = id.copyOf(MeshFrame.ID_SIZE))
+            val digest = CryptoEngine.bytesToHex(java.security.MessageDigest.getInstance("SHA-256").digest(ack.signatureHex.toByteArray(StandardCharsets.UTF_8)))
+            broadcastSealed(MeshFrame.Type.ACK, bytes, MeshFrame.MAX_TTL, idLabel = "ack|$digest")
         }
     }
 
@@ -220,11 +238,11 @@ class TransportManager(
         return try {
             val envelope = prepareEnvelope(msg)
             val viaRelay = webSocketTransport.sendEnvelope(envelope)
-            val viaMesh = meshAvailable() && meshRouter.broadcast(
+            val viaMesh = meshAvailable() && broadcastSealed(
                 MeshFrame.Type.ENVELOPE,
                 json.encodeToString(envelope).toByteArray(StandardCharsets.UTF_8),
-                ttl = MeshFrame.MAX_TTL,
-                messageId = meshId(CryptoEngine.envelopeHash(envelope))
+                MeshFrame.MAX_TTL,
+                idLabel = "env|" + CryptoEngine.envelopeHash(envelope)
             ) > 0
             val sent = viaRelay || viaMesh
             val previous = retryState[msg.id]?.attempts ?: 0

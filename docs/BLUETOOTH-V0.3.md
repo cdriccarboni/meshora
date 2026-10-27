@@ -8,8 +8,8 @@
 |---|---|---|
 | Autorisations | Android 12+ : `BLUETOOTH_SCAN` (`neverForLocation`), `BLUETOOTH_ADVERTISE`, `BLUETOOTH_CONNECT` ; ≤ 11 : `BLUETOOTH`, `BLUETOOTH_ADMIN`, `ACCESS_FINE_LOCATION`. V0.3 : demandées **à l'activation** du Bluetooth, plus au démarrage | ✅ |
 | Annonce radio | `setIncludeDeviceName(false)` ; seul l'UUID de service 128 bits est annoncé ; adresse MAC aléatoire gérée par Android | ✅ |
-| Annonce MESHORA (trame ANNOUNCE) | **Clé publique permanente + nom affiché, en clair, toutes les 20 s, relayés sur 2 sauts** | ⚠️ traçabilité — §3 |
-| Enveloppes et accusés sur le maillage | Contenu chiffré, mais clés publiques expéditeur/destinataire visibles dans le JSON | ⚠️ métadonnées — §3 |
+| Annonce MESHORA (trame ANNOUNCE) | V0.3 (27/10) : **scellée par la clé du groupe** — nom et clé publique invisibles hors du groupe (§3) | ✅ testé en JVM (espion radio, `MeshRouterTest`) |
+| Enveloppes et accusés sur le maillage | V0.3 (27/10) : scellés aussi ; type, taille exacte (arrondie à 128 octets) et clés invisibles hors du groupe ; identifiants de trame dérivés par HMAC, changent chaque jour | ✅ testé en JVM + vecteurs Python/Kotlin/TypeScript |
 | Relais multi-sauts | TTL 7, plafonné à 5 si ≥ 6 voisins ; déduplication par identifiant ; limiteur par pair ; réassemblage 30 s / 64 Kio / 64 en parallèle | ✅ testé en JVM (MeshRouterTest, 3 nœuds) |
 | Accusés par le maillage | Accusé v2 signé, relayé avec identifiant dérivé de la signature ; validé comme par Internet | ✅ testé en JVM |
 | Arrière-plan | Service de premier plan déclaré (`connectedDevice`) mais le maillage ne fonctionne qu'application ouverte | ⚠️ §4 |
@@ -31,17 +31,18 @@ Matériel minimal : 2 Android (dont le Pixel 9), idéalement 3 ; APK `0.3.0-beta
 
 Résultats à consigner dans `docs/tests/` : modèles, versions d'Android, distances, captures. Tant que P1–P4 ne sont pas réussis, le site et l'application gardent la mention « expérimental ».
 
-## 3. Identifiants tournants — étude et proposition (non implémentée)
+## 3. Identifiants tournants — implémenté le 27/10/2026 (non testé sur téléphone)
 
 **Problème.** Un observateur radio (simple téléphone) peut associer la clé publique permanente et le nom affiché à une présence physique, et suivre la personne. Bitchat a le même défaut (identifiant de pair non rotatif, voir `docs/audits/CONTRE-AUDIT-REA-BITCHAT.md`, B-P0-3).
 
-**Proposition V0.4 : balise chiffrée par le groupe.**
+**Implémenté (V0.3, `mesh/GroupSeal.kt`, `prototype/src/mesh/groupSeal.ts`) : trames chiffrées par le groupe.** Vecteurs communs produits par une implémentation Python indépendante (`tools/audit/group-seal-reference.py`, `docs/tests/v0.3/group-seal-vectors.json`).
 1. Clé de groupe : `kg = HKDF-SHA256(code du groupe, sel = "MESHORA-BLE-v1", info = jour UTC)` — change chaque jour ; le code de groupe (60 bits aléatoires) n'est connu que des membres invités.
 2. Toute trame MESHORA sur le Bluetooth (ANNOUNCE, ENVELOPE, ACK) est chiffrée AES-256-GCM avec `kg` ; l'identifiant de trame devient aléatoire par trame.
 3. Un étranger au groupe ne voit que des octets aléatoires de taille arrondie (rembourrage à 256 octets).
-4. Rotation de l'UUID de service : `UUID = tronque(HMAC(kg, "uuid"))` par jour, pour qu'un étranger ne puisse même pas compter les utilisateurs MESHORA.
+4. **Non retenu pour l'instant** : rotation de l'UUID de service par groupe. Elle empêcherait les téléphones d'autres groupes de relayer les trames. L'UUID fixe révèle seulement « un appareil MESHORA est proche » ; l'adresse radio (MAC) est aléatoire et changée par Android.
+5. Ce qui reste visible : la présence d'un appareil MESHORA, la puissance du signal, le TTL (une annonce part avec un TTL de 2), les horaires.
 
-Coût : un téléphone ne relaie que pour ses groupes (moins de portée « publique »). Option à décider : un mode « relais public » qui relaie aussi les trames inconnues sans les lire.
+Conséquence : un téléphone ne **découvre** et ne **lit** que les membres de son groupe, mais **relaie** les trames scellées de tous les groupes sans pouvoir les lire (testé : relais d'un autre groupe dans `MeshRouterTest`).
 
 ## 4. Arrière-plan (évolution)
 

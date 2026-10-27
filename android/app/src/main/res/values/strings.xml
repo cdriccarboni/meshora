@@ -94,7 +94,7 @@
     <string name="relay_url_invalid">Address refused: use wss://…</string>
 
     <string name="ble_title">Direct Bluetooth (experimental)</string>
-    <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Nearby devices can see your display name and public key.</string>
+    <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
     <string name="ble_links">Direct Bluetooth links: %1$d</string>
     <string name="ble_start">Turn on Bluetooth (experimental)</string>
     <string name="ble_stop">Stop Bluetooth</string>
