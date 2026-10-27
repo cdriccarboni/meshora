@@ -93,6 +93,8 @@
     <string name="new_group_confirm">You will leave the current group; its members will need a new invitation.</string>
     <string name="relay_url_invalid">Address refused: use wss://…</string>
 
+    <string name="gateway_title">Act as an Internet gateway (experimental)</string>
+    <string name="gateway_explain">When this phone has Internet, it carries over Bluetooth the messages of group members who have none. It cannot read them (encrypted for them). Uses data and battery.</string>
     <string name="ble_title">Direct Bluetooth (experimental)</string>
     <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
     <string name="ble_links">Direct Bluetooth links: %1$d</string>

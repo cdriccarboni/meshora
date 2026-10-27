@@ -175,6 +175,18 @@ fun TransportsScreen() {
                 Text(bleStatus, style = MaterialTheme.typography.labelSmall)
                 Text(stringResource(R.string.ble_links, bleLinks), style = MaterialTheme.typography.labelSmall)
                 Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.gateway_title), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.gateway_explain), style = MaterialTheme.typography.bodySmall, color = MeshoraTextSecondary)
+                    }
+                    Switch(checked = settings.gatewayEnabled, onCheckedChange = { on ->
+                        app.settings.setGatewayEnabled(on)
+                        tm.gatewayEnabled = on
+                        if (bleRunning) tm.announceOnMesh()
+                    })
+                }
+                Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = {
                         if (bleRunning) bleMesh.stop()

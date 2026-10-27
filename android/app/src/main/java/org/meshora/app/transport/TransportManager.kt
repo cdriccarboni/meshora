@@ -74,14 +74,14 @@ class TransportManager(
 
     val webSocketTransport = WebSocketTransport(
         scope = scope,
-        onEnvelopeReceived = { env -> handleIncomingEnvelope(env) },
-        onAckReceived = { ack -> handleIncomingAck(ack) },
+        onEnvelopeReceived = { env -> onRelayEnvelope(env) },
+        onAckReceived = { ack -> onRelayAck(ack) },
         onPeersUpdated = { peers ->
             relayPeers = peers
             publishPeers()
             flushOutbox(force = true)
         },
-        onAuthenticated = { flushOutbox(force = true) }
+        onAuthenticated = { flushOutbox(force = true); resendDelegations() }
     )
 
     /** Routeur du maillage radio (Bluetooth LE aujourd'hui), alimenté par BleMesh. */
@@ -118,9 +118,11 @@ class TransportManager(
 
     /** Annonce signée : clé publique, pseudonyme, horodatage (relayée sur 2 sauts). */
     @Serializable
-    data class MeshAnnounce(val publicKey: String, val alias: String, val timestamp: Long, val signature: String)
+    data class MeshAnnounce(val publicKey: String, val alias: String, val timestamp: Long, val signature: String, val gateway: Boolean = false)
 
-    private fun announcePayload(pub: String, al: String, ts: Long) = "MESHORA-ANNOUNCE|v1|$pub|$al|$ts"
+    /** « v1g » : l'annonce signée déclare une passerelle Internet (option activée ET relais authentifié). */
+    private fun announcePayload(pub: String, al: String, ts: Long, gateway: Boolean = false) =
+        "MESHORA-ANNOUNCE|${if (gateway) "v1g" else "v1"}|$pub|$al|$ts"
 
     /**
      * Code du groupe (salon) : sert de secret pour sceller les trames Bluetooth ([GroupSeal]).
@@ -139,10 +141,96 @@ class TransportManager(
 
     fun announceOnMesh() {
         val ts = clock()
-        val sig = CryptoEngine.signData(myPrivateKey, announcePayload(identity.publicKeyHex, alias, ts))
-        val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig)).toByteArray(StandardCharsets.UTF_8)
+        val gw = isGatewayActive()
+        val sig = CryptoEngine.signData(myPrivateKey, announcePayload(identity.publicKeyHex, alias, ts, gw))
+        val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig, gw)).toByteArray(StandardCharsets.UTF_8)
         broadcastSealed(MeshFrame.Type.ANNOUNCE, bytes, ANNOUNCE_TTL, idLabel = null)
+        if (!webSocketTransport.isConnected()) sendDelegations()
     }
+
+    // ------------------------------------------------------------------ passerelle Internet par les voisins (V0.4)
+
+    /** Option « servir de passerelle pour mon groupe » (désactivée par défaut). */
+    @Volatile var gatewayEnabled: Boolean = false
+    fun isGatewayActive() = gatewayEnabled && webSocketTransport.isConnected() && groupRoom != null
+
+    /** Côté passerelle : clés servies (délégations reçues) → expiration. */
+    private val served = ConcurrentHashMap<String, Long>()
+    private data class Delegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String)
+    private val lastDelegation = ConcurrentHashMap<String, Delegation>()
+    private val lastServeSent = ConcurrentHashMap<String, Long>()
+    /** Côté membre sans Internet : passerelles vues (annonces « v1g ») → dernière vue. */
+    private val gateways = ConcurrentHashMap<String, Long>()
+    /** Déduplication des éléments portés vers le relais. */
+    private val forwarded = ConcurrentHashMap<String, Long>()
+
+    @Serializable
+    data class MeshDelegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String)
+
+    private fun delegationPayload(room: String, pub: String, gw: String, ts: Long) = "MESHORA-DELEGATE|v1|$room|$pub|$gw|$ts"
+
+    fun isServing(key: String) = (served[key] ?: 0L) > clock()
+
+    /** Membre sans Internet : délègue sa réception aux passerelles du groupe vues récemment. */
+    private fun sendDelegations() {
+        val room = groupRoom ?: return
+        val now = clock()
+        gateways.entries.removeIf { now - it.value > MESH_PEER_TTL_MS }
+        for (gw in gateways.keys) {
+            val sig = CryptoEngine.signData(myPrivateKey, delegationPayload(room, identity.publicKeyHex, gw, now))
+            val bytes = json.encodeToString(MeshDelegation(identity.publicKeyHex, gw, alias, now, sig)).toByteArray(StandardCharsets.UTF_8)
+            broadcastSealed(MeshFrame.Type.DELEGATE, bytes, ANNOUNCE_TTL, idLabel = null)
+        }
+    }
+
+    private fun onDelegation(d: MeshDelegation) {
+        val room = groupRoom ?: return
+        if (d.gateway != identity.publicKeyHex || !isGatewayActive()) return
+        val now = clock()
+        if (kotlin.math.abs(now - d.timestamp) > DELEGATION_MAX_AGE_MS) return
+        if (CryptoEngine.normalizePublicKeyHex(d.publicKey) != d.publicKey) return
+        if (!CryptoEngine.verifySignature(d.publicKey, d.signature, delegationPayload(room, d.publicKey, d.gateway, d.timestamp))) return
+        served[d.publicKey] = now + SERVED_TTL_MS
+        lastDelegation[d.publicKey] = Delegation(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature)
+        if (now - (lastServeSent[d.publicKey] ?: 0L) >= SERVE_REFRESH_MS) {
+            lastServeSent[d.publicKey] = now
+            webSocketTransport.sendServe(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature)
+        }
+    }
+
+    /** Après une reconnexion au relais : représente les délégations encore fraîches. */
+    private fun resendDelegations() {
+        val now = clock()
+        lastDelegation.values.filter { now - it.timestamp <= DELEGATION_MAX_AGE_MS && isServing(it.publicKey) }.forEach {
+            lastServeSent[it.publicKey] = now
+            webSocketTransport.sendServe(it.publicKey, it.gateway, it.alias, it.timestamp, it.signature)
+        }
+    }
+
+    private fun firstTime(key: String): Boolean {
+        val now = clock()
+        forwarded.entries.removeIf { now - it.value > 10 * 60_000L }
+        return forwarded.putIfAbsent(key, now) == null
+    }
+
+    /** Relais → nous : pour nous, ou pour un voisin servi (renvoyé par Bluetooth, toujours chiffré pour lui). */
+    private fun onRelayEnvelope(env: EncryptedEnvelope) {
+        if (env.recipientPublicKeyHex == identity.publicKeyHex) return handleIncomingEnvelope(env)
+        if (isServing(env.recipientPublicKeyHex) && meshAvailable() && firstTime("re|" + env.signatureHex)) {
+            broadcastSealed(MeshFrame.Type.ENVELOPE, json.encodeToString(env).toByteArray(StandardCharsets.UTF_8), MeshFrame.MAX_TTL,
+                idLabel = "env|" + CryptoEngine.envelopeHash(env))
+        }
+    }
+
+    private fun onRelayAck(ack: SignedAck) {
+        if (ack.senderPublicKeyHex == identity.publicKeyHex) return handleIncomingAck(ack)
+        if (isServing(ack.senderPublicKeyHex) && meshAvailable() && firstTime("ra|" + ack.signatureHex)) {
+            val digest = CryptoEngine.bytesToHex(java.security.MessageDigest.getInstance("SHA-256").digest(ack.signatureHex.toByteArray(StandardCharsets.UTF_8)))
+            broadcastSealed(MeshFrame.Type.ACK, json.encodeToString(ack).toByteArray(StandardCharsets.UTF_8), MeshFrame.MAX_TTL, idLabel = "ack|$digest")
+        }
+    }
+
+    private fun meshKeys(): Set<String> = meshPeers.keys.toSet()
 
     private fun handleMeshMessage(outerType: MeshFrame.Type, sealedPayload: ByteArray) {
         // V0.3 : seules les trames scellées par NOTRE groupe sont lues ; les autres sont seulement relayées (par le routeur).
@@ -152,15 +240,26 @@ class TransportManager(
         val text = String(payload, StandardCharsets.UTF_8)
         try {
             when (type) {
-                MeshFrame.Type.ENVELOPE -> handleIncomingEnvelope(json.decodeFromString<EncryptedEnvelope>(text), via = "Bluetooth")
-                MeshFrame.Type.ACK -> handleIncomingAck(json.decodeFromString<SignedAck>(text))
+                MeshFrame.Type.ENVELOPE -> {
+                    val env = json.decodeFromString<EncryptedEnvelope>(text)
+                    if (env.recipientPublicKeyHex == identity.publicKeyHex) handleIncomingEnvelope(env, via = "Bluetooth")
+                    // Passerelle : destinataire hors du maillage → porté au relais (qui vérifie la signature de l'auteur).
+                    else if (isGatewayActive() && env.recipientPublicKeyHex !in meshKeys() && firstTime("fe|" + env.signatureHex)) webSocketTransport.sendForwardEnvelope(env)
+                }
+                MeshFrame.Type.ACK -> {
+                    val ack = json.decodeFromString<SignedAck>(text)
+                    if (ack.senderPublicKeyHex == identity.publicKeyHex) handleIncomingAck(ack)
+                    else if (isGatewayActive() && ack.senderPublicKeyHex !in meshKeys() && firstTime("fa|" + ack.signatureHex)) webSocketTransport.sendForwardAck(ack)
+                }
+                MeshFrame.Type.DELEGATE -> onDelegation(json.decodeFromString<MeshDelegation>(text))
                 MeshFrame.Type.ANNOUNCE -> {
                     val a = json.decodeFromString<MeshAnnounce>(text)
                     val now = clock()
                     if (a.publicKey == identity.publicKeyHex) return
                     if (kotlin.math.abs(now - a.timestamp) > ANNOUNCE_MAX_AGE_MS) return
                     if (CryptoEngine.normalizePublicKeyHex(a.publicKey) != a.publicKey) return
-                    if (!CryptoEngine.verifySignature(a.publicKey, a.signature, announcePayload(a.publicKey, a.alias, a.timestamp))) return
+                    if (!CryptoEngine.verifySignature(a.publicKey, a.signature, announcePayload(a.publicKey, a.alias, a.timestamp, a.gateway))) return
+                    if (a.gateway) gateways[a.publicKey] = now else gateways.remove(a.publicKey)
                     val fp = CryptoEngine.computeFingerprint(a.publicKey)
                     val isNew = !meshPeers.containsKey(a.publicKey)
                     meshPeers[a.publicKey] = Peer(a.publicKey, fp, "${a.alias.take(64)} · ${fp.take(9)}", now, "Bluetooth", true)
@@ -348,6 +447,9 @@ class TransportManager(
         const val ANNOUNCE_MS = 20_000L
         const val ANNOUNCE_TTL = 2
         const val ANNOUNCE_MAX_AGE_MS = 10 * 60_000L
+        const val DELEGATION_MAX_AGE_MS = 10 * 60_000L
+        const val SERVED_TTL_MS = 15 * 60_000L
+        const val SERVE_REFRESH_MS = 60_000L
         const val MESH_PEER_TTL_MS = 90_000L
 
         fun backoff(attempts: Int): Long =
