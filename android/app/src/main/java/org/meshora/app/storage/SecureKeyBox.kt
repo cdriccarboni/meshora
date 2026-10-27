@@ -37,6 +37,11 @@ object SecureKeyBox {
 
     fun isSealed(value: String) = value.startsWith(PREFIX)
 
+    /** Effacement d'urgence : détruit la clé d'emballage (la clé privée chiffrée devient irrécupérable). */
+    fun destroy() {
+        runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(KEY_ALIAS) }
+    }
+
     fun seal(plain: String): String {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, wrappingKey())
