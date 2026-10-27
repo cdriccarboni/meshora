@@ -26,8 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -71,6 +71,13 @@ jobs:
           for i in $(seq 1 120); do curl -fsS http://127.0.0.1:8788/health >/dev/null && break; sleep 1; done
           curl -fsS http://127.0.0.1:8788/health || { cat /tmp/wrangler.log; exit 1; }
           cd ../../prototype && RELAY=ws://127.0.0.1:8788 npx tsx ../tools/audit/relay-conformance.ts 2>&1 | tee ../rapport-relais-wrangler.log
+      - name: Résumé lisible par l'API (annotations)
+        if: always()
+        run: |
+          for f in rapport-*.log; do
+            [ -f "$f" ] || continue
+            grep -hE "RÉSULTAT|Total:|❌|FAIL" "$f" | head -20 | while IFS= read -r l; do echo "::notice title=$f::$l"; done
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -82,12 +89,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -103,6 +110,16 @@ jobs:
       - name: Lint Android
         working-directory: android
         run: ./gradlew --no-daemon -q lintDebug
+      - name: Résumé lisible par l'API (annotations)
+        if: always()
+        run: |
+          for f in android/app/build/test-results/testDebugUnitTest/*.xml; do
+            [ -f "$f" ] || continue
+            l=$(grep -o '<testsuite name="[^"]*" tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' "$f" | sed 's/<testsuite //')
+            echo "::notice title=Android::$l"
+          done
+          grep -hE "INTEROPÉRABILITÉ|ÉCHEC" rapport-android.log 2>/dev/null | while IFS= read -r l; do echo "::notice title=interop::$l"; done
+          grep -h -A3 "<failure" android/app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | head -30 | tr -d '\r' | while IFS= read -r l; do echo "::error title=échec Android::$l"; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
