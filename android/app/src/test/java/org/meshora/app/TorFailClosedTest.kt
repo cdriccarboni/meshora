@@ -42,4 +42,28 @@ class TorFailClosedTest {
         ws.disconnect()
         server.close()
     }
+
+    /** Passage en mode Tor alors qu'une connexion directe est ouverte : elle est coupée tout de suite. */
+    @Test
+    fun switchingToTorDropsDirectSocketImmediately() {
+        val server = ServerSocket(0)
+        val open = AtomicInteger(0)
+        thread(isDaemon = true) {
+            while (!server.isClosed) runCatching {
+                val s = server.accept(); open.incrementAndGet()
+                thread(isDaemon = true) { runCatching { s.getInputStream().read(ByteArray(4096)); while (s.getInputStream().read() >= 0) {} }; open.decrementAndGet() }
+            }
+        }
+        val ws = WebSocketTransport(CoroutineScope(SupervisorJob() + Dispatchers.Default), {}, {}, {})
+        ws.connect("ws://127.0.0.1:${server.localPort}", "g1234", CryptoEngine.generateIdentityKeyPair())
+        Thread.sleep(800)
+        assertEquals("connexion directe établie (témoin)", 1, open.get())
+        ws.requireProxy = true
+        ws.proxyProvider = { null }
+        ws.connect("ws://127.0.0.1:${server.localPort}", "g1234", CryptoEngine.generateIdentityKeyPair())
+        Thread.sleep(800)
+        assertEquals("connexion directe fermée aussitôt", 0, open.get())
+        ws.disconnect(); server.close()
+    }
 }
+
