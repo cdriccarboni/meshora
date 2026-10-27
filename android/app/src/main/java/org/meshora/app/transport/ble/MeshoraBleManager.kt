@@ -10,16 +10,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
 /**
- * Spécification Native Bluetooth LE MESHORA (NATIVE_MESH_SPEC.md)
- * Service GATT standardisé : 0xFE60
- * Caractéristique Enveloppes TX : 0xFE61
- * Caractéristique Accusés RX/ACK : 0xFE62
+ * Ancienne interface Bluetooth (V0.2), conservée pour l'état affiché ; le Bluetooth réel est dans [BleMesh].
+ * Correction A-P1-7 : plus aucun UUID 16 bits 0xFE60–0xFE62 (plage attribuée par le Bluetooth SIG à ses membres) ;
+ * les identifiants sont les UUID 128 bits aléatoires de [org.meshora.app.mesh.MeshIds].
  */
 class MeshoraBleManager(private val context: Context) {
     companion object {
-        val MESHORA_SERVICE_UUID: UUID = UUID.fromString("0000FE60-0000-1000-8000-00805F9B34FB")
-        val MESHORA_TX_CHAR_UUID: UUID = UUID.fromString("0000FE61-0000-1000-8000-00805F9B34FB")
-        val MESHORA_RX_CHAR_UUID: UUID = UUID.fromString("0000FE62-0000-1000-8000-00805F9B34FB")
+        val MESHORA_SERVICE_UUID: UUID = org.meshora.app.mesh.MeshIds.SERVICE
+        val MESHORA_TX_CHAR_UUID: UUID = org.meshora.app.mesh.MeshIds.CHAR_TX
+        val MESHORA_RX_CHAR_UUID: UUID = org.meshora.app.mesh.MeshIds.CHAR_RX
     }
 
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
@@ -44,7 +43,7 @@ class MeshoraBleManager(private val context: Context) {
 
     /**
      * Démarrage sécurisé du balayage de découverte BLE
-     * Ne déclare aucun pair avant détection réelle de la trame 0xFE60
+     * Ne déclare aucun pair avant détection réelle du service MESHORA
      */
     fun startScan() {
         if (!isBleSupported() || !isBluetoothEnabled()) {
