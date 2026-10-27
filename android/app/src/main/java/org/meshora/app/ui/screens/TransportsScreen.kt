@@ -191,7 +191,7 @@ fun TransportsScreen() {
                     onClick = {
                         if (bleRunning) bleMesh.stop()
                         else if (bleMesh.hasPermissions()) bleMesh.start()
-                        else permissionLauncher.launch(bleMesh.requiredPermissions())
+                        else permissionLauncher.launch(bleMesh.requestedPermissions())
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = if (bleRunning) MeshoraError else MeshoraSurfaceVariant),
                     modifier = Modifier.fillMaxWidth()
