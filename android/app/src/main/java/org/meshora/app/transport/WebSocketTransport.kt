@@ -221,7 +221,9 @@ class WebSocketTransport(
         wantConnected = false
         reconnectJob?.cancel()
         generation.incrementAndGet() // les événements de l'ancienne connexion seront ignorés
-        webSocket?.close(1000, "Normal closure")
+        // Mode Tor : la connexion précédente (éventuellement DIRECTE) est coupée immédiatement, sans attendre
+        // la poignée de main de fermeture (jusqu'à 60 s avec OkHttp) — aucune connexion directe ne subsiste.
+        if (requireProxy) webSocket?.cancel() else webSocket?.close(1000, "Normal closure")
         webSocket = null
         _nextRetryAt.value = 0L
         _problem.value = RelayProblem.NONE
