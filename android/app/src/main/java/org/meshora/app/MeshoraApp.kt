@@ -50,6 +50,7 @@ class MeshoraApp : Application() {
             alias = displayAlias()
         )
         transportManager.groupRoom = settings.current.room
+        transportManager.gatewayEnabled = settings.current.gatewayEnabled
         bleMesh = org.meshora.app.transport.ble.BleMesh(
             context = this,
             router = transportManager.meshRouter,

@@ -233,6 +233,32 @@ class WebSocketTransport(
         return ws.send(packet.toString())
     }
 
+    /** V0.4 passerelle : porte l'enveloppe d'un voisin sans Internet ; le relais vérifie la signature de l'auteur. */
+    fun sendForwardEnvelope(envelope: EncryptedEnvelope): Boolean {
+        val ws = webSocket ?: return false
+        if (!isConnected()) return false
+        return ws.send(buildJsonObject { put("type", "MESHORA_FORWARD"); put("envelope", json.encodeToJsonElement(envelope)) }.toString())
+    }
+
+    /** V0.4 passerelle : porte l'accusé signé d'un voisin sans Internet. */
+    fun sendForwardAck(ack: SignedAck): Boolean {
+        val ws = webSocket ?: return false
+        if (!isConnected()) return false
+        return ws.send(buildJsonObject { put("type", "MESHORA_FORWARD"); put("signedAck", json.encodeToJsonElement(ack)) }.toString())
+    }
+
+    /** V0.4 passerelle : présente au relais la délégation signée d'un voisin sans Internet. */
+    fun sendServe(publicKey: String, gateway: String, alias: String, timestamp: Long, signature: String): Boolean {
+        val ws = webSocket ?: return false
+        if (!isConnected()) return false
+        return ws.send(buildJsonObject {
+            put("type", "MESHORA_SERVE")
+            putJsonObject("delegation") {
+                put("publicKey", publicKey); put("gateway", gateway); put("alias", alias.take(64)); put("timestamp", timestamp); put("signature", signature)
+            }
+        }.toString())
+    }
+
     private fun handleIncomingJson(ws: WebSocket, text: String) {
         val me = identity ?: return
         val root = try {
