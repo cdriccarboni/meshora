@@ -44,6 +44,9 @@ class LiveRelayInteropTest {
         assertTrue(tm.connectWebSocket(relay, room))
         assertTrue("authentification et pair web visibles", waitUntil(15_000) { tm.webSocketTransport.isConnected() && repo.peersFlow.value.isNotEmpty() })
         val web = repo.peersFlow.value.first()
+        // V0.4 étape A (relais à jour seulement : MESHORA_INTEROP_V3=1) : la prékey du web est connue → envoi en v3.
+        val expectV3 = System.getenv("MESHORA_INTEROP_V3") == "1"
+        if (expectV3) assertTrue("prékey du web reçue et vérifiée", waitUntil(10_000) { tm.prekeys.peer(web.publicKeyHex) != null })
 
         // Android → web : chiffré, accusé signé par la clé du web
         val ping = "ping-" + System.nanoTime()
@@ -54,6 +57,7 @@ class LiveRelayInteropTest {
         assertTrue("réponse du web reçue", waitUntil(15_000) { repo.messagesFlow.value.any { it.content == "echo:$ping" } })
         val echo = repo.messagesFlow.value.first { it.content == "echo:$ping" }
         assertEquals(web.publicKeyHex, echo.senderPublicKeyHex)
+        if (expectV3) assertTrue("réponse du web reçue en enveloppe v3 (prékey Android)", tm.receivedV3.get() >= 1)
 
         // Outbox : message saisi hors connexion, renvoyé à la reconnexion
         tm.disconnectWebSocket()

@@ -107,6 +107,7 @@ jobs:
       - name: Tests unitaires Android + interopérabilité Android ↔ web via un relais local
         env:
           GRADLE_FLAGS: "--no-daemon"
+          MESHORA_INTEROP_V3: "1"   # le relais local est à jour : l'échange Android ↔ web doit passer en v3
         run: bash tools/audit/interop-android.sh 2>&1 | tee rapport-android.log
       - name: Lint Android
         working-directory: android
