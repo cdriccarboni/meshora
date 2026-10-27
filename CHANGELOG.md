@@ -11,6 +11,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : 
 - Page « Installer » : application Android d'essai 0.2.1-beta (lien vérifié : provenance, version, empreinte, certificat), version d'essai Bluetooth pour testeurs, application web, iPhone prévu.
 - Application web : liaison Bluetooth navigateur ↔ téléphone Android (Web Bluetooth, alpha).
 ### Sécurité
+- Bluetooth : trames scellées par la clé du groupe (AES-256-GCM, clé journalière HKDF) — plus de nom, de clé publique ni de type de message lisibles hors du groupe ; identifiants de trame non reliables (Android 0.3.0-beta2, web).
+- Web sur Android : invitation par bandeau « Ouvrir dans l'application » (geste réel) au lieu d'une redirection bloquée par Chrome.
 - Android : rejet des clés publiques hors de la courbe P-256 (le KeyFactory Java ne le vérifiait pas).
 - Bluetooth : avertissement explicite — les appareils proches voient le nom affiché et la clé publique.
 ### Modifié
