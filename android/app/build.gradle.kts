@@ -36,15 +36,18 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.3.0-beta2"
+        versionCode = 10
+        versionName = "0.4.0-dev1"
 
         // Relais de référence et adresse des invitations. Préproduction par défaut ;
         // la bascule en production (-Pmeshora.channel=production) exige l'accord du directeur artistique.
         val channel = (project.findProperty("meshora.channel") as String?) ?: "preprod"
         val relay = (project.findProperty("meshora.relayUrl") as String?)
-            ?: if (channel == "production") "wss://meshora-relay.acousmaticregietools.workers.dev"
-               else "wss://meshora-relay-preprod.acousmaticregietools.workers.dev"
+            ?: when (channel) {
+                "production" -> "wss://meshora-relay.acousmaticregietools.workers.dev"
+                "dev" -> "wss://meshora-relay-dev.acousmaticregietools.workers.dev"
+                else -> "wss://meshora-relay-preprod.acousmaticregietools.workers.dev"
+            }
         val inviteBase = (project.findProperty("meshora.inviteBase") as String?)
             ?: if (channel == "production") "https://meshora.pages.dev/app/" else "https://v0-3.meshora.pages.dev/app/"
         buildConfigField("String", "DEFAULT_RELAY_URL", "\"$relay\"")
