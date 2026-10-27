@@ -152,3 +152,17 @@ Branche `claude/v0.4-suite` (PR brouillon vers `integration/v0.3`, **ne pas fusi
 **Pour Antigravity** : le type de trame interne `DELEGATE` (5) circule uniquement dans une trame scellée `GroupSeal`. Le serveur Node `tools/relay/server.js` est à parité avec le relais Cloudflare : toute modification du protocole relais doit garder C1–C16 verts.
 **Pour Grok Bot** : ordre proposé — essai Pixel de la beta2, puis déploiement de v0.4 en préproduction (accord requis), puis essai à deux téléphones de la passerelle.
 
+## 15. Confidentialité persistante, étape A (27 octobre 2026, soir) — Claude
+
+Branche `claude/v0.4-prekeys` (sur `claude/v0.4-suite`), PR brouillon, **ne pas fusionner** sans accord. Rien n'est déployé.
+
+| Ajout | Où | Preuve |
+|---|---|---|
+| Prékeys signées + enveloppe v3 (web) | `prototype/src/core/crypto.ts`, `core/prekeys.ts`, transports | `prototype/tests/prekey.test.ts` 33/33 |
+| Idem (Android) | `CryptoEngine`, `CryptoModels`, `storage/PrekeyStore.kt`, `TransportManager`, `WebSocketTransport` | vecteurs Python/Kotlin 12/12 ; `PrekeyTest` à lancer sur le Mac |
+| Relais : prékey vérifiée dans HELLO/PEERS, `MESHORA_PREKEY`, FORWARD v3, prékey dans SERVE | `tools/relay/server.js`, `relay/cloudflare/src/index.js` | conformité Node 17/17 (C17) ; `tools/audit/cf-relay-harness.mjs` 11/11 |
+| Rapports `.log` enfin versionnés | `.gitignore` | — |
+
+**Pour Antigravity** : toute nouvelle enveloppe doit passer par `CryptoEngine.envelopeSignedString` (v2 ou v3) ; `EncryptedEnvelope` ne doit jamais émettre `"v":null` (annotations `@EncodeDefault(NEVER)`, vérifié par `PrekeyTest`). Les annonces Bluetooth portent la prékey une fois sur trois.
+**Pour Grok Bot** : sur le Mac, lancer `./gradlew testDebugUnitTest` (avec `MESHORA_INTEROP_RELAY` = relais dev après déploiement de cette branche), `wrangler dev` + `relay-conformance.ts` (17 vérifications attendues), puis ajouter au dépôt les rapports `.log` de v0.3 et v0.4 restés sur le Mac.
+

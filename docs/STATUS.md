@@ -5,6 +5,8 @@
 
 Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifiée · 🎭 Simulée dans le prototype (aucun réseau réel) · 🔧 Implémentée, non testée sur appareils · ✅ Testée sur appareils physiques · ❌ Écartée
 
+**Note (27/10, soir) : les rapports `.log` cités ci-dessous étaient exclus du dépôt par `.gitignore` ; ceux de v0.3 et de v0.4 produits sur le Mac doivent encore y être ajoutés.**
+
 **V0.4-dev — 27 octobre 2026 (branche `claude/v0.4-suite`, non intégrée) : effacement d'urgence vérifié sur émulateur et en navigateur réel ; passerelle Internet par voisins Bluetooth vérifiée contre un relais réel (JVM), jamais entre deux téléphones. Préproduction inchangée.**
 
 **V0.3 — mise à jour du 27 octobre 2026 : Android 0.3.0-beta2 vérifiée sur émulateur Android 16 (APK signé ↔ client web réel via le relais, 8/8) ; Bluetooth scellé par la clé du groupe ; relais résilient (redémarrage, absence 3 min, 4/4). Essai sur vrai téléphone toujours à faire.**
@@ -59,6 +61,7 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Android V0.4-dev | Effacement d'urgence (clé d'identité détruite, données effacées) | 🔧 | Émulateur Android 16 (APK signé 0.4.0-dev1) | Identité changée après effacement, discussions et contacts vides (`docs/tests/v0.4/android-effacement-urgence-emulateur.log`) ; **essai sur Pixel à faire** |
 | Web V0.4-dev | Effacement d'urgence | 🔧 | Chrome (Mac) contre `v0-4-dev.meshora.pages.dev` | 4/4 (`docs/tests/v0.4/web-effacement-urgence.log`) |
 | Android V0.4-dev | Passerelle Internet par voisins Bluetooth (désactivée par défaut) | 🔧 | JVM (liens Bluetooth simulés) + relais de développement réel | Messages et accusés dans les deux sens, la passerelle ne lit rien (`docs/tests/v0.4/android-tests-passerelle-dev.log`) ; **jamais testée entre deux téléphones** |
+| V0.4-dev | Confidentialité persistante, étape A (prékeys signées hebdomadaires, enveloppe v3, repli v2) | 🔧 | Node (web réel), relais Node, vrai code du relais Cloudflare hors wrangler, cryptographie Kotlin compilée (2.0.21) | Python = TypeScript = Kotlin (`docs/tests/v0.4/prekey-vectors.json`) ; web 33/33 ; relais Node 17/17 dont C17 ; Cloudflare 11/11 ; **tests Android complets et téléphones à faire** ; branche `claude/v0.4-prekeys` |
 | Relais V0.4-dev | Transmission vérifiée (`MESHORA_FORWARD`) et délégation (`MESHORA_SERVE`) | 🔧 | Node local, `wrangler dev`, `meshora-relay-dev` | 16/16 (`docs/tests/v0.4/relay-conformance-dev.log`) ; préproduction non mise à jour |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |

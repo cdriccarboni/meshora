@@ -176,30 +176,142 @@ object CryptoEngine {
         val timestamp = System.currentTimeMillis()
 
         // 4. Signature de l'enveloppe par la clé d'identité de l'expéditeur
-        val payloadToSign = "$messageId|$senderPublicKeyHex|$recipientPublicKeyHex|$ephemeralPublicKeyHex|$ivHex|$ciphertextHex|$timestamp"
-        val signatureHex = signData(senderPrivateKey, payloadToSign)
-
-        return EncryptedEnvelope(
+        val unsigned = EncryptedEnvelope(
             id = messageId,
             senderPublicKeyHex = senderPublicKeyHex,
             recipientPublicKeyHex = recipientPublicKeyHex,
             ephemeralPublicKeyHex = ephemeralPublicKeyHex,
             ivHex = ivHex,
             ciphertextHex = ciphertextHex,
-            signatureHex = signatureHex,
+            signatureHex = "",
             timestamp = timestamp
         )
+        return unsigned.copy(signatureHex = signData(senderPrivateKey, envelopeSignedString(unsigned)))
     }
 
+    /** Chaîne signée par l'expéditeur : v2 (§2) ou v3 (V0.4 étape A). Identique au web et aux relais. */
+    fun envelopeSignedString(e: EncryptedEnvelope): String =
+        if (e.v == 3) "ENV3|${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.prekeyId}|${e.ephemeralPublicKeyHex}|${e.saltHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}"
+        else "${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}"
+
+    // --- V0.4 étape A : prékeys signées, HKDF-SHA256, enveloppe v3 ---
+
+    /** Une prékey annoncée n'est acceptée que si son échéance est dans cet intervalle. */
+    const val PREKEY_MAX_LIFETIME_MS = 30L * 24 * 3600 * 1000
+
+    fun prekeyId(prekeyPublicKeyHex: String): String =
+        bytesToHex(MessageDigest.getInstance("SHA-256").digest(hexToBytes(prekeyPublicKeyHex))).take(16)
+
+    fun prekeySignedString(identityPublicKeyHex: String, publicKeyHex: String, id: String, expiresAt: Long) =
+        "PREKEY|v1|$identityPublicKeyHex|$publicKeyHex|$id|$expiresAt"
+
+    fun envelopeHkdfInfo(senderHex: String, recipientHex: String, prekeyId: String) = "MESHORA-ENV|v3|$senderHex|$recipientHex|$prekeyId"
+
+    /** Nouvelle prékey ECDH P-256 signée par l'identité. @return (prékey publique signée, clé privée PKCS#8 hex). */
+    fun generatePrekey(identityPrivateKey: PrivateKey, identityPublicKeyHex: String, expiresAt: Long): Pair<SignedPrekey, String> {
+        val kpg = KeyPairGenerator.getInstance(EC_ALGO)
+        kpg.initialize(ECGenParameterSpec(CURVE_NAME), SecureRandom())
+        val kp = kpg.generateKeyPair()
+        val pub = bytesToHex(kp.public.encoded)
+        val id = prekeyId(pub)
+        val sig = signData(identityPrivateKey, prekeySignedString(identityPublicKeyHex, pub, id, expiresAt))
+        return SignedPrekey(pub, id, expiresAt, sig) to bytesToHex(kp.private.encoded)
+    }
+
+    /** Vérifie une prékey annoncée pour une identité (forme, empreinte, point P-256 valide, signature, échéance). */
+    fun verifyPrekey(identityPublicKeyHex: String, p: SignedPrekey?, now: Long = System.currentTimeMillis()): Boolean {
+        if (p == null) return false
+        if (!Regex("^[0-9a-f]{2,400}$").matches(p.publicKeyHex) || p.publicKeyHex.length % 2 != 0) return false
+        if (!Regex("^[0-9a-f]{16}$").matches(p.id) || !Regex("^[0-9a-fA-F]{128}$").matches(p.signatureHex)) return false
+        if (p.expiresAt <= now || p.expiresAt > now + PREKEY_MAX_LIFETIME_MS || p.publicKeyHex == identityPublicKeyHex) return false
+        return try {
+            if (prekeyId(p.publicKeyHex) != p.id) return false
+            importPublicKey(p.publicKeyHex) // point valide de P-256
+            verifySignature(identityPublicKeyHex, p.signatureHex, prekeySignedString(identityPublicKeyHex, p.publicKeyHex, p.id, p.expiresAt))
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /** HKDF-SHA256 (RFC 5869), sortie de [length] ≤ 32 octets. */
+    fun hkdfSha256(ikm: ByteArray, salt: ByteArray, info: ByteArray, length: Int = 32): ByteArray {
+        require(length in 1..32)
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(if (salt.isEmpty()) ByteArray(32) else salt, "HmacSHA256"))
+        val prk = mac.doFinal(ikm)
+        mac.init(SecretKeySpec(prk, "HmacSHA256"))
+        mac.update(info)
+        mac.update(1.toByte())
+        return mac.doFinal().copyOf(length)
+    }
+
+    /** Clé de message v3 : HKDF-SHA256(ECDH(privée, publique), sel, info). */
+    fun v3MessageKey(privateKey: PrivateKey, publicKeyHex: String, salt: ByteArray, info: String): ByteArray {
+        val ka = KeyAgreement.getInstance("ECDH")
+        ka.init(privateKey)
+        ka.doPhase(importPublicKey(publicKeyHex), true)
+        return hkdfSha256(ka.generateSecret(), salt, info.toByteArray(StandardCharsets.UTF_8))
+    }
+
+    /** Enveloppe v3. L'appelant DOIT avoir vérifié la prékey ([verifyPrekey]) pour ce destinataire. */
+    fun encryptEnvelopeV3(
+        messageId: String,
+        senderPrivateKey: PrivateKey,
+        senderPublicKeyHex: String,
+        recipientPublicKeyHex: String,
+        prekey: SignedPrekey,
+        plaintext: String,
+        timestamp: Long = System.currentTimeMillis()
+    ): EncryptedEnvelope {
+        val kpg = KeyPairGenerator.getInstance(EC_ALGO)
+        kpg.initialize(ECGenParameterSpec(CURVE_NAME), SecureRandom())
+        val eph = kpg.generateKeyPair()
+        val rnd = SecureRandom()
+        val salt = ByteArray(32).also { rnd.nextBytes(it) }
+        val iv = ByteArray(IV_LENGTH_BYTES).also { rnd.nextBytes(it) }
+        val key = v3MessageKey(eph.private, prekey.publicKeyHex, salt, envelopeHkdfInfo(senderPublicKeyHex, recipientPublicKeyHex, prekey.id))
+        val cipher = Cipher.getInstance(AES_GCM_ALGO)
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_LENGTH_BITS, iv))
+        val unsigned = EncryptedEnvelope(
+            id = messageId,
+            senderPublicKeyHex = senderPublicKeyHex,
+            recipientPublicKeyHex = recipientPublicKeyHex,
+            ephemeralPublicKeyHex = bytesToHex(eph.public.encoded),
+            ivHex = bytesToHex(iv),
+            ciphertextHex = bytesToHex(cipher.doFinal(plaintext.toByteArray(StandardCharsets.UTF_8))),
+            signatureHex = "",
+            timestamp = timestamp,
+            v = 3,
+            prekeyId = prekey.id,
+            saltHex = bytesToHex(salt)
+        )
+        return unsigned.copy(signatureHex = signData(senderPrivateKey, envelopeSignedString(unsigned)))
+    }
+
+    /**
+     * Déchiffre une enveloppe v2 ou v3.
+     * @param prekeyLookup v3 : clé privée de la prékey désignée, ou null si elle a été effacée (message alors illisible).
+     */
     fun decryptEnvelope(
         envelope: EncryptedEnvelope,
-        recipientPrivateKey: PrivateKey
+        recipientPrivateKey: PrivateKey,
+        prekeyLookup: (String) -> PrivateKey? = { null }
     ): String {
+        if (envelope.v != null && envelope.v != 3) throw SecurityException("Version d'enveloppe inconnue.")
         // 1. Vérification de la signature de l'expéditeur
-        val payloadToVerify = "${envelope.id}|${envelope.senderPublicKeyHex}|${envelope.recipientPublicKeyHex}|${envelope.ephemeralPublicKeyHex}|${envelope.ivHex}|${envelope.ciphertextHex}|${envelope.timestamp}"
-        val verified = verifySignature(envelope.senderPublicKeyHex, envelope.signatureHex, payloadToVerify)
+        val verified = verifySignature(envelope.senderPublicKeyHex, envelope.signatureHex, envelopeSignedString(envelope))
         if (!verified) {
             throw SecurityException("ÉCHEC DE SÉCURITÉ : Signature de l'expéditeur invalide ou message altéré sur le fil.")
+        }
+
+        if (envelope.v == 3) {
+            val pid = envelope.prekeyId ?: throw SecurityException("Enveloppe v3 mal formée.")
+            val salt = envelope.saltHex?.takeIf { Regex("^[0-9a-fA-F]{64}$").matches(it) } ?: throw SecurityException("Enveloppe v3 mal formée.")
+            val prekeyPrivate = prekeyLookup(pid) ?: throw SecurityException("Prékey inconnue ou effacée : message illisible (confidentialité persistante).")
+            val key = v3MessageKey(prekeyPrivate, envelope.ephemeralPublicKeyHex, hexToBytes(salt), envelopeHkdfInfo(envelope.senderPublicKeyHex, envelope.recipientPublicKeyHex, pid))
+            val cipher = Cipher.getInstance(AES_GCM_ALGO)
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(TAG_LENGTH_BITS, hexToBytes(envelope.ivHex)))
+            return String(cipher.doFinal(hexToBytes(envelope.ciphertextHex)), StandardCharsets.UTF_8)
         }
 
         // 2. Dérivation du secret partagé ECDH avec la clé publique éphémère de l'enveloppe

@@ -10,6 +10,8 @@ import org.meshora.app.crypto.CryptoEngine
 import org.meshora.app.crypto.EncryptedEnvelope
 import org.meshora.app.crypto.KeyIdentity
 import org.meshora.app.crypto.SignedAck
+import org.meshora.app.crypto.SignedPrekey
+import org.meshora.app.storage.PrekeyStore
 import org.meshora.app.model.Message
 import org.meshora.app.model.MessageStatus
 import org.meshora.app.model.Peer
@@ -40,7 +42,9 @@ class TransportManager(
     val outboxRepository: OutboxRepository,
     val bleManager: MeshoraBleManager? = null,
     alias: String = "Android",
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    /** V0.4 étape A : prékeys de réception (en mémoire par défaut ; magasin chiffré dans l'application). */
+    val prekeys: PrekeyStore = PrekeyStore(clock = clock)
 ) {
     /** Nom affiché aux autres (modifiable dans Réseau ; pris en compte à la prochaine connexion). */
     @Volatile var alias: String = alias
@@ -81,8 +85,22 @@ class TransportManager(
             publishPeers()
             flushOutbox(force = true)
         },
-        onAuthenticated = { flushOutbox(force = true); resendDelegations() }
+        onAuthenticated = { flushOutbox(force = true); resendDelegations() },
+        prekeyProvider = { myPrekey().also { announcedPrekeyId = it.id } },
+        onPeerPrekey = { pub, p -> prekeys.rememberPeer(pub, p) }
     )
+
+    // ------------------------------------------------------------------ prékeys (V0.4 étape A)
+
+    @Volatile private var announcedPrekeyId: String? = null
+    private fun myPrekey(): SignedPrekey = prekeys.current(myPrivateKey, identity.publicKeyHex)
+
+    /** Rotation hebdomadaire pendant une longue connexion : annonce la nouvelle prékey sans se reconnecter. */
+    internal fun refreshPrekey() {
+        if (!webSocketTransport.isConnected()) return
+        val p = runCatching { myPrekey() }.getOrNull() ?: return
+        if (p.id != announcedPrekeyId && webSocketTransport.sendPrekey(p)) announcedPrekeyId = p.id
+    }
 
     /** Routeur du maillage radio (Bluetooth LE aujourd'hui), alimenté par BleMesh. */
     val meshRouter = MeshRouter(onMessage = { type, payload, _, _ -> handleMeshMessage(type, payload) })
@@ -107,6 +125,13 @@ class TransportManager(
         }
         scope.launch(Dispatchers.Default) {
             while (isActive) {
+                delay(PREKEY_CHECK_MS)
+                refreshPrekey()
+                prekeys.purge()
+            }
+        }
+        scope.launch(Dispatchers.Default) {
+            while (isActive) {
                 delay(ANNOUNCE_MS)
                 if (meshAvailable()) announceOnMesh()
                 publishPeers()
@@ -118,7 +143,12 @@ class TransportManager(
 
     /** Annonce signée : clé publique, pseudonyme, horodatage (relayée sur 2 sauts). */
     @Serializable
-    data class MeshAnnounce(val publicKey: String, val alias: String, val timestamp: Long, val signature: String, val gateway: Boolean = false)
+    data class MeshAnnounce(
+        val publicKey: String, val alias: String, val timestamp: Long, val signature: String, val gateway: Boolean = false,
+        /** V0.4 étape A : prékey signée par l'identité (vérifiée séparément), jointe une annonce sur [PREKEY_ANNOUNCE_EVERY]. */
+        val prekey: SignedPrekey? = null
+    )
+    private var announceCount = 0
 
     /** « v1g » : l'annonce signée déclare une passerelle Internet (option activée ET relais authentifié). */
     private fun announcePayload(pub: String, al: String, ts: Long, gateway: Boolean = false) =
@@ -143,7 +173,9 @@ class TransportManager(
         val ts = clock()
         val gw = isGatewayActive()
         val sig = CryptoEngine.signData(myPrivateKey, announcePayload(identity.publicKeyHex, alias, ts, gw))
-        val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig, gw)).toByteArray(StandardCharsets.UTF_8)
+        val withPrekey = (announceCount++ % PREKEY_ANNOUNCE_EVERY) == 0
+        val pk = if (withPrekey) runCatching { myPrekey() }.getOrNull() else null
+        val bytes = json.encodeToString(MeshAnnounce(identity.publicKeyHex, alias, ts, sig, gw, pk)).toByteArray(StandardCharsets.UTF_8)
         broadcastSealed(MeshFrame.Type.ANNOUNCE, bytes, ANNOUNCE_TTL, idLabel = null)
         if (!webSocketTransport.isConnected()) sendDelegations()
     }
@@ -156,7 +188,7 @@ class TransportManager(
 
     /** Côté passerelle : clés servies (délégations reçues) → expiration. */
     private val served = ConcurrentHashMap<String, Long>()
-    private data class Delegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String)
+    private data class Delegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String, val prekey: SignedPrekey? = null)
     private val lastDelegation = ConcurrentHashMap<String, Delegation>()
     private val lastServeSent = ConcurrentHashMap<String, Long>()
     /** Côté membre sans Internet : passerelles vues (annonces « v1g ») → dernière vue. */
@@ -165,7 +197,7 @@ class TransportManager(
     private val forwarded = ConcurrentHashMap<String, Long>()
 
     @Serializable
-    data class MeshDelegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String)
+    data class MeshDelegation(val publicKey: String, val gateway: String, val alias: String, val timestamp: Long, val signature: String, val prekey: SignedPrekey? = null)
 
     private fun delegationPayload(room: String, pub: String, gw: String, ts: Long) = "MESHORA-DELEGATE|v1|$room|$pub|$gw|$ts"
 
@@ -178,7 +210,8 @@ class TransportManager(
         gateways.entries.removeIf { now - it.value > MESH_PEER_TTL_MS }
         for (gw in gateways.keys) {
             val sig = CryptoEngine.signData(myPrivateKey, delegationPayload(room, identity.publicKeyHex, gw, now))
-            val bytes = json.encodeToString(MeshDelegation(identity.publicKeyHex, gw, alias, now, sig)).toByteArray(StandardCharsets.UTF_8)
+            val pk = runCatching { myPrekey() }.getOrNull()
+            val bytes = json.encodeToString(MeshDelegation(identity.publicKeyHex, gw, alias, now, sig, pk)).toByteArray(StandardCharsets.UTF_8)
             broadcastSealed(MeshFrame.Type.DELEGATE, bytes, ANNOUNCE_TTL, idLabel = null)
         }
     }
@@ -191,10 +224,11 @@ class TransportManager(
         if (CryptoEngine.normalizePublicKeyHex(d.publicKey) != d.publicKey) return
         if (!CryptoEngine.verifySignature(d.publicKey, d.signature, delegationPayload(room, d.publicKey, d.gateway, d.timestamp))) return
         served[d.publicKey] = now + SERVED_TTL_MS
-        lastDelegation[d.publicKey] = Delegation(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature)
+        val pk = d.prekey?.takeIf { CryptoEngine.verifyPrekey(d.publicKey, it, now) }
+        lastDelegation[d.publicKey] = Delegation(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature, pk)
         if (now - (lastServeSent[d.publicKey] ?: 0L) >= SERVE_REFRESH_MS) {
             lastServeSent[d.publicKey] = now
-            webSocketTransport.sendServe(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature)
+            webSocketTransport.sendServe(d.publicKey, d.gateway, d.alias, d.timestamp, d.signature, pk)
         }
     }
 
@@ -203,7 +237,7 @@ class TransportManager(
         val now = clock()
         lastDelegation.values.filter { now - it.timestamp <= DELEGATION_MAX_AGE_MS && isServing(it.publicKey) }.forEach {
             lastServeSent[it.publicKey] = now
-            webSocketTransport.sendServe(it.publicKey, it.gateway, it.alias, it.timestamp, it.signature)
+            webSocketTransport.sendServe(it.publicKey, it.gateway, it.alias, it.timestamp, it.signature, it.prekey)
         }
     }
 
@@ -260,6 +294,7 @@ class TransportManager(
                     if (CryptoEngine.normalizePublicKeyHex(a.publicKey) != a.publicKey) return
                     if (!CryptoEngine.verifySignature(a.publicKey, a.signature, announcePayload(a.publicKey, a.alias, a.timestamp, a.gateway))) return
                     if (a.gateway) gateways[a.publicKey] = now else gateways.remove(a.publicKey)
+                    if (a.prekey != null) prekeys.rememberPeer(a.publicKey, a.prekey)
                     val fp = CryptoEngine.computeFingerprint(a.publicKey)
                     val isNew = !meshPeers.containsKey(a.publicKey)
                     meshPeers[a.publicKey] = Peer(a.publicKey, fp, "${a.alias.take(64)} · ${fp.take(9)}", now, "Bluetooth", true)
@@ -319,7 +354,17 @@ class TransportManager(
 
     /** Chiffre un message de l'Outbox et mémorise l'empreinte de l'enveloppe (validation des accusés). */
     internal fun prepareEnvelope(msg: Message): EncryptedEnvelope {
-        val envelope = CryptoEngine.encryptEnvelope(
+        // V0.4 étape A : prékey vérifiée connue → v3 (confidentialité persistante) ; sinon v2.
+        val pk = prekeys.peer(msg.recipientPublicKeyHex)
+        val envelope = if (pk != null) CryptoEngine.encryptEnvelopeV3(
+            messageId = msg.id,
+            senderPrivateKey = myPrivateKey,
+            senderPublicKeyHex = identity.publicKeyHex,
+            recipientPublicKeyHex = msg.recipientPublicKeyHex,
+            prekey = pk,
+            plaintext = msg.content,
+            timestamp = clock()
+        ) else CryptoEngine.encryptEnvelope(
             messageId = msg.id,
             senderPrivateKey = myPrivateKey,
             senderPublicKeyHex = identity.publicKeyHex,
@@ -359,7 +404,7 @@ class TransportManager(
         if (envelope.recipientPublicKeyHex != identity.publicKeyHex) return
 
         val plaintext = try {
-            CryptoEngine.decryptEnvelope(envelope, myPrivateKey) // vérifie la signature de l'expéditeur
+            CryptoEngine.decryptEnvelope(envelope, myPrivateKey) { id -> prekeys.privateFor(id) } // vérifie la signature de l'expéditeur
         } catch (e: Exception) {
             return
         }
@@ -451,6 +496,8 @@ class TransportManager(
         const val SERVED_TTL_MS = 15 * 60_000L
         const val SERVE_REFRESH_MS = 60_000L
         const val MESH_PEER_TTL_MS = 90_000L
+        const val PREKEY_CHECK_MS = 3_600_000L
+        const val PREKEY_ANNOUNCE_EVERY = 3
 
         fun backoff(attempts: Int): Long =
             minOf(RETRY_MS shl minOf(attempts, 10), MAX_BACKOFF_MS)

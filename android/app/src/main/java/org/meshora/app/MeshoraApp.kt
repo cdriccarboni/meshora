@@ -47,7 +47,8 @@ class MeshoraApp : Application() {
             identity = identityStorage.getOrCreateIdentity(),
             outboxRepository = outboxRepository,
             bleManager = bleManager,
-            alias = displayAlias()
+            alias = displayAlias(),
+            prekeys = org.meshora.app.storage.PrekeyStore.forApp(this)
         )
         transportManager.groupRoom = settings.current.room
         transportManager.gatewayEnabled = settings.current.gatewayEnabled
