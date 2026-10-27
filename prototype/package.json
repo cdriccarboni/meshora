@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/run-cli.ts && tsx tests/url-hygiene.test.ts && tsx tests/invitation.test.ts && tsx tests/group-seal.test.ts && tsx tests/real-two-clients.test.ts",
+    "test": "tsx tests/run-cli.ts && tsx tests/url-hygiene.test.ts && tsx tests/invitation.test.ts && tsx tests/group-seal.test.ts && tsx tests/prekey.test.ts && tsx tests/real-two-clients.test.ts",
     "test:url": "tsx tests/url-hygiene.test.ts",
     "test:unit": "tsx tests/run-cli.ts",
     "test:real": "tsx tests/real-two-clients.test.ts",

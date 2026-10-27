@@ -312,6 +312,59 @@ async function main() {
     [B, G, X].forEach((c) => c.r.close());
   }
 
+  // C17 — V0.4 étape A : prékeys signées annoncées par le relais, rotation, enveloppe v3 (passerelle) et vrai code web en v3
+  {
+    const rm = room('c17');
+    const now = Date.now();
+    const B = await MeshoraCrypto.generateIdentityKeyPair();
+    const Bp = await MeshoraCrypto.generatePrekey(B.privateKey, B.publicKeyHex, now + 8 * 864e5);
+    const Br = await raw(rm);
+    { const n = await Br.nonce(); Br.send({ type: 'MESHORA_HELLO', senderId: await idOf(B.publicKeyHex), senderAlias: 'Bob', publicKey: B.publicKeyHex, room: rm, prekey: Bp.prekey,
+        helloSignature: await MeshoraCrypto.signData(B.privateKey, `MESHORA-HELLO|v1|${rm}|${n}|${B.publicKeyHex}`) }); }
+    // M annonce une prékey signée par la clé de B (vol) : doit être ignorée ; E annonce une prékey échue : ignorée.
+    const M = await MeshoraCrypto.generateIdentityKeyPair();
+    const Mfake = { ...(await MeshoraCrypto.generatePrekey(B.privateKey, B.publicKeyHex, now + 8 * 864e5)).prekey };
+    const Mr = await raw(rm);
+    { const n = await Mr.nonce(); Mr.send({ type: 'MESHORA_HELLO', senderId: await idOf(M.publicKeyHex), senderAlias: 'M', publicKey: M.publicKeyHex, room: rm, prekey: Mfake,
+        helloSignature: await MeshoraCrypto.signData(M.privateKey, `MESHORA-HELLO|v1|${rm}|${n}|${M.publicKeyHex}`) }); }
+    const O = await authed(rm, 'Observateur');
+    const lastPeers = () => (O.r.inbox.filter((p) => p.type === 'MESHORA_PEERS').at(-1)?.peers || []) as any[];
+    await waitFor(() => lastPeers().length >= 3);
+    const pB = lastPeers().find((p) => p.publicKey === B.publicKeyHex); const pM = lastPeers().find((p) => p.publicKey === M.publicKeyHex);
+    const announced = !!pB?.prekey && pB.prekey.id === Bp.prekey.id && (await MeshoraCrypto.verifyPrekey(B.publicKeyHex, pB.prekey));
+    const forgedDropped = !!pM && !pM.prekey;
+    // Rotation sans reconnexion
+    const Bp2 = await MeshoraCrypto.generatePrekey(B.privateKey, B.publicKeyHex, now + 9 * 864e5);
+    Br.send({ type: 'MESHORA_PREKEY', prekey: Bp2.prekey });
+    const rotated = await waitFor(() => lastPeers().find((p) => p.publicKey === B.publicKeyHex)?.prekey?.id === Bp2.prekey.id);
+    Br.send({ type: 'MESHORA_PREKEY', prekey: Bp.prekey }); await sleep(500);
+    const noRollback = lastPeers().find((p) => p.publicKey === B.publicKeyHex)?.prekey?.id === Bp2.prekey.id;
+    // Passerelle : enveloppe v3 d'un tiers, valide puis altérée
+    const A = await MeshoraCrypto.generateIdentityKeyPair();
+    const e = await MeshoraCrypto.encryptEnvelopeV3({ messageId: 'v3fwd', senderPrivateKey: A.privateKey, senderPublicKeyHex: A.publicKeyHex, recipientPublicKeyHex: B.publicKeyHex, prekey: Bp2.prekey, plaintext: 'C17' });
+    O.r.send({ type: 'MESHORA_FORWARD', envelope: { ...e, id: 'v3bad', prekeyId: '0'.repeat(16) } });
+    O.r.send({ type: 'MESHORA_FORWARD', envelope: e });
+    const fwd = await waitFor(() => Br.inbox.some((p) => p.envelope?.id === 'v3fwd'));
+    const got = Br.inbox.find((p) => p.envelope?.id === 'v3fwd')?.envelope;
+    let readable = false;
+    try { readable = (await MeshoraCrypto.decryptEnvelope({ envelope: got, recipientPrivateKeyPkcs8Hex: B.privateKeyPkcs8Hex, prekeyLookup: (id) => (id === Bp2.prekey.id ? Bp2.privateKeyPkcs8Hex : null) })).plaintext === 'C17'; } catch {}
+    const badFwd = Br.inbox.some((p) => p.envelope?.id === 'v3bad');
+    // Vrai code web : il choisit seul l'enveloppe v3 pour un pair qui annonce une prékey, et accepte d'être lu ainsi
+    const W = await appClient(rm); await sleep(2500);
+    const secret = 'C17-' + crypto.randomBytes(3).toString('hex');
+    await W.call({ cmd: 'send', text: secret });
+    await waitFor(() => Br.inbox.some((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.senderPublicKeyHex !== A.publicKeyHex), 6000);
+    const wEnv = Br.inbox.filter((p) => p.type === 'MESHORA_ENVELOPE' && p.envelope?.senderPublicKeyHex !== A.publicKeyHex).at(-1)?.envelope;
+    let webV3 = false;
+    try { webV3 = wEnv?.v === 3 && wEnv.prekeyId === Bp2.prekey.id && (await MeshoraCrypto.decryptEnvelope({ envelope: wEnv, recipientPrivateKeyPkcs8Hex: B.privateKeyPkcs8Hex, prekeyLookup: (id) => (id === Bp2.prekey.id ? Bp2.privateKeyPkcs8Hex : null) })).plaintext === secret; } catch {}
+    const wPeer = lastPeers().find((p) => p.publicKey && p.publicKey !== B.publicKeyHex && p.publicKey !== M.publicKeyHex && p.publicKey !== O.k.publicKeyHex);
+    const webAnnounces = !!wPeer?.prekey && (await MeshoraCrypto.verifyPrekey(wPeer.publicKey, wPeer.prekey));
+    record('C17', 'Prékeys (V0.4 étape A) : prékey signée redistribuée, prékey d\'une autre identité ignorée, rotation sans retour arrière, enveloppe v3 vérifiée en passerelle, vrai code web en v3',
+      announced && forgedDropped && rotated && noRollback && fwd && readable && !badFwd && webV3 && webAnnounces,
+      `annoncée=${announced} ; usurpée ignorée=${forgedDropped} ; rotation=${rotated} ; pas de retour=${noRollback} ; v3 transmise=${fwd} lisible=${readable} ; altérée refusée=${!badFwd} ; web→v3=${webV3} ; web annonce sa prékey=${webAnnounces}`);
+    W.proc.kill(); [Br, Mr, O.r].forEach((c) => c.close()); await sleep(300);
+  }
+
   // C11 — bout en bout avec le VRAI code web : réception, accusé signé, réception différée, préemption d'identifiant
   {
     const rm = room('c11');

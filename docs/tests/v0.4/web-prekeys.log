@@ -1,0 +1,35 @@
+✅ chaîne signée de la prékey = référence
+✅ identifiant de prékey = référence
+✅ prékey signée par Python acceptée
+✅ prékey refusée pour une autre identité
+✅ prékey échue refusée
+✅ échéance modifiée → signature invalide
+✅ info HKDF = référence
+✅ clé de message (destinataire) = référence Python
+✅ clé de message (expéditeur) = référence Python
+✅ chaîne signée de l'enveloppe v3 = référence
+✅ enveloppe v3 produite par Python déchiffrée
+✅ sans la prékey : illisible, même avec la clé d'identité
+✅ champ « prekeyId » altéré → refusé
+✅ champ « saltHex » altéré → refusé
+✅ champ « timestamp » altéré → refusé
+✅ champ « v » altéré → refusé
+✅ prékey annoncée pour 8 jours
+✅ même prékey tant qu'elle a moins de 7 jours
+✅ Alice mémorise la prékey vérifiée de Bob
+✅ prékey de Bob refusée si présentée pour Alice
+✅ Alice envoie en v3 (prékey connue)
+✅ Bob lit le message v3
+✅ accusé v2 inchangé sur une enveloppe v3
+✅ un ancien client (v2) reste lisible
+✅ un tiers ne lit pas le v3
+✅ nouvelle prékey après 7 jours
+✅ message capté en semaine 1 encore lisible pendant le délai de grâce
+✅ Alice passe à la nouvelle prékey
+✅ pas de retour à une prékey plus ancienne
+✅ prékey 1 effacée (échéance + 7 jours)
+✅ CONFIDENTIALITÉ PERSISTANTE : le message de la semaine 1 capté est désormais illisible, même avec le téléphone de Bob
+✅ prékey échue ignorée par Alice → repli v2 tant que Bob n'en annonce pas de nouvelle
+✅ repli v2 fonctionnel
+
+RÉSULTAT : toutes les vérifications réussies
