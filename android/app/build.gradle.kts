@@ -36,8 +36,11 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.3.0-beta2"
+        versionCode = 9
+        versionName = "0.3.0-beta2-tor2"
+
+        // Bibliothèques natives (Tor) : téléphones ARM 64/32 bits et émulateur x86_64
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
 
         // Relais de référence et adresse des invitations. Préproduction par défaut ;
         // la bascule en production (-Pmeshora.channel=production) exige l'accord du directeur artistique.
@@ -124,6 +127,12 @@ dependencies {
 
     // QR code des invitations (génération seulement, Apache-2.0)
     implementation(libs.zxing.core)
+
+    // Tor intégré (Guardian Project, BSD) — mode Tor expérimental, désactivé par défaut
+    // tor-android est en Java pur (vérifié : aucune référence à kotlin/ dans ses classes) : on exclut
+    // le kotlin-stdlib 2.2 qu'il déclare, illisible par notre compilateur Kotlin 2.0.
+    implementation(libs.tor.android) { exclude(group = "org.jetbrains.kotlin") }
+    implementation(libs.jtorctl)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)

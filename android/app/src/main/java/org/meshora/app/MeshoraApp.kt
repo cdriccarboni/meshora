@@ -32,6 +32,8 @@ class MeshoraApp : Application() {
         private set
     lateinit var contacts: ContactStore
         private set
+    lateinit var tor: org.meshora.app.transport.TorManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -56,6 +58,11 @@ class MeshoraApp : Application() {
             onLinksChanged = { transportManager.onMeshLinksChanged() }
         )
 
+        tor = org.meshora.app.transport.TorManager(this)
+        tor.onReady = { transportManager.webSocketTransport.reconnectNow() }
+        transportManager.webSocketTransport.proxyProvider = { tor.proxy() }
+        applyTorSetting()
+
         rememberConversationPartners()
         watchNetwork()
         // V0.3 : connexion automatique au relais de référence (ou au relais choisi dans Réseau → Avancé).
@@ -71,6 +78,13 @@ class MeshoraApp : Application() {
         val s = settings.current
         transportManager.groupRoom = s.room // clé de scellement des trames Bluetooth
         return transportManager.connectWebSocket(s.relayUrl, s.room)
+    }
+
+    /** Mode Tor (expérimental) : démarre ou arrête Tor et impose (ou non) le passage par Tor. */
+    fun applyTorSetting() {
+        val on = settings.current.torEnabled
+        transportManager.webSocketTransport.requireProxy = on
+        if (on) tor.start() else tor.stop()
     }
 
     /**

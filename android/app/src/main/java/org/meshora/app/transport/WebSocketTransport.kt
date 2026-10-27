@@ -37,7 +37,11 @@ enum class RelayProblem {
     /** Groupe complet (64 appareils connectés). */
     ROOM_FULL,
     /** Adresse de relais invalide. */
-    BAD_ADDRESS
+    BAD_ADDRESS,
+    /** Mode Tor : en attente du circuit Tor (aucune connexion directe tentée). */
+    WAITING_FOR_TOR,
+    /** Mode Tor : Tor est démarré mais n'atteint pas le relais (réseau Tor bloqué ou lent). */
+    TOR_UNREACHABLE
 }
 
 enum class ConnectionState {
@@ -65,10 +69,22 @@ class WebSocketTransport(
     private val onPeersUpdated: (List<Peer>) -> Unit,
     private val onAuthenticated: () -> Unit = {}
 ) {
-    private val client = OkHttpClient.Builder()
+    private val baseClient = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .pingInterval(30, TimeUnit.SECONDS) // moins de réveils radio (batterie) ; Cloudflare coupe après ~100 s d'inactivité
         .build()
+
+    /** Proxy à utiliser (Tor), ou null. */
+    @Volatile var proxyProvider: () -> java.net.Proxy? = { null }
+
+    /** Mode Tor : sans proxy prêt, AUCUNE connexion directe (échec fermé). */
+    @Volatile var requireProxy: Boolean = false
+
+    private fun clientForNow(): OkHttpClient? {
+        val proxy = proxyProvider()
+        if (proxy == null) return if (requireProxy) null else baseClient
+        return baseClient.newBuilder().proxy(proxy).connectTimeout(30, TimeUnit.SECONDS).build()
+    }
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -119,6 +135,12 @@ class WebSocketTransport(
 
     private fun open() {
         val (url, _) = target ?: return
+        val client = clientForNow()
+        if (client == null) {
+            _problem.value = RelayProblem.WAITING_FOR_TOR
+            _connectionState.value = ConnectionState.DISCONNECTED
+            return // TorManager.onReady relancera la connexion
+        }
         val gen = generation.incrementAndGet()
         _connectionState.value = ConnectionState.CONNECTING
         webSocket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
@@ -157,6 +179,7 @@ class WebSocketTransport(
                     !networkAvailable -> RelayProblem.NO_NETWORK
                     response?.code == 429 -> RelayProblem.RATE_LIMITED
                     response?.code == 503 -> RelayProblem.ROOM_FULL
+                    requireProxy -> RelayProblem.TOR_UNREACHABLE
                     else -> RelayProblem.UNREACHABLE
                 }
                 lost()
@@ -196,7 +219,9 @@ class WebSocketTransport(
         wantConnected = false
         reconnectJob?.cancel()
         generation.incrementAndGet() // les événements de l'ancienne connexion seront ignorés
-        webSocket?.close(1000, "Normal closure")
+        // Mode Tor : la connexion précédente (éventuellement DIRECTE) est coupée immédiatement, sans attendre
+        // la poignée de main de fermeture (jusqu'à 60 s avec OkHttp) — aucune connexion directe ne subsiste.
+        if (requireProxy) webSocket?.cancel() else webSocket?.close(1000, "Normal closure")
         webSocket = null
         _nextRetryAt.value = 0L
         _problem.value = RelayProblem.NONE
