@@ -85,4 +85,5 @@ Effacement d'urgence : supprime aussi les prékeys (web : stockage local ; Andro
 | Compilation de `TransportManager`, `WebSocketTransport`, `PrekeyStore`, crypto et maillage | sans erreur (okhttp et Android remplacés par des bouchons) |
 | Conformité du relais Node, avec C17 (prékeys et vrai code web en v3) | 17/17 |
 | Vrai code du relais Cloudflare exécuté hors wrangler | 11/11 (dont 16 clés servies avec prékeys : pièce jointe ≤ 11,8 Kio sur 16 Kio) |
-| **À faire sur le Mac** | tests unitaires Android (`PrekeyTest`, `GatewayInteropTest`, `LiveRelayInteropTest` avec v3 réel), `wrangler dev` + conformité 17/17, relais dev, APK |
+| Vérification automatique GitHub Actions (27/10, soir) | Android 40/40 dont `PrekeyTest` 3/3, `LiveRelayInteropTest` (échange Android ↔ web **en v3** dans les deux sens) et `GatewayInteropTest` ; relais Node et `wrangler dev` 17/17 ; lint OK (`docs/tests/v0.4/ci-verification-v0.4-prekeys.log`) |
+| **Reste à faire** | déploiement sur le relais dev (accord), APK 0.4.0-dev2 signé (Mac), essais sur deux téléphones |

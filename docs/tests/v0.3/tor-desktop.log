@@ -1,0 +1,15 @@
+# Essai Tor → relais de référence (préproduction), depuis le Mac M4, 27/10/2026 vers 00 h 45
+# Tor 0.4.9.14 (Homebrew), SOCKS 127.0.0.1:9150 ; isolation de circuit par identifiants SOCKS distincts.
+Bootstrapped 100% (done): Done
+IP de sortie : {"IsTor":true,"IP":"23.191.200.93"}
+santé du relais via Tor : {"status":"ok","service":"meshora-relay","version":"0.3.0","channel":"preprod","protocol":"v0.2"}
+circuit 1 : 101 (sortie exemple "IP":"80.67.167.81")
+circuit 2 : 101 (sortie exemple "IP":"23.129.64.184")
+circuit 3 : 101 (sortie exemple "IP":"109.70.100.6")
+circuit 4 : 101 (sortie exemple "IP":"192.42.116.68")
+circuit 5 : 101 (sortie exemple "IP":"192.42.116.93")
+# Authentification MESHORA complète (défi, HELLO signé ECDSA P-256, liste des pairs) à travers Tor :
+poignée de main : HTTP/1.1 101
+défi reçu, HELLO signé envoyé
+AUTHENTIFIÉ via Tor en 1329 ms ; pairs=1 ; moi présent=true
+# Note : l'IP de sortie affichée par circuit vient d'une requête séparée (même identifiants), à titre indicatif.
