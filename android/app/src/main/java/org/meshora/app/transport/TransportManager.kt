@@ -93,6 +93,8 @@ class TransportManager(
     // ------------------------------------------------------------------ prékeys (V0.4 étape A)
 
     @Volatile private var announcedPrekeyId: String? = null
+    /** Nombre d'enveloppes v3 déchiffrées (observabilité des essais ; aucune donnée de contenu). */
+    internal val receivedV3 = java.util.concurrent.atomic.AtomicInteger(0)
     private fun myPrekey(): SignedPrekey = prekeys.current(myPrivateKey, identity.publicKeyHex)
 
     /** Rotation hebdomadaire pendant une longue connexion : annonce la nouvelle prékey sans se reconnecter. */
@@ -409,6 +411,7 @@ class TransportManager(
             return
         }
 
+        if (envelope.v == 3) receivedV3.incrementAndGet()
         val senderId = WebSocketTransport.deriveId(envelope.senderPublicKeyHex)
         val localId = "$senderId:${envelope.id}"
 
