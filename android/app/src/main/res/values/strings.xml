@@ -96,7 +96,7 @@
     <string name="gateway_title">Act as an Internet gateway (experimental)</string>
     <string name="gateway_explain">When this phone has Internet, it carries over Bluetooth the messages of group members who have none. It cannot read them (encrypted for them). Uses data and battery.</string>
     <string name="ble_title">Direct Bluetooth (experimental)</string>
-    <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
+    <string name="ble_notice">Experimental: not yet tested between two phones. Keeps working with the screen off while turned on (uses more battery; a notification shows it, with a Stop button). Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
     <string name="ble_links">Direct Bluetooth links: %1$d</string>
     <string name="ble_start">Turn on Bluetooth (experimental)</string>
     <string name="ble_stop">Stop Bluetooth</string>
@@ -105,6 +105,10 @@
     <string name="ble_err_unavailable">Bluetooth unavailable.</string>
     <string name="ble_err_disabled">Bluetooth is off: turn it on and try again.</string>
     <string name="ble_err_gatt">Could not open the GATT server.</string>
+    <string name="ble_channel_name">MESHORA Bluetooth mesh</string>
+    <string name="ble_channel_description">Shown while the Bluetooth mesh keeps running with the screen off.</string>
+    <string name="ble_notif_title">MESHORA Bluetooth on</string>
+    <string name="ble_notif_text">The mesh keeps relaying messages with the screen off. Uses more battery.</string>
     <string name="ble_stopped">MESHORA Bluetooth stopped.</string>
     <string name="ble_active">MESHORA Bluetooth on (%1$s), scanning, %2$d direct link(s).</string>
     <string name="ble_adv_on">advertising</string>

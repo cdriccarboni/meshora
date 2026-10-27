@@ -10,13 +10,14 @@ import org.meshora.app.MeshoraApp
  * Ne peut rien effacer chez les destinataires ni sur le relais (courrier en attente chiffré, expiré après 24 h au plus).
  */
 object PanicWipe {
-    val PREFS = listOf("meshora_identity", "meshora_messages", "meshora_contacts", "meshora_settings")
+    val PREFS = listOf("meshora_identity", "meshora_messages", "meshora_contacts", "meshora_settings", PrekeyStore.PREFS, LocalVault.PREFS)
 
     fun wipe(context: Context) {
         val app = context.applicationContext
         runCatching { MeshoraApp.instance.transportManager.disconnectWebSocket() }
         runCatching { MeshoraApp.instance.bleMesh.stop() }
         SecureKeyBox.destroy()
+        LocalVault.forget()
         for (name in PREFS) {
             runCatching { app.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit() }
             runCatching { app.deleteSharedPreferences(name) }

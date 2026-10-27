@@ -1,0 +1,43 @@
+Vérification GitHub Actions — exécution 40572555970 (commit 7424f8b, branche claude/v0.4-prekeys)
+https://github.com/cdriccarboni/meshora/actions/runs/40572555970
+conclusion : success ; début 2026-10-27T19:49:28Z ; fin 2026-10-27T19:53:39Z
+
+== Web, vecteurs et relais : success
+  success  Set up job
+  success  Run actions/checkout@v5
+  success  Run actions/setup-node@v5
+  success  Dépendances web
+  success  Typage TypeScript
+  success  Tests web (dont vecteurs Python ↔ TypeScript et confidentialité persistante)
+  success  Référence Python des vecteurs (régénérée et relue)
+  success  Conformité du relais Node
+  success  Vrai code du relais Cloudflare (hors wrangler)
+  success  Conformité du relais Cloudflare (wrangler dev, local, sans compte)
+  success  Résumé lisible par l'API (annotations)
+  success  Run actions/upload-artifact@v4
+  success  Post Run actions/setup-node@v5
+  success  Post Run actions/checkout@v5
+  success  Complete job
+  [rapport-web.log] Total: 13 tests | Réussis: 13 | Échecs: 0 RÉSULTAT : 12/12 tests d'hygiène d'adresse réussis. RÉSULTAT : toutes les vérifications réussies RÉSULTAT : toutes les vérifications réussies RÉSULTAT : toutes les vérifications réussies RÉSULTAT : 9/9 tests d'intégration réussis avec succès. 
+  [rapport-relais-wrangler.log] RÉSULTAT : 17/17 vérifications réussies contre ws://127.0.0.1:8788 
+  [rapport-relais-node.log] RÉSULTAT : 17/17 vérifications réussies contre ws://127.0.0.1:8787 
+  [rapport-relais-cloudflare-banc.log] RÉSULTAT : toutes les vérifications réussies (code Cloudflare exécuté hors wrangler) 
+
+== Android (tests unitaires, interopérabilité, lint) : success
+  success  Set up job
+  success  Run actions/checkout@v5
+  success  Run actions/setup-java@v5
+  success  Run actions/setup-node@v5
+  success  Run gradle/actions/setup-gradle@v4
+  success  Dépendances web (robot d'écho pour l'interopérabilité)
+  success  Tests unitaires Android + interopérabilité Android ↔ web via un relais local
+  success  Lint Android
+  success  Résumé lisible par l'API (annotations)
+  success  Run actions/upload-artifact@v4
+  success  Post Run gradle/actions/setup-gradle@v4
+  success  Post Run actions/setup-node@v5
+  success  Post Run actions/setup-java@v5
+  success  Post Run actions/checkout@v5
+  success  Complete job
+  [interop] INTEROPÉRABILITÉ : OK
+  [Android] 40 tests, 0 échec(s), 0 ignoré(s) : CryptoEngineTest=6 GatewayInteropTest=1 GroupSealVectorsTest=4 InvitationTest=5 LiveRelayInteropTest=1 LocalVaultTest=3 MeshFrameTest=5 MeshInteropVectorsTest=2 MeshRouterTest=3 OutboxRepositoryTest=2 PrekeyTest=3 TransportManagerAckTest=5

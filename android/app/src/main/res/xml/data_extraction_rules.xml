@@ -4,10 +4,16 @@
         <exclude domain="sharedpref" path="meshora_identity.xml" />
         <exclude domain="sharedpref" path="meshora_messages.xml" />
         <exclude domain="sharedpref" path="meshora_contacts.xml" />
+        <exclude domain="sharedpref" path="meshora_settings.xml" />
+        <exclude domain="sharedpref" path="meshora_prekeys.xml" />
+        <exclude domain="sharedpref" path="meshora_vault.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="meshora_identity.xml" />
         <exclude domain="sharedpref" path="meshora_messages.xml" />
         <exclude domain="sharedpref" path="meshora_contacts.xml" />
+        <exclude domain="sharedpref" path="meshora_settings.xml" />
+        <exclude domain="sharedpref" path="meshora_prekeys.xml" />
+        <exclude domain="sharedpref" path="meshora_vault.xml" />
     </device-transfer>
 </data-extraction-rules>

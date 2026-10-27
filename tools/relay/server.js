@@ -369,13 +369,37 @@ function mailboxCount(box) {
 
 // ---------------------------------------------------------------- protocole
 
-const envelopeString = (e) => `${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`;
+/** Chaîne signée d'une enveloppe : v2 (§2) ou v3 (V0.4 étape A, prékey + HKDF). */
+const envelopeString = (e) =>
+  e.v === 3
+    ? `ENV3|${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.prekeyId}|${e.ephemeralPublicKeyHex}|${e.saltHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`
+    : `${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`;
 const ackString = (k) => `ACK2|${k.messageId}|${k.senderPublicKeyHex}|${k.recipientPublicKeyHex}|${k.envelopeHash}|${k.timestamp}`;
 const isKey = (k) => typeof k === 'string' && HEX_RE.test(k) && k.length <= 400;
 function validEnvelopeShape(e) {
   return e && typeof e === 'object' && typeof e.id === 'string' && e.id.length <= 128 && isKey(e.senderPublicKeyHex) && isKey(e.recipientPublicKeyHex) &&
-    ['ephemeralPublicKeyHex', 'ivHex', 'ciphertextHex', 'signatureHex'].every((f) => typeof e[f] === 'string' && HEX_RE.test(e[f])) && Number.isFinite(e.timestamp);
+    ['ephemeralPublicKeyHex', 'ivHex', 'ciphertextHex', 'signatureHex'].every((f) => typeof e[f] === 'string' && HEX_RE.test(e[f])) && Number.isFinite(e.timestamp) &&
+    (e.v === undefined || (e.v === 3 && typeof e.prekeyId === 'string' && /^[0-9a-f]{16}$/.test(e.prekeyId) && typeof e.saltHex === 'string' && /^[0-9a-f]{64}$/i.test(e.saltHex)));
 }
+
+/**
+ * V0.4 étape A — prékey de réception annoncée par le détenteur d'une identité. Le relais la vérifie
+ * (forme, identifiant = empreinte, signature de l'identité, échéance) avant de la redistribuer ;
+ * une prékey invalide est simplement ignorée (le client reste joignable en v2).
+ */
+const PREKEY_MAX_LIFETIME_MS = 30 * 24 * 3600 * 1000;
+function validPrekey(identityKey, p) {
+  if (!p || typeof p !== 'object') return null;
+  const now = Date.now();
+  if (typeof p.publicKeyHex !== 'string' || !/^[0-9a-f]{182}$/i.test(p.publicKeyHex) || p.publicKeyHex === identityKey) return null; // SPKI P-256 : 91 octets
+  if (typeof p.id !== 'string' || !/^[0-9a-f]{16}$/.test(p.id)) return null;
+  if (typeof p.signatureHex !== 'string' || !/^[0-9a-f]{128}$/i.test(p.signatureHex)) return null;
+  if (!Number.isFinite(p.expiresAt) || p.expiresAt <= now || p.expiresAt > now + PREKEY_MAX_LIFETIME_MS) return null;
+  if (crypto.createHash('sha256').update(Buffer.from(p.publicKeyHex, 'hex')).digest('hex').slice(0, 16) !== p.id) return null;
+  if (!verifyEcdsa(identityKey, p.signatureHex, `PREKEY|v1|${identityKey}|${p.publicKeyHex}|${p.id}|${p.expiresAt}`)) return null;
+  return { publicKeyHex: p.publicKeyHex, id: p.id, expiresAt: p.expiresAt, signatureHex: p.signatureHex };
+}
+const livePrekey = (p) => (p && p.expiresAt > Date.now() ? { prekey: p } : {});
 /** Détenteur de la clé, ou passerelle qui la sert (délégation valide). */
 function holds(c, key, room) {
   return c.authenticated && c.room === room && (c.publicKey === key || (c.served && c.served.has(key) && c.served.get(key).exp > Date.now()));
@@ -422,6 +446,7 @@ function handleClientMessage(client, msg) {
     client.peerId = id;
     client.peerAlias = typeof msg.senderAlias === 'string' ? msg.senderAlias.slice(0, 64) : null;
     client.publicKey = pub;
+    client.prekey = validPrekey(pub, msg.prekey);
     broadcastPeerList(client.room);
 
     // Boîte aux lettres : remise uniquement au détenteur PROUVÉ de la clé destinataire.
@@ -457,6 +482,14 @@ function handleClientMessage(client, msg) {
       return deliverAck(client.room, ack, senderKey);
     }
 
+    case 'MESHORA_PREKEY': {
+      // V0.4 étape A — rotation de la prékey sans reconnexion.
+      const p = validPrekey(client.publicKey, msg.prekey);
+      if (!p || (client.prekey && client.prekey.id === p.id) || (client.prekey && client.prekey.expiresAt > p.expiresAt)) return;
+      client.prekey = p;
+      return broadcastPeerList(client.room);
+    }
+
     case 'MESHORA_FORWARD': {
       // V0.4 — passerelle : le relais vérifie lui-même la signature de l'auteur.
       const now = Date.now();
@@ -487,7 +520,7 @@ function handleClientMessage(client, msg) {
       for (const [k, v] of client.served) if (v.exp <= now) client.served.delete(k);
       if (!client.served.has(d.publicKey) && client.served.size >= LIMITS.maxServedPerConnection) return;
       const isNew = !client.served.has(d.publicKey);
-      client.served.set(d.publicKey, { exp: now + LIMITS.servedTtlMs, id: deriveId(d.publicKey), alias: typeof d.alias === 'string' ? d.alias.slice(0, 64) : null });
+      client.served.set(d.publicKey, { exp: now + LIMITS.servedTtlMs, id: deriveId(d.publicKey), alias: typeof d.alias === 'string' ? d.alias.slice(0, 64) : null, prekey: validPrekey(d.publicKey, msg.prekey) });
       if (isNew) broadcastPeerList(client.room);
       const box = offlineMailboxes.get(client.room);
       const pending = box && box.get(d.publicKey);
@@ -514,7 +547,8 @@ function broadcastPeerList(room) {
     hops: 1,
     lastSeen: Date.now(),
     isGateway: false,
-    verified: false // clé prouvée auprès du relais, mais non vérifiée hors bande par l'utilisateur
+    verified: false, // clé prouvée auprès du relais, mais non vérifiée hors bande par l'utilisateur
+    ...livePrekey(c.prekey)
   }));
   const known = new Set(peers.map((p) => p.publicKey));
   const now = Date.now();
@@ -522,7 +556,7 @@ function broadcastPeerList(room) {
     for (const [k, v] of c.served || []) {
       if (v.exp > now && !known.has(k)) {
         known.add(k);
-        peers.push({ id: v.id, alias: v.alias || 'Pair-Meshora', publicKey: k, transport: 'gateway', hops: 2, lastSeen: now, isGateway: false, viaGateway: c.peerId, verified: false });
+        peers.push({ id: v.id, alias: v.alias || 'Pair-Meshora', publicKey: k, transport: 'gateway', hops: 2, lastSeen: now, isGateway: false, viaGateway: c.peerId, verified: false, ...livePrekey(v.prekey) });
       }
     }
   }

@@ -96,7 +96,7 @@
     <string name="gateway_title">Servir de passerelle Internet (expérimental)</string>
     <string name="gateway_explain">Quand ce téléphone a Internet, il achemine par Bluetooth les messages des membres de votre groupe qui n\'en ont plus. Il ne peut pas les lire (chiffrés pour eux). Consomme données et batterie.</string>
     <string name="ble_title">Bluetooth direct (expérimental)</string>
-    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Application ouverte et écran allumé. Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
+    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Continue de fonctionner écran éteint tant qu\'il est activé (consomme davantage de batterie ; une notification l\'indique, avec un bouton Arrêter). Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
     <string name="ble_links">Liens Bluetooth directs : %1$d</string>
     <string name="ble_start">Activer le Bluetooth (expérimental)</string>
     <string name="ble_stop">Arrêter le Bluetooth</string>
@@ -105,6 +105,10 @@
     <string name="ble_err_unavailable">Bluetooth indisponible.</string>
     <string name="ble_err_disabled">Bluetooth désactivé : activez-le puis réessayez.</string>
     <string name="ble_err_gatt">Impossible d\'ouvrir le serveur GATT.</string>
+    <string name="ble_channel_name">Maillage Bluetooth MESHORA</string>
+    <string name="ble_channel_description">Affichée tant que le maillage Bluetooth continue écran éteint.</string>
+    <string name="ble_notif_title">Bluetooth MESHORA actif</string>
+    <string name="ble_notif_text">Le maillage continue de relayer les messages écran éteint. Consomme davantage de batterie.</string>
     <string name="ble_stopped">Bluetooth MESHORA arrêté.</string>
     <string name="ble_active">Bluetooth MESHORA actif (%1$s), recherche en cours, %2$d lien(s) direct(s).</string>
     <string name="ble_adv_on">annonce active</string>

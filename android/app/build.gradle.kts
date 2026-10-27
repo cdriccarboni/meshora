@@ -36,8 +36,8 @@ android {
         applicationId = "org.meshora.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.4.0-dev1"
+        versionCode = 11
+        versionName = "0.4.0-dev2"
 
         // Relais de référence et adresse des invitations. Préproduction par défaut ;
         // la bascule en production (-Pmeshora.channel=production) exige l'accord du directeur artistique.

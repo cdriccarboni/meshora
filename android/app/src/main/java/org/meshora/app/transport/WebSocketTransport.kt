@@ -19,6 +19,7 @@ import org.meshora.app.crypto.CryptoEngine
 import org.meshora.app.crypto.EncryptedEnvelope
 import org.meshora.app.crypto.KeyIdentity
 import org.meshora.app.crypto.SignedAck
+import org.meshora.app.crypto.SignedPrekey
 import org.meshora.app.model.Peer
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -63,7 +64,11 @@ class WebSocketTransport(
     private val onEnvelopeReceived: (EncryptedEnvelope) -> Unit,
     private val onAckReceived: (SignedAck) -> Unit,
     private val onPeersUpdated: (List<Peer>) -> Unit,
-    private val onAuthenticated: () -> Unit = {}
+    private val onAuthenticated: () -> Unit = {},
+    /** V0.4 étape A : prékey de réception à annoncer dans le HELLO (null = aucune → les autres écrivent en v2). */
+    private val prekeyProvider: () -> SignedPrekey? = { null },
+    /** V0.4 étape A : prékey annoncée par un pair (à vérifier par l'appelant avant usage). */
+    private val onPeerPrekey: (String, SignedPrekey) -> Unit = { _, _ -> }
 ) {
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -247,8 +252,8 @@ class WebSocketTransport(
         return ws.send(buildJsonObject { put("type", "MESHORA_FORWARD"); put("signedAck", json.encodeToJsonElement(ack)) }.toString())
     }
 
-    /** V0.4 passerelle : présente au relais la délégation signée d'un voisin sans Internet. */
-    fun sendServe(publicKey: String, gateway: String, alias: String, timestamp: Long, signature: String): Boolean {
+    /** V0.4 passerelle : présente au relais la délégation signée d'un voisin sans Internet (et sa prékey, s'il en a une). */
+    fun sendServe(publicKey: String, gateway: String, alias: String, timestamp: Long, signature: String, prekey: SignedPrekey? = null): Boolean {
         val ws = webSocket ?: return false
         if (!isConnected()) return false
         return ws.send(buildJsonObject {
@@ -256,7 +261,15 @@ class WebSocketTransport(
             putJsonObject("delegation") {
                 put("publicKey", publicKey); put("gateway", gateway); put("alias", alias.take(64)); put("timestamp", timestamp); put("signature", signature)
             }
+            if (prekey != null) put("prekey", json.encodeToJsonElement(prekey))
         }.toString())
+    }
+
+    /** V0.4 étape A : annonce une nouvelle prékey sans se reconnecter (rotation hebdomadaire). */
+    fun sendPrekey(prekey: SignedPrekey): Boolean {
+        val ws = webSocket ?: return false
+        if (!isConnected()) return false
+        return ws.send(buildJsonObject { put("type", "MESHORA_PREKEY"); put("prekey", json.encodeToJsonElement(prekey)) }.toString())
     }
 
     private fun handleIncomingJson(ws: WebSocket, text: String) {
@@ -280,6 +293,7 @@ class WebSocketTransport(
                         put("senderAlias", alias)
                         put("publicKey", me.publicKeyHex)
                         put("helloSignature", signature)
+                        runCatching { prekeyProvider() }.getOrNull()?.let { put("prekey", json.encodeToJsonElement(it)) }
                     }
                     ws.send(hello.toString())
                 }
@@ -294,6 +308,7 @@ class WebSocketTransport(
                             if (pub == me.publicKeyHex || id != deriveIdOrNull(pub)) return@runCatching
                             val fp = CryptoEngine.computeFingerprint(pub)
                             val peerAlias = obj["alias"]?.jsonPrimitive?.contentOrNull?.take(64) ?: "Pair"
+                            (obj["prekey"] as? JsonObject)?.let { pk -> runCatching { onPeerPrekey(pub, json.decodeFromJsonElement<SignedPrekey>(pk)) } }
                             peers.add(Peer(pub, fp, "$peerAlias · ${fp.take(9)}", System.currentTimeMillis(), "WebSocket", true))
                         }
                     }

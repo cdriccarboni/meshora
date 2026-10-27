@@ -2,6 +2,8 @@
 node_modules/
 target/
 *.log
+# Rapports d'essai cités comme preuves dans docs/STATUS.md : toujours versionnés
+!docs/tests/**/*.log
 .env
 .env.*
 dist/
