@@ -13,15 +13,17 @@
 import { FrameType, ID_SIZE } from './meshFrame';
 
 const enc = new TextEncoder();
-const SALT = enc.encode('MESHORA-BLE-v1');
+/** Copie dans un ArrayBuffer propre (typage strict de WebCrypto : BufferSource). */
+const ab = (u: Uint8Array): ArrayBuffer => u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) as ArrayBuffer;
+const SALT = ab(enc.encode('MESHORA-BLE-v1'));
 const PAD = 128;
 const HEADER = 17;
 export const DAY_MS = 86_400_000;
 export const dayOf = (ms: number) => Math.floor(ms / DAY_MS);
 
 async function hkdf(room: string, info: string): Promise<Uint8Array> {
-  const ikm = await crypto.subtle.importKey('raw', enc.encode(room), 'HKDF', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: SALT, info: enc.encode(info) }, ikm, 256);
+  const ikm = await crypto.subtle.importKey('raw', ab(enc.encode(room)), 'HKDF', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: SALT, info: ab(enc.encode(info)) }, ikm, 256);
   return new Uint8Array(bits);
 }
 
@@ -29,8 +31,8 @@ export const frameKey = (room: string, day: number) => hkdf(room, `frame|${day}`
 export const idKey = (room: string, day: number) => hkdf(room, `id|${day}`);
 
 export async function frameId(room: string, day: number, label: string): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey('raw', await idKey(room, day), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(label))).slice(0, ID_SIZE);
+  const k = await crypto.subtle.importKey('raw', ab(await idKey(room, day)), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, ab(enc.encode(label)))).slice(0, ID_SIZE);
 }
 
 function aadFor(day: number): Uint8Array {
@@ -49,8 +51,8 @@ export async function seal(room: string, day: number, inner: FrameType, data: Ui
   plain[2] = data.length & 0xff;
   plain.set(data, 3);
   const aad = aadFor(day);
-  const key = await crypto.subtle.importKey('raw', await frameKey(room, day), 'AES-GCM', false, ['encrypt']);
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad }, key, plain));
+  const key = await crypto.subtle.importKey('raw', ab(await frameKey(room, day)), 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: ab(iv), additionalData: ab(aad) }, key, ab(plain)));
   const out = new Uint8Array(HEADER + ct.length);
   out.set(aad, 0);
   out.set(iv, 5);
@@ -64,9 +66,9 @@ export async function open(room: string, sealed: Uint8Array, nowMs = Date.now())
   const day = new DataView(sealed.buffer, sealed.byteOffset + 1, 4).getUint32(0);
   if (Math.abs(day - dayOf(nowMs)) > 1) return null;
   try {
-    const key = await crypto.subtle.importKey('raw', await frameKey(room, day), 'AES-GCM', false, ['decrypt']);
+    const key = await crypto.subtle.importKey('raw', ab(await frameKey(room, day)), 'AES-GCM', false, ['decrypt']);
     const plain = new Uint8Array(
-      await crypto.subtle.decrypt({ name: 'AES-GCM', iv: sealed.slice(5, 17), additionalData: sealed.slice(0, 5) }, key, sealed.slice(HEADER))
+      await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ab(sealed.slice(5, 17)), additionalData: ab(sealed.slice(0, 5)) }, key, ab(sealed.slice(HEADER)))
     );
     const type = plain[0] as FrameType;
     if (type !== FrameType.ENVELOPE && type !== FrameType.ACK && type !== FrameType.ANNOUNCE) return null;
