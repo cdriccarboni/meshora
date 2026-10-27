@@ -1,0 +1,6 @@
+{
+  "summary":  "Updated implementation plan for MESHORA v0.1 integrating the 4th official pillar: MESHORA Resilience. Details offline continuity, transparent transport failover with consent, emergency local maps and docs, P2P file transfers, battery saver profile, verifiable community alerts, and strict zero-message-loss guarantees.",
+  "updatedAt":  "2026-10-25T13:48:35.574603052Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
