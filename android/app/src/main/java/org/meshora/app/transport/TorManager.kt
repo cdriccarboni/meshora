@@ -6,7 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,10 +38,27 @@ class TorManager(private val context: Context) {
     private var receiverRegistered = false
     var onReady: () -> Unit = {}
 
+    /**
+     * tor-android annonce « ON » dès le démarrage du processus Tor, parfois AVANT que le port SOCKS soit connu
+     * (constaté sur émulateur au premier démarrage). On interroge donc le port chaque seconde tant que Tor démarre.
+     */
+    private val handler = Handler(Looper.getMainLooper())
+    private val pollPort = object : Runnable {
+        override fun run() {
+            if (_state.value != State.STARTING || service == null) return
+            refreshPort()
+            if (_state.value == State.STARTING) handler.postDelayed(this, 1000)
+        }
+    }
+    private fun startPolling() {
+        handler.removeCallbacks(pollPort)
+        handler.post(pollPort)
+    }
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, intent: Intent) {
             when (intent.getStringExtra(TorService.EXTRA_STATUS)) {
-                TorService.STATUS_ON -> refreshPort()
+                TorService.STATUS_ON -> { refreshPort(); if (_state.value != State.ON) startPolling() }
                 TorService.STATUS_STARTING -> if (_state.value != State.ON) _state.value = State.STARTING
                 TorService.STATUS_OFF, TorService.STATUS_STOPPING -> { socksPort = -1; if (_state.value != State.ERROR) _state.value = State.OFF }
             }
@@ -50,6 +69,7 @@ class TorManager(private val context: Context) {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = (binder as? TorService.LocalBinder)?.service
             refreshPort()
+            if (_state.value != State.ON) startPolling()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -84,6 +104,7 @@ class TorManager(private val context: Context) {
     }
 
     fun stop() {
+        handler.removeCallbacks(pollPort)
         socksPort = -1
         try { context.unbindService(connection) } catch (_: Exception) {}
         service = null
