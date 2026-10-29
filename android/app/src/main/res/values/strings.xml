@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MESHORA</string>
+
+    <string name="tab_chats">Chats</string>
+    <string name="tab_contacts">Contacts</string>
+    <string name="tab_network">Network</string>
+    <string name="tab_identity">Identity</string>
+    <string name="tab_emergency">112</string>
+
+    <string name="verified">Verified</string>
+    <string name="not_verified">Not verified</string>
+    <string name="online">Online</string>
+    <string name="offline">Offline</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="apply">Apply</string>
+    <string name="copied">Copied</string>
+    <string name="fingerprint_label">Fingerprint: %1$s</string>
+
+    <string name="conv_title">Chats</string>
+    <string name="conv_empty_title">No chats yet</string>
+    <string name="conv_empty_body">Invite someone from the Contacts tab: they get a link or a QR code to open, then you can message each other.</string>
+    <string name="chat_back">Back</string>
+    <string name="chat_placeholder">End-to-end encrypted message</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_invalid_key">Invalid recipient key: message not saved.</string>
+    <string name="chat_unverified_notice">Key not verified: compare the fingerprint with your contact, or exchange an invitation.</string>
+    <string name="chat_offline_notice">Your contact is not connected. The message will be delivered when they come back (kept up to 24 h by the relay, and resent by your phone until delivered).</string>
+    <string name="chat_pending">%1$d message(s) waiting to be sent</string>
+    <string name="chat_me">Me</string>
+    <string name="status_queued">Waiting, will send automatically</string>
+    <string name="status_sent">Sent, waiting for receipt</string>
+    <string name="status_delivered">Delivered (signed receipt)</string>
+    <string name="status_failed">Failed</string>
+
+    <string name="contacts_title">Contacts</string>
+    <string name="invite_button">Invite someone</string>
+    <string name="invite_title">Your invitation</string>
+    <string name="invite_body">Have them scan this QR code with their camera, or share the link. They will join your group and can message you.</string>
+    <string name="invite_share">Share link</string>
+    <string name="invite_copy">Copy link</string>
+    <string name="invite_share_text">Join me on MESHORA (encrypted messaging, test version): %1$s</string>
+    <string name="invite_paste_title">I received an invitation</string>
+    <string name="invite_paste_hint">Paste the invitation link</string>
+    <string name="invite_paste_button">Open invitation</string>
+    <string name="invite_invalid">This link is not a valid MESHORA invitation.</string>
+    <string name="online_section">Connected now</string>
+    <string name="contacts_section">My contacts</string>
+    <string name="contacts_empty">Nobody yet. Invite someone above.</string>
+    <string name="add_contact">Add</string>
+    <string name="remove_contact">Remove</string>
+    <string name="write">Message</string>
+    <string name="via">Via %1$s</string>
+
+    <string name="join_title">Invitation from %1$s</string>
+    <string name="join_body_switch">Join their group? You will leave your current group. Your identity, contacts and messages are kept.</string>
+    <string name="join_body_same">You are already in this group. Add %1$s to your verified contacts?</string>
+    <string name="join_relay_warning">Warning: this invitation uses a relay other than MESHORA\'s: %1$s</string>
+    <string name="join_accept">Join</string>
+    <string name="join_add">Add</string>
+    <string name="join_done">%1$s is now in your verified contacts.</string>
+    <string name="join_self">This is your own invitation.</string>
+    <string name="someone">Someone</string>
+
+    <string name="network_title">Network</string>
+    <string name="relay_card">Internet relay</string>
+    <string name="st_authenticated">Connected — identity proven to the relay</string>
+    <string name="st_connecting">Connecting…</string>
+    <string name="st_auth">Authenticating…</string>
+    <string name="st_disconnected">Disconnected</string>
+    <string name="problem_no_network">No network on this phone. Your messages will wait and go out automatically.</string>
+    <string name="problem_unreachable">Relay unreachable for now. Retrying automatically.</string>
+    <string name="problem_rejected">The relay refused the connection. Please update the app.</string>
+    <string name="problem_rate">Too many connections: the relay is slowing things down. Retrying automatically.</string>
+    <string name="problem_full">This group is full (64 connected devices).</string>
+    <string name="problem_bad_address">Invalid relay address. Go back to the MESHORA relay in advanced settings.</string>
+    <string name="retry_in">Retrying in %1$d s</string>
+    <string name="retry_now">Retry now</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="group_label">Your group: %1$s</string>
+    <string name="relay_label">Relay: %1$s</string>
+    <string name="relay_default">MESHORA relay (default)</string>
+    <string name="relay_privacy">The relay never sees the text of your messages (end-to-end encryption). It sees your IP address, times, message sizes, your public key and your display name.</string>
+    <string name="preprod_notice">Test version: pre-production relay, no availability guarantee.</string>
+    <string name="name_label">Your display name</string>
+    <string name="name_hint">Visible to members of your group</string>
+    <string name="advanced">Advanced settings</string>
+    <string name="advanced_relay_label">Relay address (wss://…)</string>
+    <string name="use_default_relay">Back to the MESHORA relay</string>
+    <string name="new_group">Create a new group</string>
+    <string name="new_group_confirm">You will leave the current group; its members will need a new invitation.</string>
+    <string name="relay_url_invalid">Address refused: use wss://…</string>
+
+    <string name="ble_title">Direct Bluetooth (experimental)</string>
+    <string name="ble_notice">Experimental: not yet tested between two phones. App open and screen on. Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
+    <string name="ble_links">Direct Bluetooth links: %1$d</string>
+    <string name="ble_start">Turn on Bluetooth (experimental)</string>
+    <string name="ble_stop">Stop Bluetooth</string>
+    <string name="ble_err_unsupported">Bluetooth LE is not available on this device.</string>
+    <string name="ble_err_permissions">Bluetooth permissions denied: grant them in the app settings.</string>
+    <string name="ble_err_unavailable">Bluetooth unavailable.</string>
+    <string name="ble_err_disabled">Bluetooth is off: turn it on and try again.</string>
+    <string name="ble_err_gatt">Could not open the GATT server.</string>
+    <string name="ble_stopped">MESHORA Bluetooth stopped.</string>
+    <string name="ble_active">MESHORA Bluetooth on (%1$s), scanning, %2$d direct link(s).</string>
+    <string name="ble_adv_on">advertising</string>
+    <string name="ble_adv_off">advertising unavailable</string>
+    <string name="ble_adv_refused">Bluetooth advertising refused by the system (code %1$d); scanning continues.</string>
+    <string name="ble_adv_unsupported">This device cannot advertise over Bluetooth LE; scanning continues.</string>
+    <string name="ble_adv_error">Bluetooth advertising failed: %1$s</string>
+    <string name="ble_scan_refused">Bluetooth scanning refused by the system (code %1$d).</string>
+    <string name="ble_scan_error">Bluetooth scanning failed: %1$s</string>
+
+    <string name="identity_title">Identity</string>
+    <string name="identity_sub">Your key is created on this phone and stays there, encrypted by the Android keystore.</string>
+    <string name="fingerprint_title">Your fingerprint</string>
+    <string name="fingerprint_help">Read it aloud with a contact: if it matches, nobody is sitting between you.</string>
+    <string name="pubkey_title">Public key (P-256)</string>
+    <string name="copy_key">Copy my public key</string>
+    <string name="key_copied">Public key copied</string>
+    <string name="security_title">Security</string>
+    <string name="security_body">• ECDSA P-256 / SHA-256 signatures\n• End-to-end AES-256-GCM encryption, ephemeral ECDH key per message\n• Delivery receipts signed by the recipient\n• Private key encrypted by the Android keystore, excluded from backups</string>
+    <string name="limits_title">Known limits (test version)</string>
+    <string name="limits_body">• No independent security audit yet\n• No forward secrecy yet (if your private key were stolen, previously captured messages could be decrypted)\n• The relay sees who talks to whom within a group\n• Bluetooth is experimental, not tested between phones</string>
+
+    <string name="emerg_title">Emergency</string>
+    <string name="emerg_sub">Direct call to official emergency services.</string>
+    <string name="emerg_warning_title">Important</string>
+    <string name="emerg_warning">MESHORA does not replace emergency services. If you are in danger, call 112 immediately.</string>
+    <string name="call_112">Call 112 (emergency, all of Europe)</string>
+    <string name="call_15">Call 15 (SAMU, France)</string>
+</resources>

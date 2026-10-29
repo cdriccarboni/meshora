@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <!-- Center node -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M64,64m-9,0a9,9 0 1,1 18,0a9,9 0 1,1 -18,0" />
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M64,64m-5,0a5,5 0 1,1 10,0a5,5 0 1,1 -10,0" />
+    <!-- Orbit satellites -->
+    <path
+        android:fillColor="#60A5FA"
+        android:pathData="M26,42m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M102,86m-4,0a4,4 0 1,1 8,0a4,4 0 1,1 -8,0" />
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M64,20m-3.5,0a3.5,3.5 0 1,1 7,0a3.5,3.5 0 1,1 -7,0" />
+</vector>

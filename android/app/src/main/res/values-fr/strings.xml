@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MESHORA</string>
+
+    <string name="tab_chats">Discussions</string>
+    <string name="tab_contacts">Contacts</string>
+    <string name="tab_network">Réseau</string>
+    <string name="tab_identity">Identité</string>
+    <string name="tab_emergency">112</string>
+
+    <string name="verified">Vérifié</string>
+    <string name="not_verified">Non vérifié</string>
+    <string name="online">En ligne</string>
+    <string name="offline">Hors ligne</string>
+    <string name="cancel">Annuler</string>
+    <string name="save">Enregistrer</string>
+    <string name="apply">Appliquer</string>
+    <string name="copied">Copié</string>
+    <string name="fingerprint_label">Empreinte : %1$s</string>
+
+    <string name="conv_title">Discussions</string>
+    <string name="conv_empty_title">Aucune discussion</string>
+    <string name="conv_empty_body">Invitez un proche depuis l\'onglet Contacts : il recevra un lien ou un QR code à ouvrir, puis vous pourrez vous écrire.</string>
+    <string name="chat_back">Retour</string>
+    <string name="chat_placeholder">Message chiffré de bout en bout</string>
+    <string name="chat_send">Envoyer</string>
+    <string name="chat_invalid_key">Clé du destinataire invalide : message non enregistré.</string>
+    <string name="chat_unverified_notice">Clé non vérifiée : comparez l\'empreinte avec votre contact, ou échangez une invitation.</string>
+    <string name="chat_offline_notice">Votre contact n\'est pas connecté. Le message lui sera remis à son retour (conservé 24 h au plus par le relais, et renvoyé par votre téléphone tant qu\'il n\'est pas délivré).</string>
+    <string name="chat_pending">%1$d message(s) en attente d\'envoi</string>
+    <string name="chat_me">Moi</string>
+    <string name="status_queued">En attente, envoi automatique</string>
+    <string name="status_sent">Envoyé, en attente d\'accusé</string>
+    <string name="status_delivered">Délivré (accusé signé)</string>
+    <string name="status_failed">Échec</string>
+
+    <string name="contacts_title">Contacts</string>
+    <string name="invite_button">Inviter un proche</string>
+    <string name="invite_title">Votre invitation</string>
+    <string name="invite_body">Faites scanner ce QR code avec l\'appareil photo, ou partagez le lien. La personne rejoindra votre groupe et pourra vous écrire.</string>
+    <string name="invite_share">Partager le lien</string>
+    <string name="invite_copy">Copier le lien</string>
+    <string name="invite_share_text">Rejoins-moi sur MESHORA (messagerie chiffrée, version d\'essai) : %1$s</string>
+    <string name="invite_paste_title">J\'ai reçu une invitation</string>
+    <string name="invite_paste_hint">Collez le lien d\'invitation</string>
+    <string name="invite_paste_button">Ouvrir l\'invitation</string>
+    <string name="invite_invalid">Ce lien n\'est pas une invitation MESHORA valide.</string>
+    <string name="online_section">Connectés maintenant</string>
+    <string name="contacts_section">Mes contacts</string>
+    <string name="contacts_empty">Personne pour l\'instant. Invitez un proche ci-dessus.</string>
+    <string name="add_contact">Ajouter</string>
+    <string name="remove_contact">Retirer</string>
+    <string name="write">Écrire</string>
+    <string name="via">Via %1$s</string>
+
+    <string name="join_title">Invitation de %1$s</string>
+    <string name="join_body_switch">Rejoindre son groupe ? Vous quitterez votre groupe actuel. Votre identité, vos contacts et vos messages sont conservés.</string>
+    <string name="join_body_same">Vous êtes déjà dans ce groupe. Ajouter %1$s à vos contacts vérifiés ?</string>
+    <string name="join_relay_warning">Attention : cette invitation utilise un autre relais que celui de MESHORA : %1$s</string>
+    <string name="join_accept">Rejoindre</string>
+    <string name="join_add">Ajouter</string>
+    <string name="join_done">%1$s est dans vos contacts vérifiés.</string>
+    <string name="join_self">C\'est votre propre invitation.</string>
+    <string name="someone">Quelqu\'un</string>
+
+    <string name="network_title">Réseau</string>
+    <string name="relay_card">Relais Internet</string>
+    <string name="st_authenticated">Connecté — identité prouvée au relais</string>
+    <string name="st_connecting">Connexion en cours…</string>
+    <string name="st_auth">Authentification…</string>
+    <string name="st_disconnected">Déconnecté</string>
+    <string name="problem_no_network">Pas de réseau sur ce téléphone. Vos messages attendront et partiront automatiquement.</string>
+    <string name="problem_unreachable">Relais injoignable pour le moment. Nouvelle tentative automatique.</string>
+    <string name="problem_rejected">Le relais a refusé la connexion. Mettez l\'application à jour.</string>
+    <string name="problem_rate">Trop de connexions : le relais ralentit les échanges. Nouvelle tentative automatique.</string>
+    <string name="problem_full">Ce groupe est complet (64 appareils connectés).</string>
+    <string name="problem_bad_address">Adresse de relais invalide. Revenez au relais MESHORA dans les réglages avancés.</string>
+    <string name="retry_in">Nouvelle tentative dans %1$d s</string>
+    <string name="retry_now">Réessayer maintenant</string>
+    <string name="connect">Se connecter</string>
+    <string name="disconnect">Se déconnecter</string>
+    <string name="group_label">Votre groupe : %1$s</string>
+    <string name="relay_label">Relais : %1$s</string>
+    <string name="relay_default">relais MESHORA (par défaut)</string>
+    <string name="relay_privacy">Le relais ne voit jamais le texte de vos messages (chiffrement de bout en bout). Il voit votre adresse IP, les horaires, la taille des messages, votre clé publique et votre nom affiché.</string>
+    <string name="preprod_notice">Version d\'essai : relais de préproduction, sans garantie de disponibilité.</string>
+    <string name="name_label">Votre nom affiché</string>
+    <string name="name_hint">Visible par les membres de votre groupe</string>
+    <string name="advanced">Réglages avancés</string>
+    <string name="advanced_relay_label">Adresse du relais (wss://…)</string>
+    <string name="use_default_relay">Revenir au relais MESHORA</string>
+    <string name="new_group">Créer un nouveau groupe</string>
+    <string name="new_group_confirm">Vous quitterez le groupe actuel ; ses membres devront être réinvités.</string>
+    <string name="relay_url_invalid">Adresse refusée : utilisez wss://…</string>
+
+    <string name="ble_title">Bluetooth direct (expérimental)</string>
+    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Application ouverte et écran allumé. Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
+    <string name="ble_links">Liens Bluetooth directs : %1$d</string>
+    <string name="ble_start">Activer le Bluetooth (expérimental)</string>
+    <string name="ble_stop">Arrêter le Bluetooth</string>
+    <string name="ble_err_unsupported">Bluetooth LE indisponible sur cet appareil.</string>
+    <string name="ble_err_permissions">Autorisations Bluetooth refusées : à accorder dans les réglages de l\'application.</string>
+    <string name="ble_err_unavailable">Bluetooth indisponible.</string>
+    <string name="ble_err_disabled">Bluetooth désactivé : activez-le puis réessayez.</string>
+    <string name="ble_err_gatt">Impossible d\'ouvrir le serveur GATT.</string>
+    <string name="ble_stopped">Bluetooth MESHORA arrêté.</string>
+    <string name="ble_active">Bluetooth MESHORA actif (%1$s), recherche en cours, %2$d lien(s) direct(s).</string>
+    <string name="ble_adv_on">annonce active</string>
+    <string name="ble_adv_off">annonce indisponible</string>
+    <string name="ble_adv_refused">Annonce Bluetooth refusée par le système (code %1$d) ; la recherche continue.</string>
+    <string name="ble_adv_unsupported">Cet appareil ne peut pas annoncer en Bluetooth LE ; la recherche continue.</string>
+    <string name="ble_adv_error">Annonce Bluetooth impossible : %1$s</string>
+    <string name="ble_scan_refused">Recherche Bluetooth refusée par le système (code %1$d).</string>
+    <string name="ble_scan_error">Recherche Bluetooth impossible : %1$s</string>
+
+    <string name="identity_title">Identité</string>
+    <string name="identity_sub">Votre clé est créée sur ce téléphone et y reste, chiffrée par le magasin de clés Android.</string>
+    <string name="fingerprint_title">Votre empreinte</string>
+    <string name="fingerprint_help">Comparez-la à voix haute avec un contact : si elle correspond, personne ne s\'interpose entre vous.</string>
+    <string name="pubkey_title">Clé publique (P-256)</string>
+    <string name="copy_key">Copier ma clé publique</string>
+    <string name="key_copied">Clé publique copiée</string>
+    <string name="security_title">Sécurité</string>
+    <string name="security_body">• Signatures ECDSA P-256 / SHA-256\n• Chiffrement de bout en bout AES-256-GCM, clé éphémère ECDH par message\n• Accusés de réception signés par le destinataire\n• Clé privée chiffrée par le magasin de clés Android, exclue des sauvegardes</string>
+    <string name="limits_title">Limites connues (version d\'essai)</string>
+    <string name="limits_body">• Pas d\'audit de sécurité indépendant\n• Pas encore de confidentialité persistante (si votre clé privée était volée, d\'anciens messages captés pourraient être déchiffrés)\n• Le relais voit qui échange avec qui dans un groupe\n• Bluetooth expérimental, non testé entre téléphones</string>
+
+    <string name="emerg_title">Secours</string>
+    <string name="emerg_sub">Appel direct des services d\'urgence officiels.</string>
+    <string name="emerg_warning_title">Important</string>
+    <string name="emerg_warning">MESHORA ne remplace pas les services d\'urgence. En cas de danger, appelez immédiatement le 112.</string>
+    <string name="call_112">Appeler le 112 (urgences, toute l\'Europe)</string>
+    <string name="call_15">Appeler le 15 (SAMU, France)</string>
+</resources>

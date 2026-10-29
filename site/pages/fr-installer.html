@@ -1,0 +1,82 @@
+<!--{"lang":"fr","path":"/fr/installer/","alt":"/en/install/","title":"Installer","description":"Installer MESHORA : application Android d'essai, application web, iPhone prévu. État réel, vérification de l'application et avertissements.","nav":"install"}-->
+      <div class="hero">
+        <p class="kicker">Version d'essai · installation simple</p>
+        <h1>Installer MESHORA</h1>
+        <p>MESHORA est en phase d'essai. Choisissez votre appareil, suivez trois étapes, puis lisez l'état réel de la connexion : pas de compte, pas de publicité, pas de promesse cachée.</p>
+      </div>
+
+      <section aria-labelledby="avant">
+        <h2 id="avant">Avant de commencer</h2>
+        <div class="grid">
+          <div class="card"><h3>Android</h3><p>L'APK d'essai permet d'échanger par Internet avec un proche invité. Le Bluetooth reste expérimental.</p></div>
+          <div class="card"><h3>Web</h3><p>Ouvrez l'application dans votre navigateur pour l'essai en ligne. Elle ne remplace pas l'application Android pour le Bluetooth.</p></div>
+          <div class="card"><h3>iPhone et iPad</h3><p>La version web fonctionne par Internet. L'application native et le Bluetooth iPhone ne sont pas encore disponibles.</p></div>
+        </div>
+        <div class="notice">
+          <p>Après l'ouverture, fiez-vous à l'état affiché : Internet n'est disponible que si le relais répond. « Connexion protégée » décrit les échanges MESHORA chiffrés ; le VPN de tout le téléphone n'est pas encore proposé.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="android">
+        <h2 id="android">Android</h2>
+        <div class="card release">
+          <h3>Version d'essai 0.3.0-beta2 <span class="badge b-dev">En validation sur téléphone</span></h3>
+          <p>Connexion automatique au relais MESHORA : plus aucune adresse à saisir. Invitation d'un proche par QR code ou par lien, discussions par personne, interface en français et en anglais. Messagerie chiffrée de bout en bout, accusés de réception signés, envoi différé.</p>
+          <p class="muted">Vérifiée le 27 octobre 2026 sur un émulateur Android 16 contre le relais réel : connexion automatique, invitation par QR code, messages dans les deux sens avec accusé signé, mise à jour depuis la 0.2.1 sans perte d'identité. L'essai sur un vrai téléphone est en cours ; la version 0.2.1-beta, elle, a été vérifiée sur un Google Pixel 9.</p>
+          <div class="actions">
+            <a class="btn primary" href="https://github.com/cdriccarboni/meshora/releases/download/android-v0.3.0-beta2/MESHORA-0.3.0-beta2.apk" rel="noopener">Télécharger l'APK (12 Mo)</a>
+            <a class="btn" href="https://github.com/cdriccarboni/meshora/releases/tag/android-v0.3.0-beta2" rel="noopener">Page de la version</a>
+          </div>
+          <details class="verify">
+            <summary>Vérifier l'application avant de l'installer</summary>
+            <dl>
+              <dt>Empreinte SHA-256 du fichier</dt><dd><code>5d4aae5c9b78378e47803bbd066bd18e17b9c7a83a4799df547ca2316b6426d1</code></dd>
+              <dt>Certificat de signature (SHA-256)</dt><dd><code>5f:18:1e:db:a7:93:98:21:ef:69:01:57:5b:51:bf:3a:87:23:7e:a0:13:6a:e8:96:70:26:7a:92:3c:2d:f2:f2</code></dd>
+              <dt>Nom du paquet</dt><dd><code>org.meshora.app</code>, version 0.3.0-beta2 (code 8), Android 8.0 ou plus récent</dd>
+            </dl>
+            <p class="muted">Sur ordinateur : <code>shasum -a 256 MESHORA-0.3.0-beta2.apk</code>. Le certificat se lit avec <code>apksigner verify --print-certs</code>. Même certificat que les versions précédentes : l'installation les met à jour.</p>
+          </details>
+        </div>
+        <h3>Installer en 3 étapes</h3>
+        <ol class="steps">
+          <li>Sur le téléphone, touchez « Télécharger l'APK », puis ouvrez le fichier téléchargé.</li>
+          <li>Si Android le demande, autorisez l'installation depuis votre navigateur, puis touchez « Installer ».</li>
+          <li>Ouvrez MESHORA : il se connecte tout seul. Pour écrire à quelqu'un, onglet <strong>Contacts</strong> → <strong>Inviter un proche</strong> : la personne scanne le QR code ou ouvre le lien.</li>
+        </ol>
+        <div class="notice">
+          <p>Cette version n'est pas encore sur Google Play. Android ou Play Protect peut afficher un avertissement : n'installez MESHORA que depuis cette page ou la page GitHub du projet, et comparez l'empreinte ci-dessus.</p>
+          <p>Le relais MESHORA est en préproduction, sans garantie de disponibilité. Il ne voit jamais le texte de vos messages. Ne comptez pas sur MESHORA pour une urgence : appelez le 112.</p>
+        </div>
+        <div class="card">
+          <h3>Bluetooth sans Internet <span class="badge b-dev">En développement</span></h3>
+          <p>La version 0.3.0-beta2 contient une liaison Bluetooth expérimentale entre téléphones, <strong>désactivée par défaut</strong> (onglet Réseau). Elle n'a pas encore été vérifiée entre deux vrais téléphones : réservée aux personnes qui veulent nous aider à la tester.</p>
+          <p>Hors de votre groupe, les autres appareils ne voient que des données chiffrées : ni votre nom, ni votre clé.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="web">
+        <h2 id="web">Application web</h2>
+        <p>Pour essayer MESHORA en ligne sans installation, ouvrez l'application dans le navigateur, sur ordinateur comme sur téléphone. Vous pourrez ensuite l'ajouter à l'écran d'accueil.</p>
+        <!--@app-status-->
+        <p>Elle se connecte automatiquement au relais MESHORA. Pour échanger avec quelqu'un, ouvrez le <strong>lien d'invitation</strong> qu'il vous a envoyé, ou envoyez-lui le vôtre depuis <strong>Réglages → Inviter un proche</strong>.</p>
+      </section>
+
+      <section aria-labelledby="iphone">
+        <h2 id="iphone">iPhone et iPad</h2>
+        <p class="status"><span class="dot note" aria-hidden="true"></span>Application prévue — pas encore de version à installer.</p>
+        <p>En attendant, l'application web fonctionne dans Safari pour échanger par Internet avec un lien d'invitation. Le Bluetooth n'est pas accessible aux pages web sur iPhone : il viendra avec l'application.</p>
+      </section>
+
+      <section aria-labelledby="toutes">
+        <h2 id="toutes">Toutes les plateformes</h2>
+        <!--@releases-->
+      </section>
+
+      <section>
+        <h2>Ce dont vous aurez besoin</h2>
+        <div class="grid">
+          <div class="card"><h3>Un téléphone ou un ordinateur</h3><p>Aucun compte à créer : l'application génère votre identité sur votre appareil.</p></div>
+          <div class="card"><h3>Un lien d'invitation</h3><p>Pour rejoindre le groupe d'un proche : QR code ou lien, à ouvrir sur votre appareil.</p></div>
+          <div class="card"><h3>Le Bluetooth activé</h3><p>Seulement pour la version d'essai Bluetooth, sur téléphone Android. Il est désactivé par défaut et reste à tester entre deux téléphones.</p></div>
+        </div>
+      </section>

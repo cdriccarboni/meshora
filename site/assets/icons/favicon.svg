@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- MESHORA — variante « petite taille » du logo officiel (public/icon.svg, V0.2) pour favicon 16–32 px :
+       même carré, même noyau, même ellipse inclinée ; traits épaissis, orbites secondaires retirées pour rester lisible. -->
+  <rect width="128" height="128" rx="28" fill="#121316"/>
+  <ellipse cx="64" cy="64" rx="48" ry="25" transform="rotate(-30 64 64)" stroke="#60a5fa" stroke-width="8"/>
+  <circle cx="64" cy="64" r="17" fill="#f8fafc"/>
+  <circle cx="64" cy="64" r="9" fill="#3b82f6"/>
+  <circle cx="27" cy="44" r="9" fill="#93c5fd"/>
+</svg>

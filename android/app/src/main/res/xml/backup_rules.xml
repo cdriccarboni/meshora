@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="meshora_identity.xml" />
+        <exclude domain="sharedpref" path="meshora_messages.xml" />
+        <exclude domain="sharedpref" path="meshora_contacts.xml" />
+</full-backup-content>

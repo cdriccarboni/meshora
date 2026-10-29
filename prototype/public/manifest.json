@@ -1,0 +1,39 @@
+{
+  "id": "/app/",
+  "name": "MESHORA",
+  "short_name": "MESHORA",
+  "description": "Un réseau qui relie les autres. Application libre multi-réseaux pour communiquer localement et via passerelles.",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#121316",
+  "theme_color": "#121316",
+  "categories": ["social", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/app/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+    "data": {
+        "viewer": {
+            "accounts": [
+                {
+                    "durableObjectsInvocationsAdaptiveGroups": [
+                        {
+                            "dimensions": {
+                                "date": "2026-10-26"
+                            },
+                            "sum": {
+                                "requests": 387
+                            }
+                        },
+                        {
+                            "dimensions": {
+                                "date": "2026-10-27"
+                            },
+                            "sum": {
+                                "requests": 493
+                            }
+                        }
+                    ],
+                    "durableObjectsPeriodicGroups": [
+                        {
+                            "dimensions": {
+                                "date": "2026-10-26"
+                            },
+                            "sum": {
+                                "activeTime": 303138271,
+                                "cpuTime": 212358,
+                                "rowsRead": 178,
+                                "rowsWritten": 107
+                            }
+                        },
+                        {
+                            "dimensions": {
+                                "date": "2026-10-27"
+                            },
+                            "sum": {
+                                "activeTime": 444960883,
+                                "cpuTime": 299798,
+                                "rowsRead": 268,
+                                "rowsWritten": 146
+                            }
+                        }
+                    ],
+                    "durableObjectsStorageGroups": [],
+                    "workersInvocationsAdaptive": [
+                        {
+                            "dimensions": {
+                                "date": "2026-10-26"
+                            },
+                            "sum": {
+                                "errors": 0,
+                                "requests": 117
+                            }
+                        },
+                        {
+                            "dimensions": {
