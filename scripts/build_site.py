@@ -34,15 +34,15 @@ HAS_PROTO = (ROOT / "prototype" / "dist").is_dir()
 BUILT_AT = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 L = {
-    "fr": dict(home="/", discover="/fr/decouvrir/", install="/fr/installer/", status="/fr/etat/", privacy="/fr/confidentialite/",
+    "fr": dict(home="/", discover="/fr/decouvrir/", install="/fr/installer/", status="/fr/etat/", privacy="/fr/confidentialite/", legal="/fr/mentions-legales/",
                nav=[("discover", "Découvrir"), ("install", "Installer"), ("app", "Essayer")], other="en", other_label="English",
                main_nav="Navigation principale", share="Partager", sig="Un réseau qui relie les autres.",
-               footer_nav="Pied de page", status_label="État réel", privacy_label="Confidentialité", version="Version",
+               footer_nav="Pied de page", status_label="État réel", privacy_label="Confidentialité", legal_label="Mentions légales", version="Version",
                preview="Aperçu de validation — pas encore publié officiellement.", locale="fr_FR"),
-    "en": dict(home="/en/", discover="/en/discover/", install="/en/install/", status="/en/status/", privacy="/en/privacy/",
+    "en": dict(home="/en/", discover="/en/discover/", install="/en/install/", status="/en/status/", privacy="/en/privacy/", legal="/en/legal-notice/",
                nav=[("discover", "Discover"), ("install", "Install"), ("app", "Try it")], other="fr", other_label="Français",
                main_nav="Main navigation", share="Share", sig="A network that connects the others.",
-               footer_nav="Footer", status_label="Real status", privacy_label="Privacy", version="Version",
+               footer_nav="Footer", status_label="Real status", privacy_label="Privacy", legal_label="Legal notice", version="Version",
                preview="Validation preview — not officially published yet.", locale="en_GB"),
 }
 
@@ -119,6 +119,7 @@ def layout(meta, body):
           <a href="{t['install']}">{dict(t['nav'])['install']}</a>
           <a href="{t['status']}">{t['status_label']}</a>
           <a href="{t['privacy']}">{t['privacy_label']}</a>
+          <a href="{t['legal']}">{t['legal_label']}</a>
         </nav>
         <span class="version">{t['version']} {VERSION} · {COMMIT}</span>
       </div>
