@@ -30,6 +30,23 @@ def git_commit():
     except Exception: return "local"
 
 COMMIT = git_commit()
+# V0.3 — relais de référence : CSP de /app et adresse intégrée à l'application (préproduction hors production).
+REF_RELAY = os.environ.get("MESHORA_RELAY_URL") or (
+    "wss://meshora-relay.acousmaticregietools.workers.dev" if CHANNEL == "production"
+    else "wss://meshora-relay-preprod.acousmaticregietools.workers.dev")
+_ref = re.fullmatch(r"(wss://[a-z0-9.-]+\.[a-z]{2,}(:\d+)?)/?", REF_RELAY)
+if not _ref:
+    sys.exit(f"REFUS — relais de référence invalide : {REF_RELAY!r} (wss:// obligatoire)")
+REF_RELAY_ORIGIN = _ref.group(1)
+PREPROD_RELAY_HOST = "meshora-relay-preprod.acousmaticregietools.workers.dev"
+
+# MESHORA_BUILD_APP=1 : construit l'application web (prototype/, Vite, base /app/) avec le relais de référence.
+BUILT_APP = os.environ.get("MESHORA_BUILD_APP") == "1"
+if BUILT_APP:
+    if not (ROOT / "prototype" / "node_modules").is_dir():
+        sys.exit("REFUS — prototype/node_modules absent : lancez d'abord `npm ci` dans prototype/.")
+    subprocess.run(["npm", "run", "build"], cwd=ROOT / "prototype", check=True,
+                   env={**os.environ, "VITE_MESHORA_RELAY": REF_RELAY_ORIGIN})
 HAS_PROTO = (ROOT / "prototype" / "dist").is_dir()
 BUILT_AT = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -226,12 +243,7 @@ def build():
     if CHANNEL != "production":
         headers = headers.replace("/*\n", "/*\n  X-Robots-Tag: noindex, nofollow\n", 1)
     # V0.3 — relais de référence autorisé dans la CSP de /app (préproduction hors production).
-    ref_relay = os.environ.get("MESHORA_RELAY_URL") or (
-        "wss://meshora-relay.acousmaticregietools.workers.dev" if CHANNEL == "production"
-        else "wss://meshora-relay-preprod.acousmaticregietools.workers.dev")
-    m = re.fullmatch(r"(wss://[a-z0-9.-]+\.[a-z]{2,}(:\d+)?)/?", ref_relay)
-    if not m:
-        sys.exit(f"REFUS — relais de référence invalide : {ref_relay!r} (wss:// obligatoire)")
+    m = _ref  # relais de référence calculé une seule fois (REF_RELAY, en tête du script)
     block = headers.split("/app/*\n", 1)
     if len(block) != 2 or "connect-src 'self'" not in block[1].split("\n", 1)[0]:
         sys.exit("REFUS — CSP de /app introuvable dans site/_headers")
@@ -317,6 +329,15 @@ EMERGENCY_APPROVAL = ROOT / "docs" / "tests" / "EMERGENCY-APPROVAL.md"
 def check(urls):
     errors = []
     app_dir = DIST / "app"
+    if HAS_PROTO and app_dir.is_dir():
+        js = "".join(f.read_text(errors="ignore") for f in app_dir.rglob("*.js"))
+        if REF_RELAY_ORIGIN not in js:
+            errors.append(f"Relais de référence absent du build /app ({REF_RELAY_ORIGIN})")
+        if CHANNEL == "production" and REF_RELAY_ORIGIN.find(PREPROD_RELAY_HOST) < 0:
+            for f in app_dir.rglob("*"):
+                if f.is_file() and PREPROD_RELAY_HOST in f.read_text(errors="ignore"):
+                    errors.append(f"Relais de préproduction présent dans /app en production ({f.relative_to(DIST)})")
+                    break
     if app_dir.is_dir() and not EMERGENCY_APPROVAL.is_file():
         for f in app_dir.rglob("*"):
             if f.is_file() and f.suffix in {".html", ".js", ".json", ".mjs"}:
