@@ -105,7 +105,7 @@ Toute clé d'API présente dans le ZIP doit être retirée et révoquée ; une a
 | Branche de production | `main` (aucune mise en production sans accord) |
 | Commande de construction | `python3 scripts/build_site.py` |
 | Dossier publié | `dist` |
-| Variables | `SITE_URL` (URL publique), `MESHORA_CHANNEL` (`preview` ou `production`) |
+| Variables | `SITE_URL` (URL publique), `MESHORA_CHANNEL` (`preview` ou `production`) ; `MESHORA_BUILD_APP=1` construit l'application web (`npm run build` dans `prototype/`, après `npm ci`) et la publie sous `/app` ; `MESHORA_RELAY_URL` remplace le relais de référence (par défaut `wss://meshora-relay.acousmaticregietools.workers.dev` en production, la préproduction sinon), utilisé à la fois dans l'application et dans la CSP de `/app` |
 | Aperçus | Une URL par branche ; partage pour validation |
 
 Les aperçus Cloudflare Pages sont accessibles à toute personne qui connaît l'URL. Ils ne sont pas indexés (`noindex`), mais ils ne doivent contenir que ce qui pourrait être public.
