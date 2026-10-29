@@ -231,7 +231,10 @@ export const i18nData = {
       dark: 'Graphite Sombre',
       light: 'Clair Épuré',
       storageTitle: 'Données locales & Stockage',
-      auditTitle: 'Journal de sécurité'
+      auditTitle: 'Journal de sécurité',
+      aboutTitle: 'À propos et code source',
+      licenseText: 'MESHORA est un logiciel libre, publié sous licence AGPL-3.0. Vous pouvez consulter, copier et modifier le code source correspondant à cette application.',
+      sourceLink: 'Code source (AGPL-3.0)'
     }
   },
   en: {
@@ -458,7 +461,10 @@ export const i18nData = {
       dark: 'Dark Graphite',
       light: 'Crisp Light',
       storageTitle: 'Local Storage & Cache',
-      auditTitle: 'Security Audit Log'
+      auditTitle: 'Security Audit Log',
+      aboutTitle: 'About and source code',
+      licenseText: 'MESHORA is free software, released under the AGPL-3.0 licence. You can read, copy and modify the source code of this application.',
+      sourceLink: 'Source code (AGPL-3.0)'
     }
   }
 } as const;
