@@ -68,7 +68,7 @@ for (const vp of VIEWPORTS) {
         const fig = page.locator('figure.mesh-diagram');
         await fig.screenshot({ path: path.join(SHOTS, `schema-${slug}-${vp.name}-${scheme}.png`) });
       }
-      record(`version affichée ${tag}`, /0\.3\.0-preview/.test(info.version || ''), `pied de page « ${info.version} »`);
+      record(`version affichée ${tag}`, /(^|\s)0\.3\.0 ·/.test(info.version || ''), `pied de page « ${info.version} »`);
       await page.close();
     }
     await ctx.close();

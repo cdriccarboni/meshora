@@ -2,7 +2,9 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : [SemVer](https://semver.org/lang/fr/).
 
-## [0.3.0-preview] — non publié
+## [0.3.0] — 2026-10-29 (site public)
+### Publié
+- Site public en production : pages Découvrir et Installer (FR/EN), accès web v1 (`docs/WEB-ACCESS-V1.md`), mentions légales FR/EN liées en pied de page. Bluetooth et Tor restent expérimentaux ; l'APK Android 0.3.0-beta2 reste « en validation ».
 ### Ajouté
 - **Relais de référence** sur Cloudflare Workers + Durable Objects (`relay/cloudflare`), préproduction : adresse stable, sans compte, boîte aux lettres persistante 24 h, limites de débit, aucune journalisation ; banc de conformité `tools/audit/relay-conformance.ts` (13 vérifications).
 - **Android 0.3.0-beta1** : connexion automatique, invitations par QR code et lien, contacts vérifiés, discussions par personne, interface anglais/français, erreurs compréhensibles, clé privée chiffrée par le magasin de clés Android.
