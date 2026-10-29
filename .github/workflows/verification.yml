@@ -1,7 +1,7 @@
 # MESHORA — vérifications automatiques de chaque pull request (aucun secret, aucun déploiement, aucune signature).
 # Ce que ça vérifie : tests web, vecteurs communs, conformité des DEUX relais (Node et vrai Worker via
 # `wrangler dev` en local), tests unitaires Android dont l'interopérabilité Android ↔ web à travers un relais local,
-# et lint Android. Les rapports sont joints à chaque exécution.
+# lint Android et APK de débogage (artefact « apk-debug » + SHA256SUMS). Les rapports sont joints à chaque exécution.
 # SPDX-License-Identifier: AGPL-3.0-or-later
 name: Vérification
 
@@ -112,6 +112,21 @@ jobs:
       - name: Lint Android
         working-directory: android
         run: ./gradlew --no-daemon -q lintDebug
+      - name: APK de débogage (signature de débogage du runner, jamais la clé de publication)
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon -q assembleDebug
+          mkdir -p ../apk-debug
+          name=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          cp app/build/outputs/apk/debug/*.apk "../apk-debug/meshora-${name}-debug.apk"
+          cd ../apk-debug && sha256sum *.apk | tee SHA256SUMS
+          echo "::notice title=APK debug::$(cat SHA256SUMS)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-debug
+          path: apk-debug/
+          if-no-files-found: error
+          retention-days: 30
       - name: Résumé lisible par l'API (annotations)
         if: always()
         run: |
