@@ -95,6 +95,14 @@
 
     <string name="gateway_title">Servir de passerelle Internet (expérimental)</string>
     <string name="gateway_explain">Quand ce téléphone a Internet, il achemine par Bluetooth les messages des membres de votre groupe qui n\'en ont plus. Il ne peut pas les lire (chiffrés pour eux). Consomme données et batterie.</string>
+    <string name="problem_waiting_tor">Mode Tor : en attente du circuit Tor. Aucune connexion directe n\'est tentée.</string>
+    <string name="problem_tor_unreachable">Mode Tor : Tor n\'atteint pas le relais pour le moment (réseau Tor bloqué ou lent). Nouvelle tentative automatique ; aucune connexion directe.</string>
+    <string name="tor_title">Passer par Tor (expérimental)</string>
+    <string name="tor_off">Désactivé</string>
+    <string name="tor_starting">Démarrage de Tor… (jusqu\'à une minute)</string>
+    <string name="tor_on">Actif : le relais ne voit plus l\'adresse IP de ce téléphone</string>
+    <string name="tor_error">Tor n\'a pas pu démarrer</string>
+    <string name="tor_explain">Avec Tor, le relais et Cloudflare voient l\'adresse d\'un nœud Tor au lieu de la vôtre. Plus lent, un peu plus de batterie. Si Tor n\'est pas prêt, MESHORA attend plutôt que de se connecter directement. Le contenu des messages est chiffré de bout en bout dans tous les cas. Non testé sur téléphone.</string>
     <string name="ble_title">Bluetooth direct (expérimental)</string>
     <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Continue de fonctionner écran éteint tant qu\'il est activé (consomme davantage de batterie ; une notification l\'indique, avec un bouton Arrêter). Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
     <string name="ble_links">Liens Bluetooth directs : %1$d</string>

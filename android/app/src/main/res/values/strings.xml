@@ -95,6 +95,14 @@
 
     <string name="gateway_title">Act as an Internet gateway (experimental)</string>
     <string name="gateway_explain">When this phone has Internet, it carries over Bluetooth the messages of group members who have none. It cannot read them (encrypted for them). Uses data and battery.</string>
+    <string name="problem_waiting_tor">Tor mode: waiting for the Tor circuit. No direct connection is attempted.</string>
+    <string name="problem_tor_unreachable">Tor mode: Tor cannot reach the relay right now (Tor network blocked or slow). Retrying automatically; no direct connection.</string>
+    <string name="tor_title">Route through Tor (experimental)</string>
+    <string name="tor_off">Off</string>
+    <string name="tor_starting">Starting Tor… (up to a minute)</string>
+    <string name="tor_on">On: the relay no longer sees this phone\'s IP address</string>
+    <string name="tor_error">Tor could not start</string>
+    <string name="tor_explain">With Tor, the relay and Cloudflare see a Tor node\'s address instead of yours. Slower, a little more battery. If Tor is not ready, MESHORA waits rather than connecting directly. Message content is end-to-end encrypted either way. Not tested on a phone.</string>
     <string name="ble_title">Direct Bluetooth (experimental)</string>
     <string name="ble_notice">Experimental: not yet tested between two phones. Keeps working with the screen off while turned on (uses more battery; a notification shows it, with a Stop button). Range not measured. Only members of your group see your name; other devices only see encrypted data (they can tell a MESHORA device is nearby).</string>
     <string name="ble_links">Direct Bluetooth links: %1$d</string>

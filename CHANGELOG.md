@@ -4,6 +4,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) · versions : 
 
 ## [0.4.0-dev] — non publié (branche `claude/v0.4-suite`)
 ### Ajouté
+- **Mode Tor (expérimental, branche `feature/tor`, Android 0.4.0-dev2-tor, code 12)** : tor-android 0.4.9.6 (Guardian Project, BSD), échec fermé (aucune connexion directe tant que Tor n'est pas prêt), réglage dans Réseau → avancés ; désactivé par défaut.
 - **Effacement d'urgence** : Android (écran Identité, confirmation obligatoire ; destruction de la clé d'emballage du magasin de clés Android, des préférences, du cache, puis `clearApplicationUserData`) et web (Paramètres ; stockage local, IndexedDB, caches, service worker). Nouvelle identité au redémarrage.
 - **Passerelle Internet par les voisins Bluetooth** (expérimental, désactivée par défaut) : un téléphone sans Internet délègue sa réception à un voisin connecté (délégation signée, 10 min, liée au groupe et à la passerelle) ; le relais vérifie lui-même les signatures des enveloppes et accusés transmis (`MESHORA_FORWARD`, `MESHORA_SERVE`). La passerelle ne lit rien.
 - Banc de conformité du relais : 16 vérifications (C14 à C16 pour la passerelle) ; relais de développement séparé `meshora-relay-dev`.

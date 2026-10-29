@@ -37,6 +37,7 @@ fun TransportsScreen() {
     val bleRunning by bleMesh.running.collectAsState()
     val bleLinks by bleMesh.linkCount.collectAsState()
     val bleStatus by bleMesh.status.collectAsState()
+    val torState by app.tor.state.collectAsState()
     val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { bleMesh.start() }
@@ -77,6 +78,8 @@ fun TransportsScreen() {
                             RelayProblem.RATE_LIMITED -> R.string.problem_rate
                             RelayProblem.ROOM_FULL -> R.string.problem_full
                             RelayProblem.BAD_ADDRESS -> R.string.problem_bad_address
+                            RelayProblem.WAITING_FOR_TOR -> R.string.problem_waiting_tor
+                            RelayProblem.TOR_UNREACHABLE -> R.string.problem_tor_unreachable
                             else -> R.string.problem_unreachable
                         }),
                         style = MaterialTheme.typography.bodySmall
@@ -150,6 +153,29 @@ fun TransportsScreen() {
                             OutlinedButton(onClick = { app.settings.resetRelay(); app.settings.setAutoConnect(true); app.connectRelay() }) { Text(stringResource(R.string.use_default_relay)) }
                         }
                     }
+                    Spacer(Modifier.height(16.dp))
+                    // --- Tor (expérimental) ---
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.tor_title), fontWeight = FontWeight.SemiBold)
+                            Text(
+                                stringResource(when (torState) {
+                                    org.meshora.app.transport.TorManager.State.ON -> R.string.tor_on
+                                    org.meshora.app.transport.TorManager.State.STARTING -> R.string.tor_starting
+                                    org.meshora.app.transport.TorManager.State.ERROR -> R.string.tor_error
+                                    else -> R.string.tor_off
+                                }),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (torState == org.meshora.app.transport.TorManager.State.ON) MeshoraSuccess else MeshoraTextSecondary
+                            )
+                        }
+                        Switch(checked = settings.torEnabled, onCheckedChange = { on ->
+                            app.settings.setTorEnabled(on)
+                            app.applyTorSetting()
+                            if (app.settings.current.autoConnect) app.connectRelay()
+                        })
+                    }
+                    Text(stringResource(R.string.tor_explain), style = MaterialTheme.typography.bodySmall, color = MeshoraTextSecondary)
                     Spacer(Modifier.height(12.dp))
                     if (confirmNewGroup) {
                         Text(stringResource(R.string.new_group_confirm), style = MaterialTheme.typography.bodySmall, color = MeshoraWarning)
