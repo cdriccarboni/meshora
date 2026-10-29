@@ -4,8 +4,11 @@
  * MESHORA — Un réseau qui relie les autres.
  */
 
-import { invitationLink, parseInvitation, newRoomCode } from '../../core/invitation';
+import { invitationLink, parseInvitation, newRoomCode, DEFAULT_RELAY_URL } from '../../core/invitation';
 import { panicWipe } from '../../core/panicWipe';
+
+const SOURCE_URL = 'https://github.com/cdriccarboni/meshora';
+const RELAY_IS_PREPROD = DEFAULT_RELAY_URL.includes('preprod');
 import { isAcceptableRelayUrl } from '../../core/urlHygiene';
 import React, { useState, useEffect } from 'react';
 import { Language, i18nData } from '../../core/i18n';
@@ -14,7 +17,7 @@ import { updateIdentityAlias } from '../../core/identity';
 import { MessageStore } from '../../core/storage';
 import { TransportManager } from '../../transports/TransportManager';
 import { WebSocketTransport } from '../../transports/WebSocketTransport';
-import { Sliders, KeyRound, Database, ShieldAlert, Check, Moon, Sun, Trash2, Copy, Wifi, Share2 } from 'lucide-react';
+import { Sliders, KeyRound, Database, ShieldAlert, Check, Moon, Sun, Trash2, Copy, Wifi, Share2, Code2 } from 'lucide-react';
 
 interface SettingsScreenProps {
   lang: Language;
@@ -200,8 +203,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
         <p className="text-xs text-neutral-500 leading-relaxed">
           {lang === 'fr'
-            ? 'Connexion automatique au relais MESHORA (version d’essai, préproduction). Le relais ne voit jamais le texte de vos messages ; il voit votre adresse IP, les horaires, la taille des messages, votre clé publique et votre nom.'
-            : 'Automatic connection to the MESHORA relay (test version, pre-production). The relay never sees the text of your messages; it sees your IP address, times, message sizes, your public key and your name.'}
+            ? 'Connexion automatique au relais MESHORA (version d’essai' + (RELAY_IS_PREPROD ? ', préproduction' : '') + '). Le relais ne voit jamais le texte de vos messages ; il voit votre adresse IP, les horaires, la taille des messages, votre clé publique et votre nom.'
+            : 'Automatic connection to the MESHORA relay (test version' + (RELAY_IS_PREPROD ? ', pre-production' : '') + '). The relay never sees the text of your messages; it sees your IP address, times, message sizes, your public key and your name.'}
         </p>
         <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400">
           {(lang === 'fr' ? 'Votre groupe : ' : 'Your group: ') + inputs.room}
@@ -350,6 +353,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <Trash2 className="w-3.5 h-3.5" />
           <span>{t.actions.clearCache}</span>
         </button>
+      </div>
+
+      {/* À propos — accès au code source (AGPL-3.0, docs/PUBLICATION.md §3 règle 7) */}
+      <div className="rounded-2xl p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+          <Code2 className="w-4 h-4 text-neutral-500" />
+          <span>{t.settings.aboutTitle}</span>
+        </h2>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">{t.settings.licenseText}</p>
+        <a
+          href={SOURCE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl transition underline-offset-2 hover:underline"
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>{t.settings.sourceLink}</span>
+        </a>
       </div>
     </div>
   );

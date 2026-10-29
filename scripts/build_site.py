@@ -164,6 +164,8 @@ def status_body(lang):
         return re.sub(r"`([^`]+)`", r"<code>\1</code>", c)
     legend = re.search(r"Légende : (.*)", md).group(1)
     tested = sum(1 for r in data if "✅" in cells(r)[2])
+    sm = re.search(rf"^Résumé public \({'FR' if lang == 'fr' else 'EN'}\) : (.*)$", md, re.M)
+    summary = f"<p><strong>{html.escape(sm.group(1))}</strong></p>" if sm else ""
     if lang == "fr":
         intro = (f"<p>Cette page est générée automatiquement depuis le suivi interne du projet. "
                  f"Une fonction n'est marquée ✅ qu'après un test réel sur appareils physiques.</p>"
@@ -182,6 +184,7 @@ def status_body(lang):
     ths = "".join(f'<th scope="col">{h}</th>' for h in heads)
     return f"""      <div class="hero"><h1>{title}</h1></div>
       <section>
+        {summary}
         {intro}
         <div class="table-scroll"><table class="status-table"><thead><tr>{ths}</tr></thead><tbody>
 {trs}
