@@ -7,6 +7,8 @@ name: Vérification
 
 on:
   pull_request:
+  push:
+    branches: [release/v0.4, feature/tor]   # APK de débogage et tests même quand la PR est en conflit
   workflow_dispatch:
 
 permissions:
