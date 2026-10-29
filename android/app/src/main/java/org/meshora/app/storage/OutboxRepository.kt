@@ -11,8 +11,14 @@ import org.meshora.app.model.Message
 import org.meshora.app.model.MessageStatus
 import org.meshora.app.model.Peer
 
-class OutboxRepository(context: Context? = null) {
+/**
+ * Messages et file d'envoi. Sur l'appareil, l'historique est CHIFFRÉ au repos ([LocalVault], correction A-P1-6) ;
+ * un ancien historique en clair est lu une fois puis réécrit chiffré. Sans coffre disponible, rien n'est écrit
+ * en clair : les données restent en mémoire. [vault] est injectable pour les tests JVM.
+ */
+class OutboxRepository(context: Context? = null, vault: LocalVault? = null) {
     private val prefs: SharedPreferences? = context?.getSharedPreferences("meshora_messages", Context.MODE_PRIVATE)
+    private val vault: LocalVault? = vault ?: context?.let { LocalVault.forApp(it) }
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
@@ -30,7 +36,7 @@ class OutboxRepository(context: Context? = null) {
     @Synchronized
     private fun loadFromStorage() {
         if (prefs == null) return
-        val rawMessages = prefs.getString("messages_json", null)
+        val rawMessages = prefs.getString("messages_json", null)?.let { stored -> vault?.open(stored) ?: stored.takeUnless { LocalVault.isSealed(it) } }
         if (!rawMessages.isNullOrBlank()) {
             try {
                 val list = json.decodeFromString<List<Message>>(rawMessages)
@@ -39,20 +45,25 @@ class OutboxRepository(context: Context? = null) {
             } catch (_: Exception) {}
         }
 
-        val rawSeen = prefs.getStringSet("seen_ids", emptySet())
-        if (rawSeen != null) {
-            seenMessageIds.addAll(rawSeen)
+        // Ancien format (identifiants en clair) puis format chiffré.
+        prefs.getStringSet("seen_ids", null)?.let { seenMessageIds.addAll(it) }
+        prefs.getString("seen_json", null)?.let { stored -> vault?.open(stored) }?.let { raw ->
+            runCatching { seenMessageIds.addAll(json.decodeFromString<List<String>>(raw)) }
+        }
+        if (vault != null && (prefs.contains("seen_ids") || prefs.getString("messages_json", null)?.let { !LocalVault.isSealed(it) } == true)) {
+            saveToStorage() // migration : réécrit chiffré et supprime le clair
         }
     }
 
     @Synchronized
     private fun saveToStorage() {
         if (prefs == null) return
+        val v = vault ?: return // jamais d'écriture en clair
         try {
-            val rawMessages = json.encodeToString(_messages.value)
             prefs.edit()
-                .putString("messages_json", rawMessages)
-                .putStringSet("seen_ids", seenMessageIds.toSet())
+                .putString("messages_json", v.seal(json.encodeToString(_messages.value)))
+                .putString("seen_json", v.seal(json.encodeToString(seenMessageIds.toList())))
+                .remove("seen_ids")
                 .apply()
         } catch (_: Exception) {}
     }
@@ -118,7 +129,7 @@ class OutboxRepository(context: Context? = null) {
     @Synchronized
     fun recordSeenMessage(id: String) {
         seenMessageIds.add(id)
-        prefs?.edit()?.putStringSet("seen_ids", seenMessageIds.toSet())?.apply()
+        saveToStorage()
     }
 
     @Synchronized

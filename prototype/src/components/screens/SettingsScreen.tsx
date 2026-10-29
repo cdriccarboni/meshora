@@ -5,6 +5,7 @@
  */
 
 import { invitationLink, parseInvitation, newRoomCode, DEFAULT_RELAY_URL } from '../../core/invitation';
+import { panicWipe } from '../../core/panicWipe';
 
 const SOURCE_URL = 'https://github.com/cdriccarboni/meshora';
 const RELAY_IS_PREPROD = DEFAULT_RELAY_URL.includes('preprod');
@@ -112,6 +113,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       setPasted('');
       setPasteError(false);
     }
+  };
+
+  const handlePanicWipe = async () => {
+    const ok = confirm(
+      lang === 'fr'
+        ? 'EFFACEMENT D’URGENCE\n\nEffacer définitivement de cet appareil votre identité, vos messages, vos contacts et vos réglages ?\n\nIrréversible. Les messages déjà reçus par d’autres ne sont pas effacés chez eux.'
+        : 'EMERGENCY WIPE\n\nPermanently erase your identity, messages, contacts and settings from this device?\n\nIrreversible. Messages already received by others are not erased on their devices.'
+    );
+    if (!ok) return;
+    await panicWipe();
+    window.location.replace(window.location.pathname);
   };
 
   const handleClearCache = () => {
@@ -326,6 +338,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             : 'All message and resilience data is kept locally on this device without remote server transmission.'}
         </p>
 
+        <button
+          type="button"
+          onClick={handlePanicWipe}
+          className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-xl transition"
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>{lang === 'fr' ? 'Effacement d’urgence (tout effacer)' : 'Emergency wipe (erase everything)'}</span>
+        </button>
         <button
           onClick={handleClearCache}
           className="flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-xl transition"

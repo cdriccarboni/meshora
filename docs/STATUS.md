@@ -11,6 +11,10 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 
 **V0.3 — mise à jour du 29 octobre 2026 : site public publié en production (`meshora.pages.dev`, version 0.3.0) ; application web `/app` publiée, reliée au relais de production `wss://meshora-relay.acousmaticregietools.workers.dev`, en ligne et vérifié 13/13 le 29/10 (`docs/tests/v0.3/relais-production-2026-10-29.md`). Bluetooth et Android 0.3.0-beta2 toujours non testés sur vrai téléphone.**
 
+**Note (27/10, soir) : les rapports `.log` cités ci-dessous étaient exclus du dépôt par `.gitignore` ; ceux de v0.3 et de v0.4 produits sur le Mac doivent encore y être ajoutés.**
+
+**V0.4-dev — 27 octobre 2026 (branche `claude/v0.4-suite`, non intégrée) : effacement d'urgence vérifié sur émulateur et en navigateur réel ; passerelle Internet par voisins Bluetooth vérifiée contre un relais réel (JVM), jamais entre deux téléphones. Préproduction inchangée.**
+
 **V0.3 — mise à jour du 27 octobre 2026 : Android 0.3.0-beta2 vérifiée sur émulateur Android 16 (APK signé ↔ client web réel via le relais, 8/8) ; Bluetooth scellé par la clé du groupe ; relais résilient (redémarrage, absence 3 min, 4/4). Essai sur vrai téléphone toujours à faire.**
 
 **V0.3 (26 octobre 2026, nuit) : relais de référence Cloudflare en préproduction, connexion automatique et invitations — vérifiés automatiquement contre l'adresse réelle, essai sur téléphone à faire. Détail : `docs/tests/v0.3/`.**
@@ -61,6 +65,14 @@ Légende : ⛔ Bloquée pour publication · ⬜ Non commencée · 📐 Spécifi�
 | Mesh natif | Trame, fragmentation, déduplication, relais TTL, limiteur | 🔧 | JVM | `MeshFrameTest` 5/5 (branche `claude/mesh-ble-prep`) ; aucune radio pilotée |
 | Site | Pages Découvrir et Installer (FR/EN), schéma vérifié / en développement / futur | 🔧 | Chrome ordinateur 1280 px et mobile 390 px, thèmes clair et sombre | Prévisualisation `v0-3.meshora.pages.dev` : 121/121 (`docs/tests/v0.3/site-audit-v0-3.log`) ; avant : 120/120 vérifications (accessibilité axe WCAG 2.1 AA, liens, débordement, versions) ; **publié en production le 29/10/2026** (`meshora.pages.dev`, 0.3.0, mentions légales FR/EN) ; vérifié par requêtes HTTP (200, sans `noindex`), audit navigateur de la production à faire |
 | Web V0.3 | Application web publiée sous `/app` (production), relais de production, lien vers le code source (AGPL-3.0) | 🔧 | Requêtes HTTP vers `meshora.pages.dev/app/` ; relais de production 13/13 depuis un Mac | Publiée le 29/10/2026 : CSP `connect-src` limitée au relais de production ; **aucun essai sur téléphone ni en navigateur réel contre la production** |
+| Android V0.4-dev | Effacement d'urgence (clé d'identité détruite, données effacées) | 🔧 | Émulateur Android 16 (APK signé 0.4.0-dev1) | Identité changée après effacement, discussions et contacts vides (`docs/tests/v0.4/android-effacement-urgence-emulateur.log`) ; **essai sur Pixel à faire** |
+| Web V0.4-dev | Effacement d'urgence | 🔧 | Chrome (Mac) contre `v0-4-dev.meshora.pages.dev` | 4/4 (`docs/tests/v0.4/web-effacement-urgence.log`) |
+| Android V0.4-dev | Passerelle Internet par voisins Bluetooth (désactivée par défaut) | 🔧 | JVM (liens Bluetooth simulés) + relais de développement réel | Messages et accusés dans les deux sens, la passerelle ne lit rien (`docs/tests/v0.4/android-tests-passerelle-dev.log`) ; **jamais testée entre deux téléphones** |
+| V0.4-dev | Confidentialité persistante, étape A (prékeys signées hebdomadaires, enveloppe v3, repli v2) | 🔧 | Node (web réel), relais Node, vrai code du relais Cloudflare hors wrangler, Android JVM (GitHub Actions) | Python = TypeScript = Kotlin (`docs/tests/v0.4/prekey-vectors.json`) ; web 33/33 ; relais Node et `wrangler dev` 17/17 dont C17 ; tests Android verts dont `PrekeyTest`, interopérabilité Android ↔ web en v3 et passerelle ; **téléphones à faire** ; branche `claude/v0.4-prekeys` |
+| Android V0.4-dev | Maillage Bluetooth écran éteint (service de premier plan + verrou de veille, décision du 27/10) | 🔧 | Compilation et lint (GitHub Actions) | **Jamais essayé sur téléphone** : durée de fonctionnement écran éteint et consommation à mesurer sur le Pixel |
+| Android V0.4-dev | Messages, identifiants vus et contacts chiffrés au repos (coffre scellé par le magasin de clés), exclus des sauvegardes | 🔧 | JVM (GitHub Actions) | `LocalVaultTest` 3/3 ; migration de l'ancien clair à vérifier sur téléphone (mise à jour beta2 → 0.4) |
+| Outillage | Vérification automatique de chaque pull request (GitHub Actions) | ✅ | Ubuntu (GitHub) | Web, vecteurs, relais Node 17/17, relais Cloudflare `wrangler dev` 17/17, Android (unitaires + interopérabilité Android ↔ web + passerelle), lint — `.github/workflows/verification.yml` |
+| Relais V0.4-dev | Transmission vérifiée (`MESHORA_FORWARD`) et délégation (`MESHORA_SERVE`) | 🔧 | Node local, `wrangler dev`, `meshora-relay-dev` | 16/16 (`docs/tests/v0.4/relay-conformance-dev.log`) ; préproduction non mise à jour |
 | — | Transport via les réseaux Find My / Find Hub | ❌ | — | NEARBY §1 |
 | — | Bluetooth Mesh SIG, Wi-Fi Direct, Nearby Connections, I2P | ❌ | — | voir AUDIT |
 

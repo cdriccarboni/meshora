@@ -1,0 +1,154 @@
+# MESHORA — vérifications automatiques de chaque pull request (aucun secret, aucun déploiement, aucune signature).
+# Ce que ça vérifie : tests web, vecteurs communs, conformité des DEUX relais (Node et vrai Worker via
+# `wrangler dev` en local), tests unitaires Android dont l'interopérabilité Android ↔ web à travers un relais local,
+# lint Android et APK de débogage (artefact « apk-debug » + SHA256SUMS). Les rapports sont joints à chaque exécution.
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Vérification
+
+on:
+  pull_request:
+  push:
+    branches: [release/v0.4, feature/tor]   # APK de débogage et tests même quand la PR est en conflit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash   # « -eo pipefail » : un test en échec fait échouer l'étape même à travers « | tee »
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-et-relais:
+    name: Web, vecteurs et relais
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: prototype/package-lock.json
+      - name: Dépendances web
+        working-directory: prototype
+        run: npm ci --no-audit --no-fund
+      - name: Typage TypeScript
+        working-directory: prototype
+        run: npm run lint
+      - name: Tests web (dont vecteurs Python ↔ TypeScript et confidentialité persistante)
+        working-directory: prototype
+        run: npm test 2>&1 | tee ../rapport-web.log
+      - name: Référence Python des vecteurs (régénérée et relue)
+        run: |
+          pip install --quiet cryptography
+          python3 tools/audit/prekey-reference.py /tmp/prekey-vectors-ci.json
+          python3 tools/audit/group-seal-reference.py > /tmp/group-seal-ci.json
+          python3 - <<'PY'
+          import json
+          a = json.load(open('/tmp/group-seal-ci.json')); b = json.load(open('docs/tests/v0.3/group-seal-vectors.json'))
+          assert a == b, 'vecteurs de scellement Bluetooth différents de la référence'
+          print('vecteurs de scellement : identiques à la référence')
+          PY
+      - name: Conformité du relais Node
+        run: |
+          PORT=8787 HOST=127.0.0.1 node tools/relay/server.js > /tmp/relay-node.log 2>&1 &
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:8787/health >/dev/null && break; sleep 0.25; done
+          cd prototype && RELAY=ws://127.0.0.1:8787 npx tsx ../tools/audit/relay-conformance.ts 2>&1 | tee ../rapport-relais-node.log
+          kill %1 || true
+      - name: Vrai code du relais Cloudflare (hors wrangler)
+        working-directory: prototype
+        run: npx tsx ../tools/audit/cf-relay-harness.mjs 2>&1 | tee ../rapport-relais-cloudflare-banc.log
+      - name: Conformité du relais Cloudflare (wrangler dev, local, sans compte)
+        env:
+          WRANGLER_SEND_METRICS: "false"
+          CI: "true"
+        run: |
+          cd relay/cloudflare
+          npx --yes wrangler@4 dev --env dev --ip 127.0.0.1 --port 8788 > /tmp/wrangler.log 2>&1 &
+          for i in $(seq 1 120); do curl -fsS http://127.0.0.1:8788/health >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8788/health || { cat /tmp/wrangler.log; exit 1; }
+          cd ../../prototype && RELAY=ws://127.0.0.1:8788 npx tsx ../tools/audit/relay-conformance.ts 2>&1 | tee ../rapport-relais-wrangler.log
+      - name: Résumé lisible par l'API (annotations)
+        if: always()
+        run: |
+          for f in rapport-*.log; do
+            [ -f "$f" ] || continue
+            echo "::notice title=$f::$(grep -hE 'RÉSULTAT|Total:' "$f" | tr '\n' ' ' | cut -c1-900)"
+            grep -hE "❌|FAIL" "$f" | head -8 | while IFS= read -r l; do echo "::error title=$f::$l"; done || true
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapports-web-et-relais
+          path: rapport-*.log
+
+  android:
+    name: Android (tests unitaires, interopérabilité, lint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: prototype/package-lock.json
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Dépendances web (robot d'écho pour l'interopérabilité)
+        working-directory: prototype
+        run: npm ci --no-audit --no-fund
+      - name: Tests unitaires Android + interopérabilité Android ↔ web via un relais local
+        env:
+          GRADLE_FLAGS: "--no-daemon"
+          MESHORA_INTEROP_V3: "1"   # le relais local est à jour : l'échange Android ↔ web doit passer en v3
+        run: bash tools/audit/interop-android.sh 2>&1 | tee rapport-android.log
+      - name: Lint Android
+        working-directory: android
+        run: ./gradlew --no-daemon -q lintDebug
+      - name: APK de débogage (signature de débogage du runner, jamais la clé de publication)
+        working-directory: android
+        run: |
+          ./gradlew --no-daemon -q assembleDebug
+          mkdir -p ../apk-debug
+          name=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/')
+          cp app/build/outputs/apk/debug/*.apk "../apk-debug/meshora-${name}-debug.apk"
+          cd ../apk-debug && sha256sum *.apk | tee SHA256SUMS
+          echo "::notice title=APK debug::$(cat SHA256SUMS)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-debug
+          path: apk-debug/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Résumé lisible par l'API (annotations)
+        if: always()
+        run: |
+          # Une seule annotation par ligne de synthèse (GitHub limite à 10 annotations par type et par étape).
+          tot=0; fail=0; skip=0; list=""
+          for f in android/app/build/test-results/testDebugUnitTest/*.xml; do
+            [ -f "$f" ] || continue
+            n=$(grep -o '<testsuite name="[^"]*"' "$f" | sed 's/.*\.//; s/"//')
+            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc 0-9); x=$(grep -o 'failures="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
+            e=$(grep -o 'errors="[0-9]*"' "$f" | head -1 | tr -dc 0-9); k=$(grep -o 'skipped="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
+            tot=$((tot+t)); fail=$((fail+x+e)); skip=$((skip+k)); list="$list $n=$t"
+          done
+          echo "::notice title=Android::$tot tests, $fail échec(s), $skip ignoré(s) :$list"
+          grep -hE "INTEROPÉRABILITÉ|ÉCHEC" rapport-android.log 2>/dev/null | head -3 | while IFS= read -r l; do echo "::notice title=interop::$l"; done || true
+          grep -h -A2 "<failure" android/app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | head -9 | tr -d '\r' | while IFS= read -r l; do echo "::error title=échec Android::$l"; done || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapports-android
+          path: |
+            rapport-android.log
+            android/app/build/test-results/testDebugUnitTest/*.xml
+            android/app/build/reports/lint-results-debug.html

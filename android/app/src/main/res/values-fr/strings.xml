@@ -93,8 +93,18 @@
     <string name="new_group_confirm">Vous quitterez le groupe actuel ; ses membres devront être réinvités.</string>
     <string name="relay_url_invalid">Adresse refusée : utilisez wss://…</string>
 
+    <string name="gateway_title">Servir de passerelle Internet (expérimental)</string>
+    <string name="gateway_explain">Quand ce téléphone a Internet, il achemine par Bluetooth les messages des membres de votre groupe qui n\'en ont plus. Il ne peut pas les lire (chiffrés pour eux). Consomme données et batterie.</string>
+    <string name="problem_waiting_tor">Mode Tor : en attente du circuit Tor. Aucune connexion directe n\'est tentée.</string>
+    <string name="problem_tor_unreachable">Mode Tor : Tor n\'atteint pas le relais pour le moment (réseau Tor bloqué ou lent). Nouvelle tentative automatique ; aucune connexion directe.</string>
+    <string name="tor_title">Passer par Tor (expérimental)</string>
+    <string name="tor_off">Désactivé</string>
+    <string name="tor_starting">Démarrage de Tor… (jusqu\'à une minute)</string>
+    <string name="tor_on">Actif : le relais ne voit plus l\'adresse IP de ce téléphone</string>
+    <string name="tor_error">Tor n\'a pas pu démarrer</string>
+    <string name="tor_explain">Avec Tor, le relais et Cloudflare voient l\'adresse d\'un nœud Tor au lieu de la vôtre. Plus lent, un peu plus de batterie. Si Tor n\'est pas prêt, MESHORA attend plutôt que de se connecter directement. Le contenu des messages est chiffré de bout en bout dans tous les cas. Non testé sur téléphone.</string>
     <string name="ble_title">Bluetooth direct (expérimental)</string>
-    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Application ouverte et écran allumé. Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
+    <string name="ble_notice">Expérimental : pas encore testé entre deux téléphones. Continue de fonctionner écran éteint tant qu\'il est activé (consomme davantage de batterie ; une notification l\'indique, avec un bouton Arrêter). Portée non mesurée. Seuls les membres de votre groupe voient votre nom ; les autres appareils ne voient que des données chiffrées (ils peuvent savoir qu\'un appareil MESHORA est à proximité).</string>
     <string name="ble_links">Liens Bluetooth directs : %1$d</string>
     <string name="ble_start">Activer le Bluetooth (expérimental)</string>
     <string name="ble_stop">Arrêter le Bluetooth</string>
@@ -103,6 +113,10 @@
     <string name="ble_err_unavailable">Bluetooth indisponible.</string>
     <string name="ble_err_disabled">Bluetooth désactivé : activez-le puis réessayez.</string>
     <string name="ble_err_gatt">Impossible d\'ouvrir le serveur GATT.</string>
+    <string name="ble_channel_name">Maillage Bluetooth MESHORA</string>
+    <string name="ble_channel_description">Affichée tant que le maillage Bluetooth continue écran éteint.</string>
+    <string name="ble_notif_title">Bluetooth MESHORA actif</string>
+    <string name="ble_notif_text">Le maillage continue de relayer les messages écran éteint. Consomme davantage de batterie.</string>
     <string name="ble_stopped">Bluetooth MESHORA arrêté.</string>
     <string name="ble_active">Bluetooth MESHORA actif (%1$s), recherche en cours, %2$d lien(s) direct(s).</string>
     <string name="ble_adv_on">annonce active</string>
@@ -125,6 +139,12 @@
     <string name="limits_title">Limites connues (version d\'essai)</string>
     <string name="limits_body">• Pas d\'audit de sécurité indépendant\n• Pas encore de confidentialité persistante (si votre clé privée était volée, d\'anciens messages captés pourraient être déchiffrés)\n• Le relais voit qui échange avec qui dans un groupe\n• Bluetooth expérimental, non testé entre téléphones</string>
 
+    <string name="wipe_title">Effacement d\'urgence</string>
+    <string name="wipe_body">Efface de ce téléphone votre identité, vos messages, vos contacts et vos réglages. Irréversible. Les messages déjà reçus par d\'autres restent chez eux.</string>
+    <string name="wipe_button">Tout effacer</string>
+    <string name="wipe_confirm_title">Tout effacer maintenant ?</string>
+    <string name="wipe_confirm_body">Votre identité MESHORA sera détruite : vos contacts devront vous réinviter. L\'application se fermera.</string>
+    <string name="wipe_confirm_button">Effacer définitivement</string>
     <string name="emerg_title">Secours</string>
     <string name="emerg_sub">Appel direct des services d\'urgence officiels.</string>
     <string name="emerg_warning_title">Important</string>

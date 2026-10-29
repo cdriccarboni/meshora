@@ -25,15 +25,18 @@ data class Contact(
     val fingerprint: String get() = CryptoEngine.computeFingerprint(publicKeyHex)
 }
 
-class ContactStore(context: Context? = null) {
+/** Contacts, chiffrés au repos sur l'appareil ([LocalVault]) ; jamais réécrits en clair. */
+class ContactStore(context: Context? = null, vault: LocalVault? = null) {
     private val prefs: SharedPreferences? = context?.getSharedPreferences("meshora_contacts", Context.MODE_PRIVATE)
+    private val vault: LocalVault? = vault ?: context?.let { LocalVault.forApp(it) }
     private val json = Json { ignoreUnknownKeys = true }
     private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
     val contacts: StateFlow<List<Contact>> = _contacts.asStateFlow()
 
     init {
-        prefs?.getString("contacts_json", null)?.let { raw ->
+        prefs?.getString("contacts_json", null)?.let { stored -> vault?.open(stored) ?: stored.takeUnless { LocalVault.isSealed(it) } }?.let { raw ->
             runCatching { _contacts.value = json.decodeFromString<List<Contact>>(raw) }
+            if (vault != null && prefs?.getString("contacts_json", null)?.let { LocalVault.isSealed(it) } == false) persist() // migration
         }
     }
 
@@ -58,6 +61,7 @@ class ContactStore(context: Context? = null) {
     }
 
     private fun persist() {
-        prefs?.edit()?.putString("contacts_json", json.encodeToString(_contacts.value))?.apply()
+        val v = vault ?: return // jamais d'écriture en clair
+        prefs?.edit()?.putString("contacts_json", v.seal(json.encodeToString(_contacts.value)))?.apply()
     }
 }

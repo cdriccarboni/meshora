@@ -34,6 +34,8 @@
         android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"
         tools:targetApi="upside_down_cake" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Maillage Bluetooth écran éteint (décision du 27/10/2026) : verrou de veille partiel tenu par MeshoraBleService. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Fonctionnalité matérielle BLE optionnelle (ne bloque pas l'installation sur tablettes sans BLE) -->
     <uses-feature

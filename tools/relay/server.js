@@ -44,6 +44,11 @@ const LIMITS = {
   mailboxPerRoom: 1000,
   mailboxTtlMs: 24 * 3600 * 1000,
   helloTimeoutMs: 10_000,
+  maxServedPerConnection: 16,
+  delegationMaxAgeMs: 10 * 60_000,
+  servedTtlMs: 15 * 60_000,
+  forwardMaxAgeMs: 48 * 3600_000,
+  forwardMaxFutureMs: 10 * 60_000,
   pingIntervalMs: 30_000
 };
 
@@ -364,6 +369,65 @@ function mailboxCount(box) {
 
 // ---------------------------------------------------------------- protocole
 
+/** Chaîne signée d'une enveloppe : v2 (§2) ou v3 (V0.4 étape A, prékey + HKDF). */
+const envelopeString = (e) =>
+  e.v === 3
+    ? `ENV3|${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.prekeyId}|${e.ephemeralPublicKeyHex}|${e.saltHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`
+    : `${e.id}|${e.senderPublicKeyHex}|${e.recipientPublicKeyHex}|${e.ephemeralPublicKeyHex}|${e.ivHex}|${e.ciphertextHex}|${e.timestamp}`;
+const ackString = (k) => `ACK2|${k.messageId}|${k.senderPublicKeyHex}|${k.recipientPublicKeyHex}|${k.envelopeHash}|${k.timestamp}`;
+const isKey = (k) => typeof k === 'string' && HEX_RE.test(k) && k.length <= 400;
+function validEnvelopeShape(e) {
+  return e && typeof e === 'object' && typeof e.id === 'string' && e.id.length <= 128 && isKey(e.senderPublicKeyHex) && isKey(e.recipientPublicKeyHex) &&
+    ['ephemeralPublicKeyHex', 'ivHex', 'ciphertextHex', 'signatureHex'].every((f) => typeof e[f] === 'string' && HEX_RE.test(e[f])) && Number.isFinite(e.timestamp) &&
+    (e.v === undefined || (e.v === 3 && typeof e.prekeyId === 'string' && /^[0-9a-f]{16}$/.test(e.prekeyId) && typeof e.saltHex === 'string' && /^[0-9a-f]{64}$/i.test(e.saltHex)));
+}
+
+/**
+ * V0.4 étape A — prékey de réception annoncée par le détenteur d'une identité. Le relais la vérifie
+ * (forme, identifiant = empreinte, signature de l'identité, échéance) avant de la redistribuer ;
+ * une prékey invalide est simplement ignorée (le client reste joignable en v2).
+ */
+const PREKEY_MAX_LIFETIME_MS = 30 * 24 * 3600 * 1000;
+function validPrekey(identityKey, p) {
+  if (!p || typeof p !== 'object') return null;
+  const now = Date.now();
+  if (typeof p.publicKeyHex !== 'string' || !/^[0-9a-f]{182}$/i.test(p.publicKeyHex) || p.publicKeyHex === identityKey) return null; // SPKI P-256 : 91 octets
+  if (typeof p.id !== 'string' || !/^[0-9a-f]{16}$/.test(p.id)) return null;
+  if (typeof p.signatureHex !== 'string' || !/^[0-9a-f]{128}$/i.test(p.signatureHex)) return null;
+  if (!Number.isFinite(p.expiresAt) || p.expiresAt <= now || p.expiresAt > now + PREKEY_MAX_LIFETIME_MS) return null;
+  if (crypto.createHash('sha256').update(Buffer.from(p.publicKeyHex, 'hex')).digest('hex').slice(0, 16) !== p.id) return null;
+  if (!verifyEcdsa(identityKey, p.signatureHex, `PREKEY|v1|${identityKey}|${p.publicKeyHex}|${p.id}|${p.expiresAt}`)) return null;
+  return { publicKeyHex: p.publicKeyHex, id: p.id, expiresAt: p.expiresAt, signatureHex: p.signatureHex };
+}
+const livePrekey = (p) => (p && p.expiresAt > Date.now() ? { prekey: p } : {});
+/** Détenteur de la clé, ou passerelle qui la sert (délégation valide). */
+function holds(c, key, room) {
+  return c.authenticated && c.room === room && (c.publicKey === key || (c.served && c.served.has(key) && c.served.get(key).exp > Date.now()));
+}
+
+function deliverEnvelope(fromClient, room, env) {
+  const recipientKey = env.recipientPublicKeyHex;
+  const packet = { type: 'MESHORA_ENVELOPE', envelope: env, room };
+  let delivered = false;
+  for (const target of clients.values()) {
+    if (target.id !== fromClient.id && holds(target, recipientKey, room)) delivered = sendJson(target, packet) || delivered;
+  }
+  if (delivered) return;
+  if (!offlineMailboxes.has(room)) offlineMailboxes.set(room, new Map());
+  const box = offlineMailboxes.get(room);
+  if (mailboxCount(box) >= LIMITS.mailboxPerRoom) return;
+  const list = box.get(recipientKey) || [];
+  const dup = list.findIndex((e) => e.packet.envelope.id === env.id && e.packet.envelope.senderPublicKeyHex === env.senderPublicKeyHex);
+  if (dup >= 0) list[dup] = { packet, at: Date.now() };
+  else if (list.length < LIMITS.mailboxPerRecipient) list.push({ packet, at: Date.now() });
+  box.set(recipientKey, list);
+}
+
+function deliverAck(room, ack, senderKey) {
+  const packet = { type: 'MESHORA_ACK', ack };
+  for (const target of clients.values()) if (holds(target, senderKey, room)) sendJson(target, packet);
+}
+
 function handleClientMessage(client, msg) {
   if (!msg || typeof msg !== 'object') return;
 
@@ -382,6 +446,7 @@ function handleClientMessage(client, msg) {
     client.peerId = id;
     client.peerAlias = typeof msg.senderAlias === 'string' ? msg.senderAlias.slice(0, 64) : null;
     client.publicKey = pub;
+    client.prekey = validPrekey(pub, msg.prekey);
     broadcastPeerList(client.room);
 
     // Boîte aux lettres : remise uniquement au détenteur PROUVÉ de la clé destinataire.
@@ -402,33 +467,8 @@ function handleClientMessage(client, msg) {
       const env = msg.envelope;
       if (!env || typeof env !== 'object') return;
       if (env.senderPublicKeyHex !== client.publicKey) return; // expéditeur déclaré ≠ clé authentifiée
-      const recipientKey = env.recipientPublicKeyHex;
-      if (typeof recipientKey !== 'string' || !HEX_RE.test(recipientKey)) return;
-      const packet = { type: 'MESHORA_ENVELOPE', envelope: env, room: client.room };
-
-      let delivered = false;
-      for (const target of clients.values()) {
-        if (target.authenticated && target.room === client.room && target.id !== client.id && target.publicKey === recipientKey) {
-          delivered = sendJson(target, packet) || delivered;
-        }
-      }
-      if (!delivered) {
-        if (!offlineMailboxes.has(client.room)) offlineMailboxes.set(client.room, new Map());
-        const box = offlineMailboxes.get(client.room);
-        if (mailboxCount(box) >= LIMITS.mailboxPerRoom) return;
-        const list = box.get(recipientKey) || [];
-        // Un renvoi du même message (même expéditeur, même identifiant) remplace la copie en attente.
-        const dup = list.findIndex(
-          (e) => e.packet.envelope.id === env.id && e.packet.envelope.senderPublicKeyHex === env.senderPublicKeyHex
-        );
-        if (dup >= 0) {
-          list[dup] = { packet, at: Date.now() };
-        } else if (list.length < LIMITS.mailboxPerRecipient) {
-          list.push({ packet, at: Date.now() });
-        }
-        box.set(recipientKey, list);
-      }
-      return;
+      if (typeof env.recipientPublicKeyHex !== 'string' || !HEX_RE.test(env.recipientPublicKeyHex)) return;
+      return deliverEnvelope(client, client.room, env);
     }
 
     case 'MESHORA_ACK': {
@@ -439,9 +479,54 @@ function handleClientMessage(client, msg) {
       if (ack.signedAck.recipientPublicKeyHex !== client.publicKey) return;
       const senderKey = ack.signedAck.senderPublicKeyHex;
       if (typeof senderKey !== 'string' || !HEX_RE.test(senderKey)) return;
-      const packet = { type: 'MESHORA_ACK', ack };
-      for (const target of clients.values()) {
-        if (target.authenticated && target.room === client.room && target.publicKey === senderKey) sendJson(target, packet);
+      return deliverAck(client.room, ack, senderKey);
+    }
+
+    case 'MESHORA_PREKEY': {
+      // V0.4 étape A — rotation de la prékey sans reconnexion.
+      const p = validPrekey(client.publicKey, msg.prekey);
+      if (!p || (client.prekey && client.prekey.id === p.id) || (client.prekey && client.prekey.expiresAt > p.expiresAt)) return;
+      client.prekey = p;
+      return broadcastPeerList(client.room);
+    }
+
+    case 'MESHORA_FORWARD': {
+      // V0.4 — passerelle : le relais vérifie lui-même la signature de l'auteur.
+      const now = Date.now();
+      if (msg.envelope) {
+        const e = msg.envelope;
+        if (!validEnvelopeShape(e)) return;
+        if (e.timestamp < now - LIMITS.forwardMaxAgeMs || e.timestamp > now + LIMITS.forwardMaxFutureMs) return;
+        if (!verifyEcdsa(e.senderPublicKeyHex, e.signatureHex, envelopeString(e))) return;
+        return deliverEnvelope(client, client.room, e);
+      }
+      if (msg.signedAck) {
+        const k = msg.signedAck;
+        if (!k || typeof k !== 'object' || !isKey(k.senderPublicKeyHex) || !isKey(k.recipientPublicKeyHex) || typeof k.messageId !== 'string') return;
+        if (!verifyEcdsa(k.recipientPublicKeyHex, k.signatureHex, ackString(k))) return;
+        return deliverAck(client.room, { messageId: k.messageId, recipientId: deriveId(k.recipientPublicKeyHex), timestamp: k.timestamp, transport: 'websocket', signedAck: k }, k.senderPublicKeyHex);
+      }
+      return;
+    }
+
+    case 'MESHORA_SERVE': {
+      // V0.4 — délégation signée par le détenteur de la clé (sans Internet) au profit de cette passerelle.
+      const d = msg.delegation;
+      if (!d || typeof d !== 'object' || !isKey(d.publicKey) || d.gateway !== client.publicKey || d.publicKey === client.publicKey || !Number.isFinite(d.timestamp)) return;
+      const now = Date.now();
+      if (Math.abs(now - d.timestamp) > LIMITS.delegationMaxAgeMs) return;
+      if (!verifyEcdsa(d.publicKey, d.signature, `MESHORA-DELEGATE|v1|${client.room}|${d.publicKey}|${d.gateway}|${d.timestamp}`)) return;
+      client.served = client.served || new Map();
+      for (const [k, v] of client.served) if (v.exp <= now) client.served.delete(k);
+      if (!client.served.has(d.publicKey) && client.served.size >= LIMITS.maxServedPerConnection) return;
+      const isNew = !client.served.has(d.publicKey);
+      client.served.set(d.publicKey, { exp: now + LIMITS.servedTtlMs, id: deriveId(d.publicKey), alias: typeof d.alias === 'string' ? d.alias.slice(0, 64) : null, prekey: validPrekey(d.publicKey, msg.prekey) });
+      if (isNew) broadcastPeerList(client.room);
+      const box = offlineMailboxes.get(client.room);
+      const pending = box && box.get(d.publicKey);
+      if (pending && pending.length) {
+        for (const e of pending) sendJson(client, e.packet);
+        box.delete(d.publicKey);
       }
       return;
     }
@@ -462,8 +547,19 @@ function broadcastPeerList(room) {
     hops: 1,
     lastSeen: Date.now(),
     isGateway: false,
-    verified: false // clé prouvée auprès du relais, mais non vérifiée hors bande par l'utilisateur
+    verified: false, // clé prouvée auprès du relais, mais non vérifiée hors bande par l'utilisateur
+    ...livePrekey(c.prekey)
   }));
+  const known = new Set(peers.map((p) => p.publicKey));
+  const now = Date.now();
+  for (const c of roomClients) {
+    for (const [k, v] of c.served || []) {
+      if (v.exp > now && !known.has(k)) {
+        known.add(k);
+        peers.push({ id: v.id, alias: v.alias || 'Pair-Meshora', publicKey: k, transport: 'gateway', hops: 2, lastSeen: now, isGateway: false, viaGateway: c.peerId, verified: false, ...livePrekey(v.prekey) });
+      }
+    }
+  }
   const frame = encodeWsFrame(JSON.stringify({ type: 'MESHORA_PEERS', peers }));
   for (const c of roomClients) {
     try {

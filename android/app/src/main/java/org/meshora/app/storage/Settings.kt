@@ -12,7 +12,7 @@ import org.meshora.app.invite.Invitation
 class Settings(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("meshora_settings", Context.MODE_PRIVATE)
 
-    data class Values(val relayUrl: String, val room: String, val alias: String, val autoConnect: Boolean) {
+    data class Values(val relayUrl: String, val room: String, val alias: String, val autoConnect: Boolean, val gatewayEnabled: Boolean = false, val torEnabled: Boolean = false) {
         val usesDefaultRelay get() = relayUrl == DEFAULT_RELAY_URL
     }
 
@@ -30,7 +30,9 @@ class Settings(context: Context) {
             relayUrl = prefs.getString("relay_url", null) ?: DEFAULT_RELAY_URL,
             room = room,
             alias = prefs.getString("alias", null) ?: "",
-            autoConnect = prefs.getBoolean("auto_connect", true)
+            autoConnect = prefs.getBoolean("auto_connect", true),
+            gatewayEnabled = prefs.getBoolean("gateway_enabled", false),
+            torEnabled = prefs.getBoolean("tor_enabled", false)
         )
     }
 
@@ -40,6 +42,8 @@ class Settings(context: Context) {
             .putString("room", v.room)
             .putString("alias", v.alias)
             .putBoolean("auto_connect", v.autoConnect)
+            .putBoolean("gateway_enabled", v.gatewayEnabled)
+            .putBoolean("tor_enabled", v.torEnabled)
             .apply()
         _values.value = v
     }
@@ -50,6 +54,8 @@ class Settings(context: Context) {
     fun newRoom() = save(current.copy(room = Invitation.newRoomCode()))
     fun setAlias(alias: String) = save(current.copy(alias = alias.trim().take(40)))
     fun setAutoConnect(on: Boolean) = save(current.copy(autoConnect = on))
+    fun setGatewayEnabled(on: Boolean) = save(current.copy(gatewayEnabled = on))
+    fun setTorEnabled(on: Boolean) = save(current.copy(torEnabled = on))
 
     companion object {
         val DEFAULT_RELAY_URL: String = BuildConfig.DEFAULT_RELAY_URL

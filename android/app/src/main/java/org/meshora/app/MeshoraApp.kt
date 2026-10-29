@@ -32,6 +32,8 @@ class MeshoraApp : Application() {
         private set
     lateinit var contacts: ContactStore
         private set
+    lateinit var tor: org.meshora.app.transport.TorManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -47,9 +49,11 @@ class MeshoraApp : Application() {
             identity = identityStorage.getOrCreateIdentity(),
             outboxRepository = outboxRepository,
             bleManager = bleManager,
-            alias = displayAlias()
+            alias = displayAlias(),
+            prekeys = org.meshora.app.storage.PrekeyStore.forApp(this)
         )
         transportManager.groupRoom = settings.current.room
+        transportManager.gatewayEnabled = settings.current.gatewayEnabled
         bleMesh = org.meshora.app.transport.ble.BleMesh(
             context = this,
             router = transportManager.meshRouter,
@@ -57,6 +61,12 @@ class MeshoraApp : Application() {
         )
 
         rememberConversationPartners()
+
+        tor = org.meshora.app.transport.TorManager(this)
+        tor.onReady = { transportManager.webSocketTransport.reconnectNow() }
+        transportManager.webSocketTransport.proxyProvider = { tor.proxy() }
+        applyTorSetting()
+
         watchNetwork()
         // V0.3 : connexion automatique au relais de référence (ou au relais choisi dans Réseau → Avancé).
         if (settings.current.autoConnect) connectRelay()
@@ -90,6 +100,13 @@ class MeshoraApp : Application() {
                     }
                 }
         }
+    }
+
+    /** Mode Tor (expérimental) : démarre ou arrête Tor et impose (ou non) le passage par Tor. */
+    fun applyTorSetting() {
+        val on = settings.current.torEnabled
+        transportManager.webSocketTransport.requireProxy = on
+        if (on) tor.start() else tor.stop()
     }
 
     private fun watchNetwork() {
